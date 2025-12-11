@@ -9,7 +9,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import com.ai.assistance.operit.api.chat.EnhancedAIService
 import com.google.gson.Gson
@@ -20,21 +19,6 @@ import com.ai.assistance.operit.integrations.tasker.triggerAIAgentAction
  * This file contains all tool registrations centralized for easier maintenance and integration It
  * extracts the registerTools logic from AIToolHandler into a dedicated file
  */
-
-/**
- * Helper function to execute suspend functions with timeout in tool executors
- * This ensures that tool execution doesn't block indefinitely
- */
-private inline fun <T> runBlockingWithTimeout(
-    timeoutMs: Long = 30000, // 30 seconds default timeout
-    crossinline block: suspend () -> T
-): T {
-    return runBlocking(Dispatchers.IO) {
-        withTimeout(timeoutMs) {
-            block()
-        }
-    }
-}
 
 /**
  * Register all available tools with the AIToolHandler
@@ -323,7 +307,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             },
             executor = { tool ->
                 val intentTool = ToolGetter.getIntentToolExecutor(context)
-                runBlockingWithTimeout { intentTool.invoke(tool) }
+                runBlocking(Dispatchers.IO) { intentTool.invoke(tool) }
             }
     )
 
@@ -387,7 +371,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     handler.registerTool(
             name = "get_all_workflows",
             descriptionGenerator = { _ -> "获取所有工作流列表" },
-            executor = { tool -> runBlockingWithTimeout { workflowTools.getAllWorkflows(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.getAllWorkflows(tool) } }
     )
 
     // 创建工作流
@@ -397,7 +381,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val name = tool.parameters.find { it.name == "name" }?.value ?: ""
                 "创建工作流: $name"
             },
-            executor = { tool -> runBlockingWithTimeout { workflowTools.createWorkflow(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.createWorkflow(tool) } }
     )
 
     // 获取工作流详情
@@ -407,7 +391,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val id = tool.parameters.find { it.name == "workflow_id" }?.value ?: ""
                 "获取工作流详情: $id"
             },
-            executor = { tool -> runBlockingWithTimeout { workflowTools.getWorkflow(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.getWorkflow(tool) } }
     )
 
     // 更新工作流
@@ -422,7 +406,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                     "更新工作流: $id"
                 }
             },
-            executor = { tool -> runBlockingWithTimeout { workflowTools.updateWorkflow(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.updateWorkflow(tool) } }
     )
 
     // 删除工作流
@@ -432,7 +416,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val id = tool.parameters.find { it.name == "workflow_id" }?.value ?: ""
                 "删除工作流: $id"
             },
-            executor = { tool -> runBlockingWithTimeout { workflowTools.deleteWorkflow(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.deleteWorkflow(tool) } }
     )
 
     // 触发工作流执行
@@ -442,7 +426,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val id = tool.parameters.find { it.name == "workflow_id" }?.value ?: ""
                 "触发工作流: $id"
             },
-            executor = { tool -> runBlockingWithTimeout { workflowTools.triggerWorkflow(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.triggerWorkflow(tool) } }
     )
 
     // 对话管理工具
@@ -452,21 +436,21 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     handler.registerTool(
             name = "start_chat_service",
             descriptionGenerator = { _ -> "启动对话服务（悬浮窗）" },
-            executor = { tool -> runBlockingWithTimeout { chatManagerTool.startChatService(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.startChatService(tool) } }
     )
 
     // 新建对话
     handler.registerTool(
             name = "create_new_chat",
             descriptionGenerator = { _ -> "创建新的对话" },
-            executor = { tool -> runBlockingWithTimeout { chatManagerTool.createNewChat(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.createNewChat(tool) } }
     )
 
     // 列出所有对话
     handler.registerTool(
             name = "list_chats",
             descriptionGenerator = { _ -> "列出所有对话" },
-            executor = { tool -> runBlockingWithTimeout { chatManagerTool.listChats(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.listChats(tool) } }
     )
 
     // 切换对话
@@ -476,7 +460,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val chatId = tool.parameters.find { it.name == "chat_id" }?.value ?: ""
                 "切换到对话: $chatId"
             },
-            executor = { tool -> runBlockingWithTimeout { chatManagerTool.switchChat(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.switchChat(tool) } }
     )
 
     // 发送消息给AI
@@ -487,7 +471,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val preview = if (message.length > 30) "${message.take(30)}..." else message
                 "发送消息给AI: $preview"
             },
-            executor = { tool -> runBlockingWithTimeout { chatManagerTool.sendMessageToAI(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.sendMessageToAI(tool) } }
     )
 
     // 文件系统工具
@@ -503,7 +487,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "列出目录内容: $path$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.listFiles(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.listFiles(tool) }
             }
     )
 
@@ -516,7 +500,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
                 "读取文件: $path$envInfo"
             },
-            executor = { tool -> runBlockingWithTimeout { fileSystemTools.readFile(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.readFile(tool) } }
     )
 
     // 按行号范围读取文件内容
@@ -532,7 +516,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "读取文件 ($rangeInfo): $path$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.readFilePart(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.readFilePart(tool) }
             }
     )
 
@@ -545,7 +529,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
                 "读取完整文件内容: $path$envInfo"
             },
-            executor = { tool -> runBlockingWithTimeout { fileSystemTools.readFileFull(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.readFileFull(tool) } }
     )
 
     // 写入文件
@@ -561,7 +545,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "$operation: $path$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.writeFile(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.writeFile(tool) }
             }
     )
 
@@ -576,7 +560,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             "将Base64内容写入二进制文件: $path$envInfo"
         },
         executor = { tool ->
-            runBlockingWithTimeout { fileSystemTools.writeFileBinary(tool) }
+            runBlocking(Dispatchers.IO) { fileSystemTools.writeFileBinary(tool) }
         }
     )
 
@@ -593,7 +577,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "$operation: $path$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.deleteFile(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.deleteFile(tool) }
             }
     )
 
@@ -649,7 +633,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                     else -> "点击元素"
                 }
             },
-            executor = { tool -> runBlockingWithTimeout { uiTools.clickElement(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.clickElement(tool) } }
     )
 
     // 点击屏幕坐标
@@ -660,7 +644,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val y = tool.parameters.find { it.name == "y" }?.value ?: "?"
                 "点击屏幕坐标 ($x, $y)"
             },
-            executor = { tool -> runBlockingWithTimeout { uiTools.tap(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.tap(tool) } }
     )
 
     handler.registerTool(
@@ -670,7 +654,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val y = tool.parameters.find { it.name == "y" }?.value ?: "?"
                 "长按屏幕坐标 ($x, $y)"
             },
-            executor = { tool -> runBlockingWithTimeout { uiTools.longPress(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.longPress(tool) } }
     )
 
     // HTTP请求工具
@@ -684,7 +668,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val method = tool.parameters.find { it.name == "method" }?.value ?: "GET"
                 "$method 请求: $url"
             },
-            executor = { tool -> runBlockingWithTimeout { httpTools.httpRequest(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { httpTools.httpRequest(tool) } }
     )
 
     // 多部分表单请求（文件上传）
@@ -702,7 +686,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "多部分表单请求: $url (包含 $filesCount 个文件)"
             },
             executor = { tool ->
-                runBlockingWithTimeout { httpTools.multipartRequest(tool) }
+                runBlocking(Dispatchers.IO) { httpTools.multipartRequest(tool) }
             }
     )
 
@@ -720,7 +704,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                     else -> "管理Cookie: $action"
                 }
             },
-            executor = { tool -> runBlockingWithTimeout { httpTools.manageCookies(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { httpTools.manageCookies(tool) } }
     )
 
     // 检查文件是否存在
@@ -733,7 +717,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "检查文件存在: $path$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.fileExists(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.fileExists(tool) }
             }
     )
 
@@ -748,7 +732,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
                 "移动文件: $source -> $destination$envInfo"
             },
-            executor = { tool -> runBlockingWithTimeout { fileSystemTools.moveFile(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.moveFile(tool) } }
     )
 
     // 复制文件或目录
@@ -772,7 +756,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 }
                 "复制文件: $source -> $destination$envInfo"
             },
-            executor = { tool -> runBlockingWithTimeout { fileSystemTools.copyFile(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.copyFile(tool) } }
     )
 
     // 创建目录
@@ -785,7 +769,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "创建目录: $path$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.makeDirectory(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.makeDirectory(tool) }
             }
     )
 
@@ -801,14 +785,14 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val port = tool.parameters.find { it.name == "port" }?.value ?: "22"
                 "登录SSH服务器: $username@$host:$port"
             },
-            executor = { tool -> runBlockingWithTimeout { sshTools.sshLogin(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { sshTools.sshLogin(tool) } }
     )
 
     // 退出SSH
     handler.registerTool(
             name = "ssh_exit",
             descriptionGenerator = { _ -> "退出SSH连接" },
-            executor = { tool -> runBlockingWithTimeout { sshTools.sshExit(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { sshTools.sshExit(tool) } }
     )
 
     // 搜索文件
@@ -822,7 +806,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "搜索文件: 在 $path 中查找 $pattern$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.findFiles(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.findFiles(tool) }
             }
     )
 
@@ -835,7 +819,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
                 "获取文件信息: $path$envInfo"
             },
-            executor = { tool -> runBlockingWithTimeout { fileSystemTools.fileInfo(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.fileInfo(tool) } }
     )
 
     // 智能应用文件绑定
@@ -872,7 +856,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
                 "压缩文件: $source -> $destination$envInfo"
             },
-            executor = { tool -> runBlockingWithTimeout { fileSystemTools.zipFiles(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.zipFiles(tool) } }
     )
 
     // 解压缩文件
@@ -886,7 +870,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "解压文件: $source -> $destination$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.unzipFiles(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.unzipFiles(tool) }
             }
     )
 
@@ -899,7 +883,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
                 "打开文件: $path$envInfo"
             },
-            executor = { tool -> runBlockingWithTimeout { fileSystemTools.openFile(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.openFile(tool) } }
     )
 
     // 分享文件
@@ -912,7 +896,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "分享文件: $path$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.shareFile(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.shareFile(tool) }
             }
     )
 
@@ -933,7 +917,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 }
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.grepCode(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.grepCode(tool) }
             }
     )
 
@@ -949,7 +933,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "在 $path 中基于意图搜索相关文件: '$preview'$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.grepContext(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.grepContext(tool) }
             }
     )
 
@@ -964,7 +948,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "下载文件: $url -> $destination$envInfo"
             },
             executor = { tool ->
-                runBlockingWithTimeout { fileSystemTools.downloadFile(tool) }
+                runBlocking(Dispatchers.IO) { fileSystemTools.downloadFile(tool) }
             }
     )
 
@@ -981,7 +965,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "修改系统设置: $key = $value"
             },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.modifySystemSetting(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.modifySystemSetting(tool) }
             }
     )
 
@@ -993,7 +977,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "获取系统设置: $key"
             },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.getSystemSetting(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.getSystemSetting(tool) }
             }
     )
 
@@ -1006,7 +990,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "安装应用: $path"
             },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.installApp(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.installApp(tool) }
             }
     )
 
@@ -1019,7 +1003,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "卸载应用: $packageName"
             },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.uninstallApp(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.uninstallApp(tool) }
             }
     )
 
@@ -1028,7 +1012,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "list_installed_apps",
             descriptionGenerator = { _ -> "列出已安装应用" },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.listInstalledApps(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.listInstalledApps(tool) }
             }
     )
 
@@ -1040,7 +1024,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "启动应用: $packageName"
             },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.startApp(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.startApp(tool) }
             }
     )
 
@@ -1053,7 +1037,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 "停止应用: $packageName"
             },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.stopApp(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.stopApp(tool) }
             }
     )
 
@@ -1069,7 +1053,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 if (includeOngoing) "$description，包括常驻通知" else description
             },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.getNotifications(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.getNotifications(tool) }
             }
     )
 
@@ -1082,7 +1066,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 if (highAccuracy) "获取设备位置 (高精度)" else "获取设备位置"
             },
             executor = { tool ->
-                runBlockingWithTimeout { systemOperationTools.getDeviceLocation(tool) }
+                runBlocking(Dispatchers.IO) { systemOperationTools.getDeviceLocation(tool) }
             }
     )
 
@@ -1090,7 +1074,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     handler.registerTool(
             name = "get_page_info",
             descriptionGenerator = { _ -> "获取当前页面信息" },
-            executor = { tool -> runBlockingWithTimeout { uiTools.getPageInfo(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.getPageInfo(tool) } }
     )
 
     // 运行UI子代理（多步自动化决策，仅记录动作日志）
@@ -1101,7 +1085,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val maxSteps = tool.parameters.find { it.name == "max_steps" }?.value ?: "20"
                 "运行UI子代理以完成任务: $intent (最多执行 $maxSteps 步)"
             },
-            executor = { tool -> runBlockingWithTimeout { uiTools.runUiSubAgent(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.runUiSubAgent(tool) } }
     )
 
     // 在输入框中设置文本
@@ -1111,7 +1095,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val text = tool.parameters.find { it.name == "text" }?.value ?: ""
                 "设置输入文本: $text"
             },
-            executor = { tool -> runBlockingWithTimeout { uiTools.setInputText(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.setInputText(tool) } }
     )
 
     // 按下特定按键
@@ -1121,7 +1105,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val keyCode = tool.parameters.find { it.name == "key_code" }?.value ?: ""
                 "按下按键: $keyCode"
             },
-            executor = { tool -> runBlockingWithTimeout { uiTools.pressKey(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.pressKey(tool) } }
     )
 
     // 执行滑动手势
@@ -1134,7 +1118,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val endY = tool.parameters.find { it.name == "end_y" }?.value ?: "?"
                 "滑动: ($startX,$startY) -> ($endX,$endY)"
             },
-            executor = { tool -> runBlockingWithTimeout { uiTools.swipe(tool) } }
+            executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.swipe(tool) } }
     )
 
 

@@ -399,7 +399,7 @@ class FileBindingService(context: Context) {
 
             for (future in tasks) {
                 try {
-                    val result = future.get(60, TimeUnit.SECONDS)
+                    val result = future.get()
                     totalWindows += result.windows
                     lcsCalculations += result.lcsCalculations
 
@@ -407,9 +407,6 @@ class FileBindingService(context: Context) {
                         bestMatchScore = result.bestScore
                         bestMatchRange = result.startLine to result.endLine
                     }
-                } catch (e: TimeoutException) {
-                    AppLogger.e(TAG, "File binding search task timeout after 60 seconds", e)
-                    future.cancel(true)
                 } catch (e: Exception) {
                     AppLogger.e(TAG, "Error getting file binding search result", e)
                 }

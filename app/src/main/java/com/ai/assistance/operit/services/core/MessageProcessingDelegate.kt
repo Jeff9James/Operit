@@ -356,12 +356,7 @@ class MessageProcessingDelegate(
                     }
 
                 // 等待流完成，以便finally块可以正确执行来更新UI状态
-                // 添加超时避免无限等待（10分钟超时，因为AI响应可能需要较长时间）
-                kotlinx.coroutines.withTimeoutOrNull(600000) { // 10分钟超时
-                    deferred.await()
-                } ?: run {
-                    AppLogger.w(TAG, "Message processing timeout after 10 minutes")
-                }
+                deferred.await()
 
                 AppLogger.d(TAG, "AI响应处理完成，总耗时: ${System.currentTimeMillis() - startTime}ms")
             } catch (e: Exception) {
