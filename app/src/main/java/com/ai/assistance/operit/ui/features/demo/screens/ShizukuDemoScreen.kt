@@ -125,6 +125,15 @@ fun ShizukuDemoScreen(
             }
         }
 
+        // 检查无障碍服务版本状态
+        val (accessibilityInstalledVersion, accessibilityBundledVersion, isAccessibilityUpdateNeeded) =
+                remember(uiState.isRefreshing.value) {
+                    val installed = AccessibilityProviderInstaller.getInstalledVersion(context)
+                    val bundled = AccessibilityProviderInstaller.getBundledVersion(context)
+                    val needsUpdate = AccessibilityProviderInstaller.isUpdateNeeded(context)
+                    Triple(installed, bundled, needsUpdate)
+                }
+
         // 权限管理卡片
         PermissionLevelCard(
                 hasStoragePermission = uiState.hasStoragePermission.value,
@@ -139,6 +148,7 @@ fun ShizukuDemoScreen(
                 isDeviceRooted = uiState.isDeviceRooted.value,
                 hasRootAccess = uiState.hasRootAccess.value,
                 isAccessibilityProviderInstalled = uiState.isAccessibilityProviderInstalled.value,
+                isAccessibilityUpdateNeeded = isAccessibilityUpdateNeeded,
                 isRefreshing = uiState.isRefreshing.value,
                 onRefresh = { scope.launch(Dispatchers.IO) { viewModel.refreshStatus(context) } },
                 onStoragePermissionClick = {
@@ -253,7 +263,7 @@ fun ShizukuDemoScreen(
 
         // 检查Shizuku版本状态 - 使用remember缓存结果，避免每次重组时重复调用
         val (installedVersion, bundledVersion, isUpdateNeeded) =
-                remember {
+                remember(uiState.isRefreshing.value) {
                     val installed = ShizukuInstaller.getInstalledShizukuVersion(context)
                     val bundled = ShizukuInstaller.getBundledShizukuVersion(context)
                     val needsUpdate = ShizukuInstaller.isShizukuUpdateNeeded(context)
@@ -263,15 +273,6 @@ fun ShizukuDemoScreen(
                     )
                     Triple(installed, bundled, needsUpdate)
                 }
-        
-        // 检查无障碍服务版本状态
-        val (accessibilityInstalledVersion, accessibilityBundledVersion, isAccessibilityUpdateNeeded) =
-            remember {
-                val installed = AccessibilityProviderInstaller.getInstalledVersion(context)
-                val bundled = AccessibilityProviderInstaller.getBundledVersion(context)
-                val needsUpdate = AccessibilityProviderInstaller.isUpdateNeeded(context)
-                Triple(installed, bundled, needsUpdate)
-            }
 
         val needShizukuSetupGuide =
                 currentDisplayedPermissionLevel == AndroidPermissionLevel.DEBUGGER &&

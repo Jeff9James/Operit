@@ -88,6 +88,64 @@ open class RootUITools(context: Context) : AdminUITools(context) {
         }
     }
 
+    override suspend fun longPress(tool: AITool): ToolResult {
+        val x = tool.parameters.find { it.name == "x" }?.value?.toIntOrNull()
+        val y = tool.parameters.find { it.name == "y" }?.value?.toIntOrNull()
+
+        if (x == null || y == null) {
+            return ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result = StringResultData(""),
+                error = "Missing or invalid coordinates. Both 'x' and 'y' must be valid integers."
+            )
+        }
+
+        val overlay = operationOverlay
+        withContext(Dispatchers.Main) { overlay.showTap(x, y) }
+
+        val durationMs = 800
+
+        try {
+            AppLogger.d(TAG, "Attempting to long press at coordinates: ($x, $y) via shell swipe command")
+            val command = "input swipe $x $y $x $y $durationMs"
+            val result = AndroidShellExecutor.executeShellCommand(command)
+
+            return if (result.success) {
+                AppLogger.d(TAG, "Long press successful at coordinates: ($x, $y)")
+                withContext(Dispatchers.Main) { overlay.hide() }
+                ToolResult(
+                        toolName = tool.name,
+                        success = true,
+                        result =
+                                UIActionResultData(
+                                        actionType = "long_press",
+                            actionDescription = "Successfully long pressed at ($x, $y) via shell command",
+                                        coordinates = Pair(x, y)
+                        )
+                )
+            } else {
+                AppLogger.e(TAG, "Long press failed at coordinates: ($x, $y), error: ${result.stderr}")
+                withContext(Dispatchers.Main) { overlay.hide() }
+                ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result = StringResultData(""),
+                    error = "Failed to long press at ($x, $y): ${result.stderr ?: "Unknown error"}"
+                )
+            }
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error long pressing at coordinates ($x, $y)", e)
+            withContext(Dispatchers.Main) { overlay.hide() }
+            return ToolResult(
+                toolName = tool.name,
+                success = false,
+                result = StringResultData(""),
+                error = "Error long pressing at coordinates: ${e.message ?: "Unknown exception"}"
+            )
+        }
+    }
+
     /** Performs a swipe action using the 'input swipe' shell command. */
     override suspend fun swipe(tool: AITool): ToolResult {
         val startX = tool.parameters.find { it.name == "start_x" }?.value?.toIntOrNull()

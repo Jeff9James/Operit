@@ -22,6 +22,13 @@ export namespace UI {
      */
     function tap(x: number, y: number): Promise<UIActionResultData>;
 
+    /**
+     * Long press at coordinates
+     * @param x - X coordinate
+     * @param y - Y coordinate
+     */
+    function longPress(x: number, y: number): Promise<UIActionResultData>;
+
 
 
     /**
@@ -310,6 +317,11 @@ export class UINode {
     click(): Promise<UIActionResultData>;
 
     /**
+     * Long press on this node
+     */
+    longPress(): Promise<UIActionResultData>;
+
+    /**
      * Set text in this node (typically an input field)
      * @param text - Text to enter
      */
@@ -326,6 +338,12 @@ export class UINode {
      * @param ms - Milliseconds to wait after clicking
      */
     clickAndWait(ms?: number): Promise<UINode>;
+
+    /**
+     * Long press this node and wait for the UI to update
+     * @param ms - Milliseconds to wait after long pressing
+     */
+    longPressAndWait(ms?: number): Promise<UINode>;
 
     // Utility Methods
 
@@ -386,4 +404,11 @@ export class UINode {
      * @param delayMs - Milliseconds to wait
      */
     static clickAndWait(query: object, delayMs?: number): Promise<UINode>;
-} 
+
+    /**
+     * Long press an element, wait, and return updated UI state
+     * @param query - Element to long press (search parameters)
+     * @param delayMs - Milliseconds to wait
+     */
+    static longPressAndWait(query: object, delayMs?: number): Promise<UINode>;
+}

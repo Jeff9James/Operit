@@ -45,6 +45,14 @@
             ]
         },
         {
+            "name": "long_press",
+            "description": "在特定坐标模拟长按操作。适用于呼出上下文菜单、拖拽前的按住等场景。",
+            "parameters": [
+                { "name": "x", "description": "X坐标", "type": "number", "required": true },
+                { "name": "y", "description": "Y坐标", "type": "number", "required": true }
+            ]
+        },
+        {
             "name": "click_element",
             "description": "点击由资源ID或类名标识的元素。必须至少提供一个标识参数。",
             "parameters": [
@@ -145,6 +153,11 @@ const UIAutomationTools = (function () {
             message: '双击操作成功',
             data: { first, second },
         };
+    }
+
+    async function long_press(params: { x: number, y: number }): Promise<ToolResponse> {
+        const result = await Tools.UI.longPress(params.x, params.y);
+        return { success: true, message: '长按操作成功', data: result };
     }
 
     async function click_element(params: { resourceId?: string, className?: string, index?: number, partialMatch?: boolean, bounds?: string }): Promise<ToolResponse> {
@@ -315,6 +328,7 @@ const UIAutomationTools = (function () {
         get_page_screenshot_image: () => wrapToolExecution(get_page_screenshot_image, {}),
         tap: (params: { x: number, y: number }) => wrapToolExecution(tap, params),
         double_tap: (params: { x: number, y: number }) => wrapToolExecution(double_tap, params),
+        long_press: (params: { x: number, y: number }) => wrapToolExecution(long_press, params),
         click_element: (params: { resourceId?: string, className?: string, index?: number, partialMatch?: boolean, bounds?: string }) => wrapToolExecution(click_element, params),
         set_input_text: (params: { text: string }) => wrapToolExecution(set_input_text, params),
         press_key: (params: { key_code: string }) => wrapToolExecution(press_key, params),
@@ -329,6 +343,7 @@ exports.app_launch = UIAutomationTools.app_launch;
 exports.get_page_screenshot_image = UIAutomationTools.get_page_screenshot_image;
 exports.tap = UIAutomationTools.tap;
 exports.double_tap = UIAutomationTools.double_tap;
+exports.long_press = UIAutomationTools.long_press;
 exports.click_element = UIAutomationTools.click_element;
 exports.set_input_text = UIAutomationTools.set_input_text;
 exports.press_key = UIAutomationTools.press_key;

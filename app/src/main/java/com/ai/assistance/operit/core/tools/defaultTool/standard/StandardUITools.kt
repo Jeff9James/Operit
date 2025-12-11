@@ -278,6 +278,16 @@ open class StandardUITools(protected val context: Context) {
         )
     }
 
+    /** Simulates a long press at specific coordinates */
+    open suspend fun longPress(tool: AITool): ToolResult {
+            return ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result = StringResultData(""),
+                error = OPERATION_NOT_SUPPORTED
+        )
+    }
+
     /** Simulates a click on an element identified by resource ID or class name */
     open suspend fun clickElement(tool: AITool): ToolResult {
                     return ToolResult(
@@ -666,6 +676,24 @@ open class StandardUITools(protected val context: Context) {
                         )
                 val result = tap(tapTool)
                 if (result.success) ok() else fail(message = result.error ?: "Tap failed at ($x,$y)")
+            }
+            "LongPress" -> {
+                val element = fields["element"]?.takeIf { it.isNotBlank() }
+                        ?: return fail(message = "No element coordinates for LongPress")
+                val (x, y) =
+                        parseRelativePoint(element, screenWidth, screenHeight)
+                                ?: return fail(message = "Invalid element coordinates for LongPress: $element")
+                val longPressTool =
+                        AITool(
+                                name = "long_press",
+                                parameters =
+                                        listOf(
+                                                ToolParameter("x", x.toString()),
+                                                ToolParameter("y", y.toString())
+                                        )
+                        )
+                val result = longPress(longPressTool)
+                if (result.success) ok() else fail(message = result.error ?: "Long press failed at ($x,$y)")
             }
             "Type", "Type_Name" -> {
                 val text = fields["text"] ?: ""

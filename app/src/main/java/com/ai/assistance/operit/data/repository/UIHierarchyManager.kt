@@ -373,36 +373,15 @@ object UIHierarchyManager {
         }
     }
 
-    /**
-     * 注册一个回调来接收无障碍事件。
-     */
-    suspend fun registerAccessibilityEventListener(context: Context, listener: com.ai.assistance.operit.provider.IAccessibilityEventCallback): Boolean {
+    suspend fun performLongPress(context: Context, x: Int, y: Int): Boolean {
         if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法注册监听器")
+            AppLogger.w(TAG, "绑定失败，无法执行长按")
             return false
         }
         return try {
-            accessibilityProvider?.registerAccessibilityEventListener(listener)
-            true
+            accessibilityProvider?.performLongPress(x, y) ?: false
         } catch (e: RemoteException) {
-            AppLogger.e(TAG, "注册无障碍事件监听器失败", e)
-            false
-        }
-    }
-
-    /**
-     * 注销之前注册的无障碍事件回调。
-     */
-    suspend fun unregisterAccessibilityEventListener(context: Context, listener: com.ai.assistance.operit.provider.IAccessibilityEventCallback): Boolean {
-        if (!ensureBound(context)) {
-            AppLogger.w(TAG, "绑定失败，无法注销监听器")
-            return false
-        }
-        return try {
-            accessibilityProvider?.unregisterAccessibilityEventListener(listener)
-            true
-        } catch (e: RemoteException) {
-            AppLogger.e(TAG, "注销无障碍事件监听器失败", e)
+            AppLogger.e(TAG, "长按点击操作失败", e)
             false
         }
     }

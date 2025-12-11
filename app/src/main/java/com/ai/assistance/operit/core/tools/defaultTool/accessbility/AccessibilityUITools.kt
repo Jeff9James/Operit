@@ -474,7 +474,7 @@ open class AccessibilityUITools(context: Context) : StandardUITools(context) {
                         result = StringResultData(""),
                         error = "Failed to tap at coordinates via accessibility service."
                 )
-                }
+            }
             }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error tapping at coordinates", e)
@@ -484,6 +484,65 @@ open class AccessibilityUITools(context: Context) : StandardUITools(context) {
                     success = false,
                     result = StringResultData(""),
                     error = "Error tapping at coordinates: ${e.message}"
+            )
+        }
+    }
+
+    /** 执行长按操作 */
+    override suspend fun longPress(tool: AITool): ToolResult {
+        return try {
+            withAccessibilityCheck(tool) {
+        val x = tool.parameters.find { it.name == "x" }?.value?.toIntOrNull()
+        val y = tool.parameters.find { it.name == "y" }?.value?.toIntOrNull()
+
+        if (x == null || y == null) {
+                    return@withAccessibilityCheck ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result = StringResultData(""),
+                        error = "Missing or invalid coordinates. Both 'x' and 'y' must be valid integers."
+            )
+        }
+
+            // 显示长按反馈（复用点击效果）
+            operationOverlay.showTap(x, y)
+
+            // 使用无障碍服务执行长按
+            val result = performAccessibilityLongPress(x, y)
+
+                if (result) {
+                // 成功后主动隐藏overlay
+                operationOverlay.hide()
+                ToolResult(
+                        toolName = tool.name,
+                        success = true,
+                        result =
+                                UIActionResultData(
+                                        actionType = "long_press",
+                                        actionDescription =
+                                                "Successfully long pressed at coordinates ($x, $y) via accessibility service",
+                                        coordinates = Pair(x, y)
+                                ),
+                        error = ""
+                )
+            } else {
+                operationOverlay.hide()
+                ToolResult(
+                        toolName = tool.name,
+                        success = false,
+                        result = StringResultData(""),
+                        error = "Failed to long press at coordinates via accessibility service."
+                )
+                }
+            }
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error long pressing at coordinates", e)
+            operationOverlay.hide()
+            ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result = StringResultData(""),
+                    error = "Error long pressing at coordinates: ${e.message}"
             )
         }
     }
@@ -555,6 +614,16 @@ open class AccessibilityUITools(context: Context) : StandardUITools(context) {
             UIHierarchyManager.performClick(context, x, y)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error performing accessibility click", e)
+            return false
+        }
+    }
+
+    // 使用无障碍服务执行长按的辅助方法
+    private suspend fun performAccessibilityLongPress(x: Int, y: Int): Boolean {
+        return try {
+            UIHierarchyManager.performLongPress(context, x, y)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error performing accessibility long press", e)
             return false
         }
     }

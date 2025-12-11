@@ -642,6 +642,16 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             executor = { tool -> kotlinx.coroutines.runBlocking { uiTools.tap(tool) } }
     )
 
+    handler.registerTool(
+            name = "long_press",
+            descriptionGenerator = { tool ->
+                val x = tool.parameters.find { it.name == "x" }?.value ?: "?"
+                val y = tool.parameters.find { it.name == "y" }?.value ?: "?"
+                "长按屏幕坐标 ($x, $y)"
+            },
+            executor = { tool -> kotlinx.coroutines.runBlocking { uiTools.longPress(tool) } }
+    )
+
     // HTTP请求工具
     val httpTools = ToolGetter.getHttpTools(context)
 

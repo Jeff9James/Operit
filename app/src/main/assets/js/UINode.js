@@ -678,6 +678,30 @@ class UINode {
         return this.wait(ms);
     }
 
+    /**
+     * Long press on this node
+     * @return {Promise<Object>} Result of the long press operation
+     */
+    async longPress() {
+        // Try to long press using coordinates if bounds are available
+        const point = this.centerPoint;
+        if (point) {
+            return Tools.UI.longPress(point.x, point.y);
+        }
+
+        throw new Error("Cannot long press element: no bounds available to determine coordinates");
+    }
+
+    /**
+     * Long press this node and wait for the UI to update
+     * @param {number} [ms=1000] - Milliseconds to wait after long pressing
+     * @return {Promise<UINode>} New UINode with updated state
+     */
+    async longPressAndWait(ms = 1000) {
+        await this.longPress();
+        return this.wait(ms);
+    }
+
     // ===== Utility Methods =====
 
     /**

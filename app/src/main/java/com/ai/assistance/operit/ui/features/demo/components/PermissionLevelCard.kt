@@ -67,6 +67,7 @@ fun PermissionLevelCard(
         isDeviceRooted: Boolean,
         hasRootAccess: Boolean,
         isAccessibilityProviderInstalled: Boolean, // 新增：提供者App是否已安装
+        isAccessibilityUpdateNeeded: Boolean,
         onStoragePermissionClick: () -> Unit,
         onOverlayPermissionClick: () -> Unit,
         onBatteryOptimizationClick: () -> Unit,
@@ -333,6 +334,7 @@ fun PermissionLevelCard(
                                             isAccessibilityProviderInstalled = isAccessibilityProviderInstalled,
                                             hasAccessibilityServiceEnabled =
                                                     hasAccessibilityServiceEnabled,
+                                            isAccessibilityUpdateNeeded = isAccessibilityUpdateNeeded,
                                             isOperitTerminalInstalled = isOperitTerminalInstalled,
                                             onStoragePermissionClick = onStoragePermissionClick,
                                             onOverlayPermissionClick = onOverlayPermissionClick,
@@ -387,6 +389,7 @@ fun PermissionLevelCard(
                                             hasShizukuPermission = hasShizukuPermission,
                                             isAccessibilityProviderInstalled = isAccessibilityProviderInstalled,
                                             hasAccessibilityServiceEnabled = hasAccessibilityServiceEnabled,
+                                            isAccessibilityUpdateNeeded = isAccessibilityUpdateNeeded,
                                             onStoragePermissionClick = onStoragePermissionClick,
                                             onOverlayPermissionClick = onOverlayPermissionClick,
                                             onBatteryOptimizationClick = onBatteryOptimizationClick,
@@ -656,6 +659,7 @@ private fun AccessibilityPermissionSection(
         hasLocationPermission: Boolean,
         isAccessibilityProviderInstalled: Boolean, // 新增
         hasAccessibilityServiceEnabled: Boolean,
+        isAccessibilityUpdateNeeded: Boolean,
         isOperitTerminalInstalled: Boolean,
         onStoragePermissionClick: () -> Unit,
         onOverlayPermissionClick: () -> Unit,
@@ -789,6 +793,8 @@ private fun AccessibilityPermissionSection(
                                         stringResource(R.string.status_not_installed)
                                 !hasAccessibilityServiceEnabled ->
                                         stringResource(R.string.status_not_granted)
+                                isAccessibilityUpdateNeeded ->
+                                        stringResource(R.string.status_update_needed)
                                 else -> stringResource(R.string.status_granted)
                             }
 
@@ -796,8 +802,13 @@ private fun AccessibilityPermissionSection(
                             text = statusText,
                             style = MaterialTheme.typography.bodySmall,
                             color =
-                                    if (isFullyEnabled) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.error
+                                    when {
+                                        !isAccessibilityProviderInstalled ||
+                                                !hasAccessibilityServiceEnabled ->
+                                                MaterialTheme.colorScheme.error
+                                        isAccessibilityUpdateNeeded -> Color(0xFFFF9800)
+                                        else -> MaterialTheme.colorScheme.primary
+                                    }
                     )
                 }
             }
@@ -939,6 +950,7 @@ private fun DebuggerPermissionSection(
         hasShizukuPermission: Boolean,
         isAccessibilityProviderInstalled: Boolean,
         hasAccessibilityServiceEnabled: Boolean,
+        isAccessibilityUpdateNeeded: Boolean,
         onStoragePermissionClick: () -> Unit,
         onOverlayPermissionClick: () -> Unit,
         onBatteryOptimizationClick: () -> Unit,
@@ -1184,6 +1196,8 @@ private fun DebuggerPermissionSection(
                                         stringResource(R.string.status_not_installed)
                                 !hasAccessibilityServiceEnabled ->
                                         stringResource(R.string.status_not_granted)
+                                isAccessibilityUpdateNeeded ->
+                                        stringResource(R.string.status_update_needed)
                                 else -> stringResource(R.string.status_granted)
                             }
 
@@ -1191,8 +1205,13 @@ private fun DebuggerPermissionSection(
                             text = statusText,
                             style = MaterialTheme.typography.bodySmall,
                             color =
-                            if (isFullyEnabled) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error
+                                    when {
+                                        !isAccessibilityProviderInstalled ||
+                                                !hasAccessibilityServiceEnabled ->
+                                                MaterialTheme.colorScheme.error
+                                        isAccessibilityUpdateNeeded -> Color(0xFFFF9800)
+                                        else -> MaterialTheme.colorScheme.primary
+                                    }
                     )
                 }
             }

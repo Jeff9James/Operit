@@ -2,7 +2,7 @@
 METADATA
 {
     "name": "daily_life",
-    "description": "日常生活工具集合，提供丰富的日常功能接口，包括日期时间查询、设备状态监测、天气搜索、提醒闹钟设置、短信电话通讯、手电筒控制、音量调节、Wi-Fi开关、截屏拍照及深色模式切换等。通过系统Intent和UI模拟实现各类日常任务，支持用户便捷地完成日常交互需求。",
+    "description": "日常生活工具集合，提供丰富的日常功能接口，包括日期时间查询、设备状态监测、天气搜索、提醒闹钟设置、短信电话通讯、微信/QQ消息发送、微信朋友圈发表、手电筒控制、音量调节、Wi-Fi开关、截屏拍照及深色模式切换等。通过系统Intent和UI模拟实现各类日常任务，支持用户便捷地完成日常交互需求。",
     "enabledByDefault": true,
     "tools": [
         {
@@ -89,6 +89,42 @@ METADATA
                 {
                     "name": "message",
                     "description": "短信内容",
+                    "type": "string",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "wechat_send_message",
+            "description": "通过微信发送文本消息，调起微信分享界面，由用户选择联系人并确认发送。",
+            "parameters": [
+                {
+                    "name": "message",
+                    "description": "要发送的文本内容",
+                    "type": "string",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "qq_send_message",
+            "description": "通过QQ发送文本消息，调起QQ分享界面，由用户选择联系人并确认发送。",
+            "parameters": [
+                {
+                    "name": "message",
+                    "description": "要发送的文本内容",
+                    "type": "string",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "wechat_post_moments",
+            "description": "通过微信朋友圈发表文本内容，调起朋友圈编辑界面并预填文案，由用户确认后发送。",
+            "parameters": [
+                {
+                    "name": "message",
+                    "description": "要发布到朋友圈的文本内容",
                     "type": "string",
                     "required": true
                 }
@@ -585,6 +621,118 @@ const dailyLife = (function () {
                 success: false,
                 message: `发送短信失败: ${error.message}`,
                 phone_number: params.phone_number
+            };
+        }
+    }
+
+    /**
+     * Use Intent to share a text message via WeChat
+     * @param params - Parameters with message content
+     */
+    async function wechat_send_message(params: { message: string }): Promise<any> {
+        try {
+            if (!params.message) {
+                throw new Error("Message content is required");
+            }
+
+            console.log("通过 Intent 调起微信发送文本消息...");
+
+            const intent = new Intent(IntentAction.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.putExtra("android.intent.extra.TEXT", params.message);
+            intent.setPackage("com.tencent.mm");
+            intent.addFlag(IntentFlag.ACTIVITY_NEW_TASK);
+
+            const result = await intent.start();
+
+            return {
+                success: true,
+                message: "已打开微信分享界面，请选择联系人并确认发送",
+                content_preview: params.message.length > 30 ? params.message.substring(0, 30) + "..." : params.message,
+                raw_result: result
+            };
+        } catch (error) {
+            console.error(`[wechat_send_message] 错误: ${error.message}`);
+            console.error(error.stack);
+            return {
+                success: false,
+                message: `调用微信发送消息失败: ${error.message}`,
+                content_preview: params.message ? (params.message.length > 30 ? params.message.substring(0, 30) + "..." : params.message) : ""
+            };
+        }
+    }
+
+    /**
+     * Use Intent to share a text message via QQ
+     * @param params - Parameters with message content
+     */
+    async function qq_send_message(params: { message: string }): Promise<any> {
+        try {
+            if (!params.message) {
+                throw new Error("Message content is required");
+            }
+
+            console.log("通过 Intent 调起 QQ 发送文本消息...");
+
+            const intent = new Intent(IntentAction.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.putExtra("android.intent.extra.TEXT", params.message);
+            intent.setPackage("com.tencent.mobileqq");
+            intent.addFlag(IntentFlag.ACTIVITY_NEW_TASK);
+
+            const result = await intent.start();
+
+            return {
+                success: true,
+                message: "已打开 QQ 分享界面，请选择联系人并确认发送",
+                content_preview: params.message.length > 30 ? params.message.substring(0, 30) + "..." : params.message,
+                raw_result: result
+            };
+        } catch (error) {
+            console.error(`[qq_send_message] 错误: ${error.message}`);
+            console.error(error.stack);
+            return {
+                success: false,
+                message: `调用 QQ 发送消息失败: ${error.message}`,
+                content_preview: params.message ? (params.message.length > 30 ? params.message.substring(0, 30) + "..." : params.message) : ""
+            };
+        }
+    }
+
+    /**
+     * Use Intent to open WeChat Moments publish screen with text prefilled
+     * @param params - Parameters with message content
+     */
+    async function wechat_post_moments(params: { message: string }): Promise<any> {
+        try {
+            if (!params.message) {
+                throw new Error("Message content is required");
+            }
+
+            console.log("通过 Intent 调起微信朋友圈发表界面...");
+
+            const intent = new Intent(IntentAction.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.setComponent("com.tencent.mm", "com.tencent.mm.ui.tools.ShareToTimeLineUI");
+            intent.putExtra("android.intent.extra.TEXT", params.message);
+            intent.putExtra("Kdescription", params.message);
+            intent.addFlag(IntentFlag.ACTIVITY_NEW_TASK);
+
+            const result = await intent.start();
+
+            return {
+                success: true,
+                message: "已打开微信朋友圈发表界面，请确认内容并发送",
+                content_preview: params.message.length > 30 ? params.message.substring(0, 30) + "..." : params.message,
+                raw_result: result
+            };
+        } catch (error) {
+            console.error(`[wechat_post_moments] 错误: ${error.message}`);
+            console.error(error.stack);
+            return {
+                success: false,
+                message: `调用微信朋友圈失败: ${error.message}`,
+                content_preview: params.message ? (params.message.length > 30 ? params.message.substring(0, 30) + "..." : params.message) : ""
             };
         }
     }
@@ -1226,8 +1374,26 @@ const dailyLife = (function () {
         send_message: async (params) => await daily_wrap(
             send_message,
             params,
-            "发送消息成功",
-            "发送消息失败"
+            "发送短信成功",
+            "发送短信失败"
+        ),
+        wechat_send_message: async (params) => await daily_wrap(
+            wechat_send_message,
+            params,
+            "调用微信发送消息成功",
+            "调用微信发送消息失败"
+        ),
+        qq_send_message: async (params) => await daily_wrap(
+            qq_send_message,
+            params,
+            "调用 QQ 发送消息成功",
+            "调用 QQ 发送消息失败"
+        ),
+        wechat_post_moments: async (params) => await daily_wrap(
+            wechat_post_moments,
+            params,
+            "调用微信朋友圈成功",
+            "调用微信朋友圈失败"
         ),
         make_phone_call: async (params) => await daily_wrap(
             make_phone_call,
@@ -1287,6 +1453,9 @@ exports.search_weather = dailyLife.search_weather;
 exports.set_reminder = dailyLife.set_reminder;
 exports.set_alarm = dailyLife.set_alarm;
 exports.send_message = dailyLife.send_message;
+exports.wechat_send_message = dailyLife.wechat_send_message;
+exports.qq_send_message = dailyLife.qq_send_message;
+exports.wechat_post_moments = dailyLife.wechat_post_moments;
 exports.make_phone_call = dailyLife.make_phone_call;
 exports.toggle_flashlight = dailyLife.toggle_flashlight;
 exports.adjust_volume = dailyLife.adjust_volume;

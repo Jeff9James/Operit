@@ -223,6 +223,7 @@ fun getJsToolsDefinition(): String {
             UI: {
                 getPageInfo: () => toolCall("get_page_info"),
                 tap: (x, y) => toolCall("tap", { x, y }),
+                longPress: (x, y) => toolCall("long_press", { x, y }),
                 // 增强的clickElement方法，支持多种参数类型
                 clickElement: function(param1, param2, param3) {
                     // 根据参数类型和数量判断调用方式
