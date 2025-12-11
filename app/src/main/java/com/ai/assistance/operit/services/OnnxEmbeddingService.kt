@@ -13,11 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
-import java.util.concurrent.TimeoutException
 import kotlin.math.sqrt
 
 /**
@@ -60,14 +58,8 @@ object OnnxEmbeddingService {
         
         if (isInitializing) {
             AppLogger.d(TAG, "OnnxEmbeddingService is already initializing, waiting...")
-            // Wait for initialization to complete with timeout
-            val startTime = System.currentTimeMillis()
-            val timeoutMs = 10000L // 10 seconds timeout
+            // Wait for initialization to complete
             while (isInitializing && !isInitialized) {
-                if (System.currentTimeMillis() - startTime > timeoutMs) {
-                    AppLogger.e(TAG, "OnnxEmbeddingService initialization timeout after ${timeoutMs}ms")
-                    throw TimeoutException("OnnxEmbeddingService initialization timeout")
-                }
                 delay(100)
             }
             return@withContext
