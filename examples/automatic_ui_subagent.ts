@@ -106,6 +106,12 @@
                             required: true
                         }
                         {
+                            name: "target_app"
+                            description: "目标应用名/包名（建议传入，用于在虚拟屏未创建时先执行一次默认 Launch 预热虚拟屏，避免在主屏误操作）"
+                            type: "string"
+                            required: false
+                        }
+                        {
                             name: "max_steps"
                             description: "最大执行步数，默认20，可根据任务复杂度调整。"
                             type: "number"
@@ -274,6 +280,12 @@
                             required: true
                         }
                         {
+                            name: "target_app"
+                            description: "目标应用名/包名（建议传入，用于在虚拟屏未创建时先执行一次默认 Launch 预热虚拟屏，避免在主屏误操作）"
+                            type: "string"
+                            required: false
+                        }
+                        {
                             name: "max_steps"
                             description: "最大执行步数，默认20，可根据任务复杂度调整。"
                             type: "number"
@@ -348,10 +360,10 @@ const UIAutomationSubAgentTools = (function () {
     }
 
 
-    async function run_subagent(params: { intent: string, max_steps?: number, agent_id?: string }): Promise<ToolResponse> {
-        const { intent, max_steps, agent_id } = params;
+    async function run_subagent(params: { intent: string, max_steps?: number, agent_id?: string, target_app?: string }): Promise<ToolResponse> {
+        const { intent, max_steps, agent_id, target_app } = params;
         const agentIdToUse = (agent_id && String(agent_id).length > 0) ? String(agent_id) : getCachedAgentId();
-        const result = await Tools.UI.runSubAgent(intent, max_steps, agentIdToUse);
+        const result = await Tools.UI.runSubAgent(intent, max_steps, agentIdToUse, target_app);
         if (result && (result as any).agentId) {
             setCachedAgentId((result as any).agentId);
         }
@@ -451,7 +463,7 @@ const UIAutomationSubAgentTools = (function () {
 
     return {
         usage_advice: (params: {}) => wrapToolExecution(usage_advice, params),
-        run_subagent: (params: { intent: string, max_steps?: number, agent_id?: string }) => wrapToolExecution(run_subagent, params),
+        run_subagent: (params: { intent: string, max_steps?: number, agent_id?: string, target_app?: string }) => wrapToolExecution(run_subagent, params),
         run_subagent_parallel: (params: {
             intent_1: string, target_app_1: string, max_steps_1?: number, agent_id_1?: string,
             intent_2?: string, target_app_2?: string, max_steps_2?: number, agent_id_2?: string,

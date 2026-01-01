@@ -26,6 +26,8 @@ public interface IShowerService extends IInterface {
 
     void injectKey(int displayId, int keyCode) throws RemoteException;
 
+    void injectKeyWithMeta(int displayId, int keyCode, int metaState) throws RemoteException;
+
     byte[] requestScreenshot(int displayId) throws RemoteException;
 
     // getDisplayId is removed regarding ensureDisplay returns the ID.
@@ -46,6 +48,7 @@ public interface IShowerService extends IInterface {
         static final int TRANSACTION_injectKey = IBinder.FIRST_CALL_TRANSACTION + 8;
         static final int TRANSACTION_requestScreenshot = IBinder.FIRST_CALL_TRANSACTION + 9;
         // getDisplayId removed
+        static final int TRANSACTION_injectKeyWithMeta = IBinder.FIRST_CALL_TRANSACTION + 10;
         static final int TRANSACTION_setVideoSink = IBinder.FIRST_CALL_TRANSACTION + 11;
 
         public Stub() {
@@ -163,6 +166,15 @@ public interface IShowerService extends IInterface {
                     byte[] result = requestScreenshot(displayId);
                     reply.writeNoException();
                     reply.writeByteArray(result);
+                    return true;
+                }
+                case TRANSACTION_injectKeyWithMeta: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int displayId = data.readInt();
+                    int keyCode = data.readInt();
+                    int metaState = data.readInt();
+                    injectKeyWithMeta(displayId, keyCode, metaState);
+                    reply.writeNoException();
                     return true;
                 }
                 case TRANSACTION_setVideoSink: {
@@ -337,6 +349,23 @@ public interface IShowerService extends IInterface {
                     data.writeInt(displayId);
                     data.writeInt(keyCode);
                     remote.transact(TRANSACTION_injectKey, data, reply, 0);
+                    reply.readException();
+                } finally {
+                    reply.recycle();
+                    data.recycle();
+                }
+            }
+
+            @Override
+            public void injectKeyWithMeta(int displayId, int keyCode, int metaState) throws RemoteException {
+                Parcel data = Parcel.obtain();
+                Parcel reply = Parcel.obtain();
+                try {
+                    data.writeInterfaceToken(DESCRIPTOR);
+                    data.writeInt(displayId);
+                    data.writeInt(keyCode);
+                    data.writeInt(metaState);
+                    remote.transact(TRANSACTION_injectKeyWithMeta, data, reply, 0);
                     reply.readException();
                 } finally {
                     reply.recycle();

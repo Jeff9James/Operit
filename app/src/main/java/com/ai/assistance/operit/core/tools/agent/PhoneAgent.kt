@@ -103,6 +103,79 @@ class PhoneAgent(
         }
     }
 
+    private fun hasShowerDisplay(logMessageSuffix: String): Boolean {
+        return try {
+            ShowerController.getDisplayId(agentId) != null || ShowerController.getVideoSize(agentId) != null
+        } catch (e: Exception) {
+            AppLogger.e("PhoneAgent", "[$agentId] $logMessageSuffix", e)
+            false
+        }
+    }
+
+    private suspend fun prewarmShowerIfNeeded(
+        hasShowerDisplayAtStart: Boolean,
+        targetApp: String?
+    ): Pair<Boolean, String?> {
+        if (hasShowerDisplayAtStart) return Pair(true, null)
+        val targetAppForPrewarm = targetApp?.takeIf { it.isNotBlank() } ?: return Pair(false, null)
+
+        val preferredLevel = androidPermissionPreferences.getPreferredPermissionLevel()
+            ?: AndroidPermissionLevel.STANDARD
+        var isAdbOrHigher = when (preferredLevel) {
+            AndroidPermissionLevel.DEBUGGER,
+            AndroidPermissionLevel.ADMIN,
+            AndroidPermissionLevel.ROOT -> true
+            else -> false
+        }
+
+        if (isAdbOrHigher) {
+            val experimentalEnabled = try {
+                DisplayPreferencesManager.getInstance(context).isExperimentalVirtualDisplayEnabled()
+            } catch (_: Exception) {
+                true
+            }
+            if (!experimentalEnabled) {
+                isAdbOrHigher = false
+            }
+        }
+
+        if (!isAdbOrHigher) return Pair(false, null)
+
+        if (preferredLevel == AndroidPermissionLevel.DEBUGGER) {
+            val isShizukuRunning = ShizukuAuthorizer.isShizukuServiceRunning()
+            val hasShizukuPermission = if (isShizukuRunning) ShizukuAuthorizer.hasShizukuPermission() else false
+            if (!isShizukuRunning || !hasShizukuPermission) {
+                return Pair(false, "Shizuku 不可用，无法启动虚拟屏幕。")
+            }
+        }
+
+        AppLogger.d(
+            "PhoneAgent",
+            "[$agentId] run: prewarming Shower virtual display via Launch(app='$targetAppForPrewarm')"
+        )
+        val prewarmResult = try {
+            actionHandler.executeAgentAction(
+                ParsedAgentAction(
+                    metadata = "do",
+                    actionName = "Launch",
+                    fields = mapOf(
+                        "action" to "Launch",
+                        "app" to targetAppForPrewarm
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            return Pair(false, "虚拟屏幕预启动失败：${e.message}")
+        }
+
+        val hasShowerAfterPrewarm = hasShowerDisplay("Error checking Shower state after prewarm")
+        if (!hasShowerAfterPrewarm) {
+            return Pair(false, prewarmResult.message ?: "虚拟屏幕未能启动，已中止以避免在主屏幕执行操作。")
+        }
+
+        return Pair(true, null)
+    }
 
     /**
      * Run the agent to complete a task.
@@ -116,7 +189,8 @@ class PhoneAgent(
         task: String,
         systemPrompt: String,
         onStep: (suspend (StepResult) -> Unit)? = null,
-        isPausedFlow: StateFlow<Boolean>? = null
+        isPausedFlow: StateFlow<Boolean>? = null,
+        targetApp: String? = null
     ): String {
         val floatingService = FloatingChatService.getInstance()
         val job = currentCoroutineContext()[Job]
@@ -127,12 +201,12 @@ class PhoneAgent(
             AppLogger.w("PhoneAgent", "[$agentId] run: no Job in coroutineContext, registry disabled")
         }
 
-        val hasShowerDisplayAtStart = try {
-            ShowerController.getDisplayId(agentId) != null || ShowerController.getVideoSize(agentId) != null
-        } catch (e: Exception) {
-            AppLogger.e("PhoneAgent", "[$agentId] Error checking Shower virtual display state", e)
-            false
+        var hasShowerDisplayAtStart = hasShowerDisplay("Error checking Shower virtual display state")
+        val (prewarmedShowerDisplay, prewarmError) = prewarmShowerIfNeeded(hasShowerDisplayAtStart, targetApp)
+        if (prewarmError != null) {
+            return prewarmError
         }
+        hasShowerDisplayAtStart = prewarmedShowerDisplay
 
         var useShowerUi = hasShowerDisplayAtStart
         val progressOverlay = UIAutomationProgressOverlay.getInstance(context)
@@ -804,8 +878,21 @@ class ActionHandler(
                 val exec = withAgentUiHiddenForAction(showerCtx) {
                     if (showerCtx.canUseShowerForInput) {
                         try {
-                            val cleared = ShowerController.key(agentId, KeyEvent.KEYCODE_CLEAR)
-                            if (!cleared) return@withAgentUiHiddenForAction fail(message = "Shower CLEAR failed")
+                            var cleared = false
+                            val selectedAll = ShowerController.keyWithMeta(agentId, KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON)
+                            if (selectedAll) {
+                                delay(80)
+                                cleared = ShowerController.key(agentId, KeyEvent.KEYCODE_DEL)
+                            }
+                            if (!cleared) {
+                                cleared = ShowerController.key(agentId, KeyEvent.KEYCODE_CLEAR)
+                            }
+                            if (!cleared) {
+                                ShowerController.key(agentId, KeyEvent.KEYCODE_MOVE_END)
+                                repeat(200) {
+                                    ShowerController.key(agentId, KeyEvent.KEYCODE_DEL)
+                                }
+                            }
                             delay(300)
                             if (text.isEmpty()) return@withAgentUiHiddenForAction ok()
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager

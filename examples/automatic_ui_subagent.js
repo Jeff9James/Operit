@@ -106,6 +106,12 @@
                             required: true
                         }
                         {
+                            name: "target_app"
+                            description: "目标应用名/包名（建议传入，用于在虚拟屏未创建时先执行一次默认 Launch 预热虚拟屏，避免在主屏误操作）"
+                            type: "string"
+                            required: false
+                        }
+                        {
                             name: "max_steps"
                             description: "最大执行步数，默认20，可根据任务复杂度调整。"
                             type: "number"
@@ -274,6 +280,12 @@
                             required: true
                         }
                         {
+                            name: "target_app"
+                            description: "目标应用名/包名（建议传入，用于在虚拟屏未创建时先执行一次默认 Launch 预热虚拟屏，避免在主屏误操作）"
+                            type: "string"
+                            required: false
+                        }
+                        {
                             name: "max_steps"
                             description: "最大执行步数，默认20，可根据任务复杂度调整。"
                             type: "number"
@@ -340,9 +352,9 @@ const UIAutomationSubAgentTools = (function () {
         };
     }
     async function run_subagent(params) {
-        const { intent, max_steps, agent_id } = params;
+        const { intent, max_steps, agent_id, target_app } = params;
         const agentIdToUse = (agent_id && String(agent_id).length > 0) ? String(agent_id) : getCachedAgentId();
-        const result = await Tools.UI.runSubAgent(intent, max_steps, agentIdToUse);
+        const result = await Tools.UI.runSubAgent(intent, max_steps, agentIdToUse, target_app);
         if (result && result.agentId) {
             setCachedAgentId(result.agentId);
         }

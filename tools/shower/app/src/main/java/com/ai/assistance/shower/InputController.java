@@ -88,12 +88,16 @@ class InputController {
     }
 
     void injectKey(int keyCode) {
+        injectKeyWithMeta(keyCode, 0);
+    }
+
+    void injectKeyWithMeta(int keyCode, int metaState) {
         long now = SystemClock.uptimeMillis();
-        KeyEvent down = new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0);
+        KeyEvent down = new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, metaState);
         down.setSource(InputDevice.SOURCE_KEYBOARD);
         inject(down);
 
-        KeyEvent up = new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0);
+        KeyEvent up = new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, metaState);
         up.setSource(InputDevice.SOURCE_KEYBOARD);
         inject(up);
     }

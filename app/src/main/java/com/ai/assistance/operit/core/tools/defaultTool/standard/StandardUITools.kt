@@ -409,6 +409,7 @@ open class StandardUITools(protected val context: Context) : ToolImplementations
         val intent = tool.parameters.find { it.name == "intent" }?.value
         val maxSteps = tool.parameters.find { it.name == "max_steps" }?.value?.toIntOrNull() ?: 20
         val requestedAgentId = tool.parameters.find { it.name == "agent_id" }?.value
+        val targetApp = tool.parameters.find { it.name == "target_app" }?.value
 
         if (intent.isNullOrBlank()) {
             return ToolResult(
@@ -465,7 +466,8 @@ open class StandardUITools(protected val context: Context) : ToolImplementations
             val finalMessage = agent.run(
                 task = intent,
                 systemPrompt = systemPrompt,
-                isPausedFlow = pausedState
+                isPausedFlow = pausedState,
+                targetApp = targetApp
             )
 
             val displayId = try {
@@ -493,6 +495,9 @@ open class StandardUITools(protected val context: Context) : ToolImplementations
                 providedParameters = buildMap {
                     put("intent", intent)
                     put("max_steps", maxSteps.toString())
+                    if (!targetApp.isNullOrBlank()) {
+                        put("target_app", targetApp)
+                    }
                     if (!requestedAgentId.isNullOrBlank()) {
                         put("agent_id", requestedAgentId)
                     }

@@ -495,6 +495,19 @@ public class Main {
                 }
 
                 @Override
+                public void injectKeyWithMeta(int displayId, int keyCode, int metaState) {
+                    markClientActive();
+                    DisplaySession session = displays.get(displayId);
+                    if (session != null && session.inputController != null) {
+                        session.inputController.injectKeyWithMeta(keyCode, metaState);
+                        logToFile(
+                                "Binder KEY(meta=" + metaState + ") injected: " + keyCode + " on " + displayId,
+                                null
+                        );
+                    }
+                }
+
+                @Override
                 public byte[] requestScreenshot(int displayId) {
                     markClientActive();
                     return captureScreenshotBytes(displayId);

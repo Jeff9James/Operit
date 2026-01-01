@@ -185,6 +185,23 @@ class ShowerController {
         val bitrate = bitrateKbps ?: 0
 
         suspend fun doEnsure(service: IShowerService): Boolean {
+            val existingId = virtualDisplayId
+            if (existingId != null && videoWidth == targetWidth && videoHeight == targetHeight) {
+                service.setVideoSink(existingId, videoSink.asBinder())
+                Log.d(TAG, "ensureDisplay reuse existing displayId=$existingId, size=${videoWidth}x${videoHeight}")
+                return true
+            }
+
+            if (existingId != null) {
+                try {
+                    service.destroyDisplay(existingId)
+                    Log.d(TAG, "ensureDisplay: destroyed previous displayId=$existingId before recreate")
+                } catch (e: Exception) {
+                    Log.w(TAG, "ensureDisplay: failed to destroy previous displayId=$existingId before recreate", e)
+                }
+                resetLocalDisplayState()
+            }
+
             // Changed: ensureDisplay now returns the ID and doesn't destroy existing ones.
             val id = service.ensureDisplay(targetWidth, targetHeight, dpi, bitrate)
             if (id < 0) {
@@ -335,13 +352,21 @@ class ShowerController {
     }
 
     suspend fun key(keyCode: Int): Boolean = withContext(Dispatchers.IO) {
+        keyWithMeta(keyCode, 0)
+    }
+
+    suspend fun keyWithMeta(keyCode: Int, metaState: Int): Boolean = withContext(Dispatchers.IO) {
         val service = getBinder() ?: return@withContext false
         val id = virtualDisplayId ?: return@withContext false
         try {
-            service.injectKey(id, keyCode)
+            if (metaState == 0) {
+                service.injectKey(id, keyCode)
+            } else {
+                service.injectKeyWithMeta(id, keyCode, metaState)
+            }
             true
         } catch (e: Exception) {
-            Log.e(TAG, "key($keyCode) failed on $id", e)
+            Log.e(TAG, "keyWithMeta(keyCode=$keyCode, metaState=$metaState) failed on $id", e)
             false
         }
     }

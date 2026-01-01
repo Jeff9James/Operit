@@ -124,5 +124,10 @@ object ShowerController {
     suspend fun key(agentId: String, keyCode: Int): Boolean =
         getInstance(agentId).key(keyCode)
 
+    suspend fun keyWithMeta(agentId: String, keyCode: Int, metaState: Int): Boolean =
+        getInstance(agentId).keyWithMeta(keyCode, metaState)
+
     suspend fun key(keyCode: Int): Boolean = key("default", keyCode)
+
+    suspend fun keyWithMeta(keyCode: Int, metaState: Int): Boolean = keyWithMeta("default", keyCode, metaState)
 }
