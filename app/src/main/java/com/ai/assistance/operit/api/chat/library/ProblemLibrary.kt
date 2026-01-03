@@ -9,6 +9,8 @@ import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.data.preferences.preferencesManager
 import com.ai.assistance.operit.data.repository.MemoryRepository
 import com.ai.assistance.operit.util.ChatUtils
+import com.ai.assistance.operit.core.config.FunctionalPrompts
+import com.ai.assistance.operit.util.LocaleUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -132,7 +134,7 @@ object ProblemLibrary {
             batches.forEachIndexed { batchIndex: Int, batch: List<Memory> ->
                 try {
                     AppLogger.d(TAG, "处理第 ${batchIndex + 1} 批记忆（共 ${batch.size} 条）...")
-                    categorizeBatch(batch, existingFolders, memoryRepository, aiService)
+                    categorizeBatch(context, batch, existingFolders, memoryRepository, aiService)
                 } catch (e: Exception) {
                     AppLogger.e(TAG, "处理第 ${batchIndex + 1} 批记忆失败", e)
                 }
@@ -146,30 +148,26 @@ object ProblemLibrary {
      * 使用 AI 为一批记忆分类
      */
     private suspend fun categorizeBatch(
+        context: Context,
         memories: List<Memory>,
         existingFolders: List<String>,
         repository: MemoryRepository,
         aiService: AIService
     ) {
-        val systemPrompt = """
-你是知识分类专家。根据记忆内容，为每条记忆分配合适的文件夹路径。
+        val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
+        val memoriesDigest = memories.joinToString("\n") { "- title: ${it.title}, content: ${it.content.take(100)}..." }
+        val systemPrompt = FunctionalPrompts.buildMemoryAutoCategorizePrompt(
+            existingFolders = existingFolders,
+            memoriesDigest = memoriesDigest,
+            useEnglish = useEnglish
+        )
 
-已存在的文件夹：${existingFolders.joinToString(", ")}
-
-请为以下记忆分类，优先使用已有文件夹，必要时创建新文件夹。
-返回 JSON 数组：[{"title": "记忆标题", "folder": "文件夹路径"}]
-
-记忆列表：
-${memories.joinToString("\n") { "- 标题: ${it.title}, 内容: ${it.content.take(100)}..." }}
-
-只返回 JSON 数组，不要其他内容。
-""".trimIndent()
-
-        val messages = listOf(Pair("system", systemPrompt), Pair("user", "请为以上记忆分类"))
+        val userMessage = if (useEnglish) "Please categorize the memories above." else "请为以上记忆分类"
+        val messages = listOf(Pair("system", systemPrompt), Pair("user", userMessage))
         val result = StringBuilder()
         
         withContext(Dispatchers.IO) {
-            val stream = aiService.sendMessage(message = "请为以上记忆分类", chatHistory = messages)
+            val stream = aiService.sendMessage(message = userMessage, chatHistory = messages)
             stream.collect { content -> result.append(content) }
         }
         
@@ -271,7 +269,7 @@ ${memories.joinToString("\n") { "- 标题: ${it.title}, 内容: ${it.content.tak
             }
 
             // Generate the graph analysis from the conversation
-            val analysis = generateAnalysis(aiService, query, prunedContent, processedHistory, memoryRepository)
+            val analysis = generateAnalysis(context, aiService, query, prunedContent, processedHistory, memoryRepository)
 
             // If analysis is empty (trivial conversation), abort early.
             if (analysis.mainProblem == null && analysis.extractedEntities.isEmpty() && analysis.updatedEntities.isEmpty() && analysis.mergedEntities.isEmpty()) {
@@ -458,6 +456,7 @@ ${memories.joinToString("\n") { "- 标题: ${it.title}, 内容: ${it.content.tak
      * Generates a structured analysis of the conversation for graph creation.
      */
     private suspend fun generateAnalysis(
+        context: Context,
         aiService: AIService,
         query: String,
         solution: String,
@@ -465,6 +464,7 @@ ${memories.joinToString("\n") { "- 标题: ${it.title}, 内容: ${it.content.tak
         memoryRepository: MemoryRepository
     ): ParsedAnalysis {
         try {
+            val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
             val currentPreferences = withContext(Dispatchers.IO) {
                 var preferences = ""
                 preferencesManager.getUserPreferencesFlow().take(1).collect { profile ->
@@ -480,112 +480,49 @@ ${memories.joinToString("\n") { "- 标题: ${it.title}, 内容: ${it.content.tak
             val candidateMemories = memoryRepository.searchMemories(contextQuery, semanticThreshold = 0.4f).take(15)
 
             // 2. Proactively find duplicates among candidates and instruct LLM to merge them
-            val duplicatesPromptPart = findAndDescribeDuplicates(candidateMemories, memoryRepository)
+            val duplicatesPromptPart = findAndDescribeDuplicates(candidateMemories, memoryRepository, useEnglish)
 
             val existingMemoriesPrompt = if (candidateMemories.isNotEmpty()) {
-                "为避免重复，请参考以下记忆库中可能相关的已有记忆。在提取实体时，如果发现与下列记忆语义相同的实体，请使用`alias_for`字段进行标注：\n" +
+                if (useEnglish) {
+                    "To avoid duplicates, please refer to these potentially relevant existing memories. If an extracted entity is semantically the same as an existing memory, use the `alias_for` field:\n" +
                         candidateMemories.joinToString("\n") { "- \"${it.title}\": ${it.content.take(150).replace("\n", " ")}..." }
+                } else {
+                    "为避免重复，请参考以下记忆库中可能相关的已有记忆。在提取实体时，如果发现与下列记忆语义相同的实体，请使用`alias_for`字段进行标注：\n" +
+                        candidateMemories.joinToString("\n") { "- \"${it.title}\": ${it.content.take(150).replace("\n", " ")}..." }
+                }
             } else {
-                "记忆库目前为空或没有找到相关记忆，请自由提取实体。"
+                if (useEnglish) {
+                    "The memory library is empty or no relevant memories were found. You may extract entities freely."
+                } else {
+                    "记忆库目前为空或没有找到相关记忆，请自由提取实体。"
+                }
             }
 
             // 获取现有文件夹列表
             val existingFolders = memoryRepository.getAllFolderPaths()
             val existingFoldersPrompt = if (existingFolders.isNotEmpty()) {
-                "当前已存在的文件夹分类如下，请优先使用或参考它们来决定新知识的分类：\n${existingFolders.joinToString(", ")}"
+                if (useEnglish) {
+                    "Existing folder categories (prefer reusing them):\n${existingFolders.joinToString(", ")}"
+                } else {
+                    "当前已存在的文件夹分类如下，请优先使用或参考它们来决定新知识的分类：\n${existingFolders.joinToString(", ")}"
+                }
             } else {
-                "当前还没有文件夹分类，请根据内容创建一个合适的分类。"
+                if (useEnglish) {
+                    "No folder categories exist yet. Please create a suitable category based on the content."
+                } else {
+                    "当前还没有文件夹分类，请根据内容创建一个合适的分类。"
+                }
             }
 
+            val systemPrompt = FunctionalPrompts.buildKnowledgeGraphExtractionPrompt(
+                duplicatesPromptPart = duplicatesPromptPart,
+                existingMemoriesPrompt = existingMemoriesPrompt,
+                existingFoldersPrompt = existingFoldersPrompt,
+                currentPreferences = currentPreferences,
+                useEnglish = useEnglish
+            )
 
-            val systemPrompt = """
-                你是一个知识图谱构建专家。你的任务是分析一段对话，并从中提取AI自己学到的关键知识，用于构建一个记忆图谱。同时，你还需要分析用户偏好。
-
-                $duplicatesPromptPart
-                $existingMemoriesPrompt
-
-                $existingFoldersPrompt
-
-                【记忆筛选原则】: AI的核心任务是学习其自身知识库之外的信息。在提取知识时，请严格遵守以下原则：
-                - **优先记录**:
-                    - 用户提供的个人信息、偏好、项目细节、人际关系。
-                    - 对话中产生的、独特的、上下文强相关的新概念。
-                    - 用户提供的、AI无法通过常规渠道获取的文件内容或数据摘要。
-                    - 在AI认知范围之外的事件（例如，发生在其知识截止日期之后的事情）。
-                - **避免记录**:
-                    - 普遍存在的常识、事实（例如：'地球是圆的'）。
-                    - 著名的历史事件、人物、地点（例如：'第一次世界大战'、'爱因斯坦'）。
-                    - 广泛可用的公开信息。
-                在判断一个信息是否为'常识'时，请站在一个大型语言模型的角度思考：'这个信息是否极有可能已经包含在我的训练数据中？'。如果答案是肯定的，则应避免为其创建独立的记忆节点。可以将这些常识性信息作为丰富现有上下文记忆的背景，而不是作为新的知识点进行存储。
-
-                你的目标是：
-                1.  **识别核心实体和概念**: 从对话中找出关键的人物、地点、项目、概念、技术等。每个实体都应该是一个独立的、可复用的知识单元。
-                2.  **定义实体间的关系**: 找出这些实体之间是如何关联的。
-                3.  **总结核心知识**: 将本次对话学习到的最核心的知识点作为一个中心记忆节点。
-                4.  **为知识分类**: 为所有新创建的知识（包括核心知识和实体）建议一个合适的文件夹路径（`folder_path`），以便于管理。
-                5.  **更新用户偏好**: 根据对话内容，增量更新对用户的了解。
-                6.  **批判性地更新和完善现有记忆**: 如果对话中的新信息可以纠正、补充或深化 `$existingMemoriesPrompt` 中列出的任何记忆，请优先更新它们，而不是创建重复的实体。
-
-                【记忆属性定义】:
-                - `credibility` (可信度): 代表该条记忆内容的准确性。取值范围 0.0 ~ 1.0。1.0代表完全可信，0.0代表完全不可信。**此值会影响记忆在被检索时的内容表示**。
-                - `importance` (重要性): 代表该条记忆对于整个知识网络的重要性。取值范围 0.0 ~ 1.0。1.0代表核心知识，0.0代表非常边缘的信息。**此值会作为搜索时的权重，直接影响其被检索到的概率**。
-                - `edge.weight` (连接权重): 代表两个记忆节点之间关联的强度。取值范围 0.0 ~ 1.0。
-
-                **【输出格式】: 你必须返回一个使用数组的紧凑型JSON，以减少Token消耗。**
-                - **键名**: 必须使用缩写: "main" (核心知识), "new" (新实体), "update" (更新实体), "merge" (合并实体), "links" (关系), "user" (用户偏好)。
-                - **值**: 必须是数组形式，并严格按照以下顺序和类型排列元素。可选字段如果不存在，请使用 `null` 占位。
-
-                ```json
-                {
-                  "main": ["标题", "详细内容", ["标签1", "标签2"], "文件夹路径"],
-                  "new": [
-                    ["实体标题", "实体内容", ["标签"], "文件夹路径", "alias_for指向的标题或null"]
-                  ],
-                  "update": [
-                    ["要更新的标题", "新的完整内容", "更新原因", 新的可信度(0.0-1.0)或null, 新的重要性(0.0-1.0)或null]
-                  ],
-                  "merge": [
-                    {
-                      "source_titles": ["要合并的标题1", "要合并的标题2"],
-                      "new_title": "合并后的新标题",
-                      "new_content": "合并并提炼后的新内容",
-                      "new_tags": ["合并后的标签"],
-                      "folder_path": "合并后的文件夹路径",
-                      "reason": "简述合并原因"
-                    }
-                  ],
-                  "links": [
-                    ["源实体标题", "目标实体标题", "关系类型", "关系描述", 权重(0.0-1.0)]
-                  ],
-                  "user": {
-                    "personality": "更新后的人格",
-                    "occupation": "<UNCHANGED>"
-                  }
-                }
-                ```
-
-                【重要指南】:
-                - 【**最重要**】如果本次对话内容非常简单、属于日常寒暄、没有包含任何新的、有价值的、值得长期记忆的知识点，或只是对已有知识的简单重复应用，请直接返回一个空的 JSON 对象 `{}`。这是控制记忆库质量的关键。
-                - `main`: 这是AI学到的核心知识，作为一个中心记忆节点。它的 `title` 和 `content` 应该聚焦于知识本身，而不是用户的提问行为。
-                - `folder_path`: 为所有新知识指定一个有意义的、层级化的文件夹路径。尽量复用已有的文件夹。如果实体与`main`主题紧密相关，它们的`folder_path`应该一致。
-                - `new`: 【极其重要】为每个提取的实体做出判断。如果它与提供的“已有记忆”列表中的某一项实质上是同一个东西，必须在数组的第5个元素提供已有记忆的标题。否则，此元素的值必须是 JSON null。
-                - `update`: **【优先更新】** 你的首要任务是维护一个准确、丰富的记忆库。当新信息可以**实质性地**改进现有记忆时（纠正错误、补充重要细节、提供全新视角），请使用此字段进行更新。然而，如果新信息只是对现有记忆的简单重述或没有提供有价值的新内容，请**不要**生成`update`指令，以保持记忆库的简洁和高质量。**优先更新和合并，而不是创建大量相似或零散的新记忆。** 如果你认为新信息影响了某条记忆的【可信度】或【重要性】，请务必在数组的第4和第5个元素中给出新的评估值。
-                - 【**冲突解决**】: `update` 和 `main` 是互斥的。如果对话的核心是**更新**一个现有概念，请**只使用 `update`**，并将 `main` 设置为 `null`。**绝对不要**在一次返回中同时使用 `update` 和 `main`。
-                - `merge`: **【合并相似项】** 当你发现多个现有记忆（在`${existingMemoriesPrompt.take(1000)}...`中提供）实际上描述的是同一个核心概念时，使用此字段将它们合并成一个更完整、更准确的单一记忆。这对于保持记忆库的整洁至关重要。
-                - `links`: 定义实体之间的关系。`source_title` 和 `target_title` 必须对应 `main` 或 `new` 中的实体标题。关系类型 (type) 应该使用大写字母和下划线 (e.g., `IS_A`, `PART_OF`, `LEADS_TO`)。`weight` 字段表示关系的强度 (0.0-1.0)，【强烈推荐】只使用以下三个标准值：
-                  - `1.0`: 代表强关联 (例如: "A 是 B 的一部分", "A 导致了 B")
-                  - `0.7`: 代表中等关联 (例如: "A 和 B 相关", "A 影响了 B")
-                  - `0.3`: 代表弱关联 (例如: "A 有时会和 B 一起提及")
-                - `user`: 【特别重要】用结构化JSON格式表示，在现有偏好的基础上进行小幅增量更新。
-                  现有用户偏好：$currentPreferences
-                  对于没有新发现的字段，使用"<UNCHANGED>"特殊标记表示保持不变。
-
-                【规则补充】: 当对话的核心结论仅仅是对一个现有概念的**深化**、**确认**或**补充**时（例如，从一次失败的工具调用中学会了‘激活机制很重要’），你**必须**通过 `update` 数组来增强现有记忆的`content`或调整其`importance`值，并且**禁止**在这种情况下使用 `main` 字段创建重复的新记忆。
-
-                只返回格式正确的JSON对象，不要添加任何其他内容。
-                """.trimIndent()
-
-            val analysisMessage = buildAnalysisMessage(query, solution, conversationHistory)
+            val analysisMessage = buildAnalysisMessage(query, solution, conversationHistory, useEnglish)
             val messages = listOf(Pair("system", systemPrompt), Pair("user", analysisMessage))
             val result = StringBuilder()
 
@@ -614,19 +551,29 @@ ${memories.joinToString("\n") { "- 标题: ${it.title}, 内容: ${it.content.tak
     /**
      * Finds duplicates within a list of candidate memories and creates a prompt instruction for the LLM.
      */
-    private suspend fun findAndDescribeDuplicates(candidateMemories: List<Memory>, memoryRepository: MemoryRepository): String {
+    private suspend fun findAndDescribeDuplicates(candidateMemories: List<Memory>, memoryRepository: MemoryRepository, useEnglish: Boolean): String {
         val titles = candidateMemories.map { it.title }.distinct()
         val duplicatesFound = mutableListOf<String>()
 
         for (title in titles) {
             val memoriesWithSameTitle = memoryRepository.findMemoriesByTitle(title)
             if (memoriesWithSameTitle.size > 1) {
-                duplicatesFound.add("发现 ${memoriesWithSameTitle.size} 个标题完全相同的记忆: \"$title\"。请在本次分析中使用 `merge` 功能将它们合并成一个单一、更完善的记忆。")
+                duplicatesFound.add(
+                    if (useEnglish) {
+                        "Found ${memoriesWithSameTitle.size} memories with the exact same title: \"$title\". Please use `merge` to combine them into a single, better memory in this analysis."
+                    } else {
+                        "发现 ${memoriesWithSameTitle.size} 个标题完全相同的记忆: \"$title\"。请在本次分析中使用 `merge` 功能将它们合并成一个单一、更完善的记忆。"
+                    }
+                )
             }
         }
 
         return if (duplicatesFound.isNotEmpty()) {
-            "【重要指令：清理重复记忆】\n" + duplicatesFound.joinToString("\n") + "\n"
+            if (useEnglish) {
+                "[IMPORTANT: deduplicate memories]\n" + duplicatesFound.joinToString("\n") + "\n"
+            } else {
+                "【重要指令：清理重复记忆】\n" + duplicatesFound.joinToString("\n") + "\n"
+            }
         } else {
             ""
         }
@@ -635,18 +582,28 @@ ${memories.joinToString("\n") { "- 标题: ${it.title}, 内容: ${it.content.tak
     private fun buildAnalysisMessage(
             query: String,
             solution: String,
-            conversationHistory: List<Pair<String, String>>
+            conversationHistory: List<Pair<String, String>>,
+            useEnglish: Boolean
     ): String {
         val messageBuilder = StringBuilder()
-        messageBuilder.appendLine("问题:")
-        messageBuilder.appendLine(query)
-        messageBuilder.appendLine()
-        messageBuilder.appendLine("解决方案:")
-        messageBuilder.appendLine(solution.take(3000))
-        messageBuilder.appendLine()
+        if (useEnglish) {
+            messageBuilder.appendLine("Question:")
+            messageBuilder.appendLine(query)
+            messageBuilder.appendLine()
+            messageBuilder.appendLine("Solution:")
+            messageBuilder.appendLine(solution.take(3000))
+            messageBuilder.appendLine()
+        } else {
+            messageBuilder.appendLine("问题:")
+            messageBuilder.appendLine(query)
+            messageBuilder.appendLine()
+            messageBuilder.appendLine("解决方案:")
+            messageBuilder.appendLine(solution.take(3000))
+            messageBuilder.appendLine()
+        }
         val recentHistory = conversationHistory.takeLast(10)
         if (recentHistory.isNotEmpty()) {
-            messageBuilder.appendLine("历史记录:")
+            messageBuilder.appendLine(if (useEnglish) "History:" else "历史记录:")
             recentHistory.forEachIndexed { index, (role, content) ->
                 messageBuilder.appendLine("#${index + 1} $role: ${content.take(4000)}")
             }

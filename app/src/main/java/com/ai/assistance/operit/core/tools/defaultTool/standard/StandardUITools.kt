@@ -28,6 +28,7 @@ import com.ai.assistance.operit.ui.common.displays.UIAutomationProgressOverlay
 import com.ai.assistance.operit.ui.common.displays.VirtualDisplayOverlay
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.util.ImagePoolManager
+import com.ai.assistance.operit.util.LocaleUtils
 import com.ai.assistance.operit.core.tools.agent.ActionHandler
 import com.ai.assistance.operit.core.tools.agent.AgentConfig
 import com.ai.assistance.operit.core.tools.agent.PhoneAgent
@@ -540,11 +541,16 @@ open class StandardUITools(protected val context: Context) : ToolImplementations
      * Subclasses can override this method if they have a more specialized screenshot pipeline.
      */
     private fun buildUiAutomationSystemPrompt(): String {
-        val calendar = Calendar.getInstance()
-        val sdf = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
-        val datePart = sdf.format(Date())
-        val weekdayNames =
-                arrayOf(
+        val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
+        val formattedDate =
+            if (useEnglish) {
+                SimpleDateFormat("yyyy-MM-dd EEEE", Locale.ENGLISH).format(Date())
+            } else {
+                val calendar = Calendar.getInstance()
+                val sdf = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
+                val datePart = sdf.format(Date())
+                val weekdayNames =
+                    arrayOf(
                         "星期日",
                         "星期一",
                         "星期二",
@@ -552,10 +558,11 @@ open class StandardUITools(protected val context: Context) : ToolImplementations
                         "星期四",
                         "星期五",
                         "星期六"
-                )
-        val weekday = weekdayNames[calendar.get(Calendar.DAY_OF_WEEK) - 1]
-        val formattedDate = "$datePart $weekday"
-        return FunctionalPrompts.UI_AUTOMATION_AGENT_PROMPT.replace("{{current_date}}", formattedDate)
+                    )
+                val weekday = weekdayNames[calendar.get(Calendar.DAY_OF_WEEK) - 1]
+                "$datePart $weekday"
+            }
+        return FunctionalPrompts.buildUiAutomationAgentPrompt(formattedDate, useEnglish)
     }
 
     protected open suspend fun captureScreenshotToFile(tool: AITool): Pair<String?, Pair<Int, Int>?> {

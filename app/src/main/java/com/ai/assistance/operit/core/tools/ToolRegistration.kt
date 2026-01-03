@@ -1,6 +1,7 @@
 package com.ai.assistance.operit.core.tools
 
 import android.content.Context
+import com.ai.assistance.operit.R
 import com.ai.assistance.operit.core.tools.defaultTool.ToolGetter
 import com.ai.assistance.operit.data.model.AITool
 import com.ai.assistance.operit.data.model.ToolResult
@@ -52,6 +53,23 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
         }
     }
 
+    fun s(resId: Int, vararg args: Any): String = context.getString(resId, *args)
+
+    fun formatEnvInfo(environment: String?): String {
+        return if (!environment.isNullOrBlank() && environment != "android") {
+            s(R.string.toolreg_env_info, environment)
+        } else {
+            ""
+        }
+    }
+
+    fun formatEnvArrowInfo(sourceEnv: String, destEnv: String): String {
+        return if (sourceEnv != "android" || destEnv != "android") {
+            s(R.string.toolreg_env_arrow_info, sourceEnv, destEnv)
+        } else {
+            ""
+        }
+    }
 
     // 不在提示词加入的工具
     handler.registerTool(
@@ -59,7 +77,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = { true }, // 总是危险操作
             descriptionGenerator = { tool ->
                 val command = tool.parameters.find { it.name == "command" }?.value ?: ""
-                "执行ADB Shell: $command"
+                s(R.string.toolreg_execute_shell_desc, command)
             },
             executor = { tool ->
                 val adbTool = ToolGetter.getShellToolExecutor(context)
@@ -70,7 +88,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     handler.registerTool(
             name = "close_all_virtual_displays",
             dangerCheck = { false },
-            descriptionGenerator = { _ -> "关闭所有虚拟屏幕" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_close_all_virtual_displays_desc) },
             executor = { tool ->
                 try {
                     VirtualDisplayOverlay.hideAll()
@@ -96,7 +114,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = { false },
             descriptionGenerator = { tool ->
                 val sessionName = tool.parameters.find { it.name == "session_name" }?.value
-                "创建或获取终端会话: ${sessionName ?: "未命名"}"
+                val displayName = sessionName ?: s(R.string.toolreg_unnamed)
+                s(R.string.toolreg_create_terminal_session_desc, displayName)
             },
             executor = { tool ->
                 val terminalTool = ToolGetter.getTerminalCommandExecutor(context)
@@ -110,7 +129,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val command = tool.parameters.find { it.name == "command" }?.value ?: ""
                 val sessionId = tool.parameters.find { it.name == "session_id" }?.value
-                "在终端会话 '$sessionId' 中执行: $command"
+                s(R.string.toolreg_execute_in_terminal_session_desc, sessionId ?: "", command)
             },
             executor = { tool ->
                 val terminalTool = ToolGetter.getTerminalCommandExecutor(context)
@@ -123,7 +142,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = { false },
             descriptionGenerator = { tool ->
                 val sessionId = tool.parameters.find { it.name == "session_id" }?.value
-                "关闭终端会话: $sessionId"
+                s(R.string.toolreg_close_terminal_session_desc, sessionId ?: "")
             },
             executor = { tool ->
                 val terminalTool = ToolGetter.getTerminalCommandExecutor(context)
@@ -137,7 +156,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = null,
             descriptionGenerator = { tool ->
                 val query = tool.parameters.find { it.name == "query" }?.value ?: ""
-                "查询问题库: $query"
+                s(R.string.toolreg_query_memory_desc, query)
             },
             executor = { tool ->
                 val problemLibraryTool = ToolGetter.getMemoryQueryToolExecutor(context)
@@ -151,7 +170,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = null,
             descriptionGenerator = { tool ->
                 val title = tool.parameters.find { it.name == "title" }?.value ?: ""
-                "根据标题获取记忆: $title"
+                s(R.string.toolreg_get_memory_by_title_desc, title)
             },
             executor = { tool ->
                 val memoryTool = ToolGetter.getMemoryQueryToolExecutor(context)
@@ -166,16 +185,24 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val params = mutableListOf<String>()
                 tool.parameters.forEach { param ->
-                    when (param.name) {
-                        "birth_date" -> params.add("生日")
-                        "gender" -> params.add("性别")
-                        "personality" -> params.add("性格")
-                        "identity" -> params.add("身份")
-                        "occupation" -> params.add("职业")
-                        "ai_style" -> params.add("AI风格")
+                    val label =
+                            when (param.name) {
+                                "birth_date" -> s(R.string.toolreg_user_pref_birth_date)
+                                "gender" -> s(R.string.toolreg_user_pref_gender)
+                                "personality" -> s(R.string.toolreg_user_pref_personality)
+                                "identity" -> s(R.string.toolreg_user_pref_identity)
+                                "occupation" -> s(R.string.toolreg_user_pref_occupation)
+                                "ai_style" -> s(R.string.toolreg_user_pref_ai_style)
+                                else -> null
+                            }
+                    if (label != null) {
+                        params.add(label)
                     }
                 }
-                "更新用户偏好: ${params.joinToString(", ")}"
+                s(
+                        R.string.toolreg_update_user_preferences_desc,
+                        params.joinToString(s(R.string.toolreg_list_separator))
+                )
             },
             executor = { tool ->
                 val memoryTool = ToolGetter.getMemoryQueryToolExecutor(context)
@@ -189,7 +216,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = null,
             descriptionGenerator = { tool ->
                 val title = tool.parameters.find { it.name == "title" }?.value ?: ""
-                "创建记忆: $title"
+                s(R.string.toolreg_create_memory_desc, title)
             },
             executor = { tool ->
                 val memoryTool = ToolGetter.getMemoryQueryToolExecutor(context)
@@ -204,7 +231,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val oldTitle = tool.parameters.find { it.name == "old_title" }?.value ?: ""
                 val newTitle = tool.parameters.find { it.name == "new_title" }?.value ?: oldTitle
-                "更新记忆: $oldTitle -> $newTitle"
+                s(R.string.toolreg_update_memory_desc, oldTitle, newTitle)
             },
             executor = { tool ->
                 val memoryTool = ToolGetter.getMemoryQueryToolExecutor(context)
@@ -218,7 +245,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = null,
             descriptionGenerator = { tool ->
                 val title = tool.parameters.find { it.name == "title" }?.value ?: ""
-                "删除记忆: $title"
+                s(R.string.toolreg_delete_memory_desc, title)
             },
             executor = { tool ->
                 val memoryTool = ToolGetter.getMemoryQueryToolExecutor(context)
@@ -234,7 +261,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val sourceTitle = tool.parameters.find { it.name == "source_title" }?.value ?: ""
                 val targetTitle = tool.parameters.find { it.name == "target_title" }?.value ?: ""
                 val linkType = tool.parameters.find { it.name == "link_type" }?.value ?: "related"
-                "链接记忆: '$sourceTitle' -> '$targetTitle' (类型: $linkType)"
+                s(R.string.toolreg_link_memories_desc, sourceTitle, targetTitle, linkType)
             },
             executor = { tool ->
                 val memoryTool = ToolGetter.getMemoryQueryToolExecutor(context)
@@ -247,7 +274,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "use_package",
             descriptionGenerator = { tool ->
                 val packageName = tool.parameters.find { it.name == "package_name" }?.value ?: ""
-                "使用工具包: $packageName"
+                s(R.string.toolreg_use_package_desc, packageName)
             },
             executor = { tool ->
                 val packageName = tool.parameters.find { it.name == "package_name" }?.value ?: ""
@@ -264,7 +291,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "calculate",
             descriptionGenerator = { tool ->
                 val expression = tool.parameters.find { it.name == "expression" }?.value ?: ""
-                "计算表达式: $expression"
+                s(R.string.toolreg_calculate_desc, expression)
             },
             executor = { tool ->
                 val expression = tool.parameters.find { it.name == "expression" }?.value ?: ""
@@ -296,9 +323,13 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
 
                 when {
                     !visitKey.isNullOrBlank() && !linkNumber.isNullOrBlank() ->
-                        "访问先前搜索结果中的链接 #${linkNumber} (Visit Key: ${visitKey.take(8)}...)"
-                    !url.isNullOrBlank() -> "访问网页: $url"
-                    else -> "访问网页"
+                        s(
+                                R.string.toolreg_visit_web_search_link_desc,
+                                linkNumber,
+                                visitKey.take(8)
+                        )
+                    !url.isNullOrBlank() -> s(R.string.toolreg_visit_web_url_desc, url)
+                    else -> s(R.string.toolreg_visit_web_desc)
                 }
             },
             executor = { tool ->
@@ -314,12 +345,13 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val durationMs =
                         tool.parameters.find { it.name == "duration_ms" }?.value?.toIntOrNull()
                                 ?: 1000
-                "休眠 ${durationMs}毫秒"
+                s(R.string.toolreg_sleep_desc, durationMs)
             },
             executor = { tool ->
                 val durationMs =
                         tool.parameters.find { it.name == "duration_ms" }?.value?.toIntOrNull()
                                 ?: 1000
+
                 val limitedDuration = durationMs.coerceIn(0, 10000) // Limit to max 10 seconds
 
                 // Use runBlocking with Dispatchers.IO to ensure sleep happens on background thread
@@ -346,11 +378,17 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val type = tool.parameters.find { it.name == "type" }?.value ?: "activity"
 
                 when {
-                    !component.isNullOrBlank() -> "执行Intent: 组件 $component (${type})"
+                    !component.isNullOrBlank() ->
+                            s(R.string.toolreg_execute_intent_component_desc, component, type)
                     !packageName.isNullOrBlank() && !action.isNullOrBlank() ->
-                            "执行Intent: $action (包: $packageName, 类型: ${type})"
-                    !action.isNullOrBlank() -> "执行Intent: $action (类型: ${type})"
-                    else -> "执行Android Intent (类型: ${type})"
+                            s(
+                                    R.string.toolreg_execute_intent_action_package_desc,
+                                    action,
+                                    packageName,
+                                    type
+                            )
+                    !action.isNullOrBlank() -> s(R.string.toolreg_execute_intent_action_desc, action, type)
+                    else -> s(R.string.toolreg_execute_android_intent_desc, type)
                 }
             },
             executor = { tool ->
@@ -362,7 +400,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     // 设备信息工具
     handler.registerTool(
             name = "device_info",
-            descriptionGenerator = { _ -> "获取设备信息" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_device_info_desc) },
             executor = { tool ->
                 val deviceInfoTool = ToolGetter.getDeviceInfoToolExecutor(context)
                 deviceInfoTool.invoke(tool)
@@ -375,7 +413,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val taskType = tool.parameters.find { it.name == "task_type" }?.value ?: ""
                 val args = tool.parameters.filter { it.name.startsWith("arg1") }.joinToString(",")
-                "触发Tasker事件: $taskType ($args)"
+                s(R.string.toolreg_trigger_tasker_event_desc, taskType, args)
             },
             executor = { tool ->
                 val params = tool.parameters.associate { it.name to it.value }
@@ -385,7 +423,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                         toolName = tool.name,
                         success = false,
                         result = StringResultData(""),
-                        error = "缺少必需参数: task_type"
+                        error = s(R.string.toolreg_missing_required_param, "task_type")
                     )
                 } else {
                     val args = params.filterKeys { it != "task_type" }
@@ -397,14 +435,21 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                         ToolResult(
                             toolName = tool.name,
                             success = true,
-                            result = StringResultData("Triggered Tasker event: $taskType")
+                            result =
+                                    StringResultData(
+                                            s(R.string.toolreg_tasker_event_triggered_result, taskType)
+                                    )
                         )
                     } catch (e: Exception) {
                         ToolResult(
                             toolName = tool.name,
                             success = false,
                             result = StringResultData(""),
-                            error = "Failed to trigger Tasker event: ${e.message}"
+                            error =
+                                    s(
+                                            R.string.toolreg_failed_trigger_tasker_event,
+                                            e.message ?: ""
+                                    )
                         )
                     }
                 }
@@ -418,7 +463,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     // 获取所有工作流
     handler.registerTool(
             name = "get_all_workflows",
-            descriptionGenerator = { _ -> "获取所有工作流列表" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_get_all_workflows_desc) },
             executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.getAllWorkflows(tool) } }
     )
 
@@ -427,7 +472,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "create_workflow",
             descriptionGenerator = { tool ->
                 val name = tool.parameters.find { it.name == "name" }?.value ?: ""
-                "创建工作流: $name"
+                s(R.string.toolreg_create_workflow_desc, name)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.createWorkflow(tool) } }
     )
@@ -437,7 +482,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "get_workflow",
             descriptionGenerator = { tool ->
                 val id = tool.parameters.find { it.name == "workflow_id" }?.value ?: ""
-                "获取工作流详情: $id"
+                s(R.string.toolreg_get_workflow_desc, id)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.getWorkflow(tool) } }
     )
@@ -449,9 +494,9 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val id = tool.parameters.find { it.name == "workflow_id" }?.value ?: ""
                 val name = tool.parameters.find { it.name == "name" }?.value
                 if (name != null) {
-                    "更新工作流: $id (新名称: $name)"
+                    s(R.string.toolreg_update_workflow_with_name_desc, id, name)
                 } else {
-                    "更新工作流: $id"
+                    s(R.string.toolreg_update_workflow_desc, id)
                 }
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.updateWorkflow(tool) } }
@@ -462,7 +507,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "delete_workflow",
             descriptionGenerator = { tool ->
                 val id = tool.parameters.find { it.name == "workflow_id" }?.value ?: ""
-                "删除工作流: $id"
+                s(R.string.toolreg_delete_workflow_desc, id)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.deleteWorkflow(tool) } }
     )
@@ -472,7 +517,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "trigger_workflow",
             descriptionGenerator = { tool ->
                 val id = tool.parameters.find { it.name == "workflow_id" }?.value ?: ""
-                "触发工作流: $id"
+                s(R.string.toolreg_trigger_workflow_desc, id)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { workflowTools.triggerWorkflow(tool) } }
     )
@@ -483,14 +528,14 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     // 启动聊天服务
     handler.registerTool(
             name = "start_chat_service",
-            descriptionGenerator = { _ -> "启动对话服务（悬浮窗）" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_start_chat_service_desc) },
             executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.startChatService(tool) } }
     )
 
     // 停止聊天服务
     handler.registerTool(
             name = "stop_chat_service",
-            descriptionGenerator = { _ -> "停止对话服务（悬浮窗）" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_stop_chat_service_desc) },
             executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.stopChatService(tool) } }
     )
 
@@ -500,9 +545,9 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val group = tool.parameters.find { it.name == "group" }?.value
                 if (group.isNullOrBlank()) {
-                    "创建新的对话"
+                    s(R.string.toolreg_create_new_chat_desc)
                 } else {
-                    "创建新的对话 (分组: $group)"
+                    s(R.string.toolreg_create_new_chat_in_group_desc, group)
                 }
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.createNewChat(tool) } }
@@ -511,7 +556,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     // 列出所有对话
     handler.registerTool(
             name = "list_chats",
-            descriptionGenerator = { _ -> "列出所有对话" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_list_chats_desc) },
             executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.listChats(tool) } }
     )
 
@@ -520,7 +565,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "switch_chat",
             descriptionGenerator = { tool ->
                 val chatId = tool.parameters.find { it.name == "chat_id" }?.value ?: ""
-                "切换到对话: $chatId"
+                s(R.string.toolreg_switch_chat_desc, chatId)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.switchChat(tool) } }
     )
@@ -531,7 +576,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val message = tool.parameters.find { it.name == "message" }?.value ?: ""
                 val preview = if (message.length > 30) "${message.take(30)}..." else message
-                "发送消息给AI: $preview"
+                s(R.string.toolreg_send_message_to_ai_desc, preview)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { chatManagerTool.sendMessageToAI(tool) } }
     )
@@ -545,8 +590,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "列出目录内容: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_list_files_desc, path, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.listFiles(tool) }
@@ -559,8 +604,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "读取文件: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_read_file_desc, path, envInfo)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.readFile(tool) } }
     )
@@ -573,9 +618,14 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val environment = tool.parameters.find { it.name == "environment" }?.value
                 val startLine = tool.parameters.find { it.name == "start_line" }?.value ?: "1"
                 val endLine = tool.parameters.find { it.name == "end_line" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                val rangeInfo = if (endLine != null) "行 $startLine-$endLine" else "从行 $startLine 开始"
-                "读取文件 ($rangeInfo): $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                val rangeInfo =
+                        if (endLine != null) {
+                            s(R.string.toolreg_read_file_part_range_lines, startLine, endLine)
+                        } else {
+                            s(R.string.toolreg_read_file_part_range_from, startLine)
+                        }
+                s(R.string.toolreg_read_file_part_desc, rangeInfo, path, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.readFilePart(tool) }
@@ -588,8 +638,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "读取完整文件内容: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_read_file_full_desc, path, envInfo)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.readFileFull(tool) } }
     )
@@ -600,8 +650,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "读取二进制文件内容: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_read_file_binary_desc, path, envInfo)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.readFileBinary(tool) } }
     )
@@ -614,9 +664,14 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
                 val append = tool.parameters.find { it.name == "append" }?.value == "true"
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                val operation = if (append) "追加内容到文件" else "写入内容到文件"
-                "$operation: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                val operation =
+                        if (append) {
+                            s(R.string.toolreg_write_file_append_operation)
+                        } else {
+                            s(R.string.toolreg_write_file_overwrite_operation)
+                        }
+                s(R.string.toolreg_write_file_desc, operation, path, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.writeFile(tool) }
@@ -630,8 +685,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
         descriptionGenerator = { tool ->
             val path = tool.parameters.find { it.name == "path" }?.value ?: ""
             val environment = tool.parameters.find { it.name == "environment" }?.value
-            val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-            "将Base64内容写入二进制文件: $path$envInfo"
+            val envInfo = formatEnvInfo(environment)
+            s(R.string.toolreg_write_file_binary_desc, path, envInfo)
         },
         executor = { tool ->
             runBlocking(Dispatchers.IO) { fileSystemTools.writeFileBinary(tool) }
@@ -646,9 +701,14 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
                 val recursive = tool.parameters.find { it.name == "recursive" }?.value == "true"
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                val operation = if (recursive) "递归删除" else "删除文件"
-                "$operation: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                val operation =
+                        if (recursive) {
+                            s(R.string.toolreg_delete_file_recursive_operation)
+                        } else {
+                            s(R.string.toolreg_delete_file_operation)
+                        }
+                s(R.string.toolreg_delete_file_desc, operation, path, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.deleteFile(tool) }
@@ -693,18 +753,20 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val className = tool.parameters.find { it.name == "className" }?.value
                 val bounds = tool.parameters.find { it.name == "bounds" }?.value
                 val index = tool.parameters.find { it.name == "index" }?.value ?: "0"
+                val indexSuffix =
+                        if (index != "0") {
+                            s(R.string.toolreg_index_suffix, index)
+                        } else {
+                            ""
+                        }
 
                 when {
                     resourceId != null ->
-                            "点击元素 [资源ID: $resourceId" +
-                                    (if (index != "0") ", 索引: $index" else "") +
-                                    "]"
+                            s(R.string.toolreg_click_element_resourceid_desc, resourceId, indexSuffix)
                     className != null ->
-                            "点击元素 [类名: $className" +
-                                    (if (index != "0") ", 索引: $index" else "") +
-                                    "]"
-                    bounds != null -> "点击元素 [边界: $bounds]"
-                    else -> "点击元素"
+                            s(R.string.toolreg_click_element_classname_desc, className, indexSuffix)
+                    bounds != null -> s(R.string.toolreg_click_element_bounds_desc, bounds)
+                    else -> s(R.string.toolreg_click_element_desc)
                 }
             },
             executor = { tool ->
@@ -720,7 +782,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val x = tool.parameters.find { it.name == "x" }?.value ?: "?"
                 val y = tool.parameters.find { it.name == "y" }?.value ?: "?"
-                "点击屏幕坐标 ($x, $y)"
+                s(R.string.toolreg_tap_desc, x, y)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) {
@@ -734,7 +796,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val x = tool.parameters.find { it.name == "x" }?.value ?: "?"
                 val y = tool.parameters.find { it.name == "y" }?.value ?: "?"
-                "长按屏幕坐标 ($x, $y)"
+                s(R.string.toolreg_long_press_desc, x, y)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) {
@@ -752,7 +814,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val url = tool.parameters.find { it.name == "url" }?.value ?: ""
                 val method = tool.parameters.find { it.name == "method" }?.value ?: "GET"
-                "$method 请求: $url"
+                s(R.string.toolreg_http_request_desc, method, url)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { httpTools.httpRequest(tool) } }
     )
@@ -769,7 +831,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                         } catch (e: Exception) {
                             0
                         }
-                "多部分表单请求: $url (包含 $filesCount 个文件)"
+                s(R.string.toolreg_multipart_request_desc, url, filesCount)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { httpTools.multipartRequest(tool) }
@@ -784,10 +846,20 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                         tool.parameters.find { it.name == "action" }?.value?.lowercase() ?: "get"
                 val domain = tool.parameters.find { it.name == "domain" }?.value ?: ""
                 when (action) {
-                    "get" -> if (domain.isBlank()) "获取所有Cookie" else "获取域名 $domain 的Cookie"
-                    "set" -> "设置Cookie到域名 $domain"
-                    "clear" -> if (domain.isBlank()) "清除所有Cookie" else "清除域名 $domain 的Cookie"
-                    else -> "管理Cookie: $action"
+                    "get" ->
+                            if (domain.isBlank()) {
+                                s(R.string.toolreg_manage_cookies_get_all_desc)
+                            } else {
+                                s(R.string.toolreg_manage_cookies_get_domain_desc, domain)
+                            }
+                    "set" -> s(R.string.toolreg_manage_cookies_set_domain_desc, domain)
+                    "clear" ->
+                            if (domain.isBlank()) {
+                                s(R.string.toolreg_manage_cookies_clear_all_desc)
+                            } else {
+                                s(R.string.toolreg_manage_cookies_clear_domain_desc, domain)
+                            }
+                    else -> s(R.string.toolreg_manage_cookies_desc, action)
                 }
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { httpTools.manageCookies(tool) } }
@@ -799,8 +871,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "检查文件存在: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_file_exists_desc, path, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.fileExists(tool) }
@@ -815,8 +887,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val source = tool.parameters.find { it.name == "source" }?.value ?: ""
                 val destination = tool.parameters.find { it.name == "destination" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "移动文件: $source -> $destination$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_move_file_desc, source, destination, envInfo)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.moveFile(tool) } }
     )
@@ -830,17 +902,13 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val sourceEnv = tool.parameters.find { it.name == "source_environment" }?.value
                 val destEnv = tool.parameters.find { it.name == "dest_environment" }?.value
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                
+
                 // 确定源和目标环境
                 val srcEnv = sourceEnv ?: environment ?: "android"
                 val dstEnv = destEnv ?: environment ?: "android"
-                
-                val envInfo = if (srcEnv != "android" || dstEnv != "android") {
-                    " ($srcEnv → $dstEnv)"
-                } else {
-                    ""
-                }
-                "复制文件: $source -> $destination$envInfo"
+
+                val envInfo = formatEnvArrowInfo(srcEnv, dstEnv)
+                s(R.string.toolreg_copy_file_desc, source, destination, envInfo)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.copyFile(tool) } }
     )
@@ -851,8 +919,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "创建目录: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_make_directory_desc, path, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.makeDirectory(tool) }
@@ -869,7 +937,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val host = tool.parameters.find { it.name == "host" }?.value ?: ""
                 val username = tool.parameters.find { it.name == "username" }?.value ?: ""
                 val port = tool.parameters.find { it.name == "port" }?.value ?: "22"
-                "登录SSH服务器: $username@$host:$port"
+                s(R.string.toolreg_ssh_login_desc, username, host, port)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { sshTools.sshLogin(tool) } }
     )
@@ -877,7 +945,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     // 退出SSH
     handler.registerTool(
             name = "ssh_exit",
-            descriptionGenerator = { _ -> "退出SSH连接" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_ssh_exit_desc) },
             executor = { tool -> runBlocking(Dispatchers.IO) { sshTools.sshExit(tool) } }
     )
 
@@ -888,8 +956,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val pattern = tool.parameters.find { it.name == "pattern" }?.value ?: "*"
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "搜索文件: 在 $path 中查找 $pattern$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_find_files_desc, path, pattern, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.findFiles(tool) }
@@ -902,8 +970,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "获取文件信息: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_file_info_desc, path, envInfo)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.fileInfo(tool) } }
     )
@@ -915,8 +983,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "智能合并AI代码到文件: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_apply_file_desc, path, envInfo)
             },
             executor =
                     object : ToolExecutor {
@@ -939,8 +1007,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val source = tool.parameters.find { it.name == "source" }?.value ?: ""
                 val destination = tool.parameters.find { it.name == "destination" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "压缩文件: $source -> $destination$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_zip_files_desc, source, destination, envInfo)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.zipFiles(tool) } }
     )
@@ -952,8 +1020,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val source = tool.parameters.find { it.name == "source" }?.value ?: ""
                 val destination = tool.parameters.find { it.name == "destination" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "解压文件: $source -> $destination$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_unzip_files_desc, source, destination, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.unzipFiles(tool) }
@@ -966,8 +1034,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "打开文件: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_open_file_desc, path, envInfo)
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { fileSystemTools.openFile(tool) } }
     )
@@ -978,8 +1046,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "分享文件: $path$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_share_file_desc, path, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.shareFile(tool) }
@@ -994,12 +1062,11 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val pattern = tool.parameters.find { it.name == "pattern" }?.value ?: ""
                 val filePattern = tool.parameters.find { it.name == "file_pattern" }?.value
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                val baseDescription = "在 $path 中搜索代码: '$pattern'$envInfo"
+                val envInfo = formatEnvInfo(environment)
                 if (filePattern != null && filePattern != "*") {
-                    "$baseDescription (文件类型: $filePattern)"
+                    s(R.string.toolreg_grep_code_with_file_pattern_desc, path, pattern, envInfo, filePattern)
                 } else {
-                    baseDescription
+                    s(R.string.toolreg_grep_code_desc, path, pattern, envInfo)
                 }
             },
             executor = { tool ->
@@ -1014,9 +1081,9 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
                 val intent = tool.parameters.find { it.name == "intent" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
+                val envInfo = formatEnvInfo(environment)
                 val preview = if (intent.length > 40) "${intent.take(40)}..." else intent
-                "在 $path 中基于意图搜索相关文件: '$preview'$envInfo"
+                s(R.string.toolreg_grep_context_desc, path, preview, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.grepContext(tool) }
@@ -1030,8 +1097,8 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val url = tool.parameters.find { it.name == "url" }?.value ?: ""
                 val destination = tool.parameters.find { it.name == "destination" }?.value ?: ""
                 val environment = tool.parameters.find { it.name == "environment" }?.value
-                val envInfo = if (!environment.isNullOrBlank() && environment != "android") " (环境: $environment)" else ""
-                "下载文件: $url -> $destination$envInfo"
+                val envInfo = formatEnvInfo(environment)
+                s(R.string.toolreg_download_file_desc, url, destination, envInfo)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { fileSystemTools.downloadFile(tool) }
@@ -1048,7 +1115,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val key = tool.parameters.find { it.name == "key" }?.value ?: ""
                 val value = tool.parameters.find { it.name == "value" }?.value ?: ""
-                "修改系统设置: $key = $value"
+                s(R.string.toolreg_modify_system_setting_desc, key, value)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.modifySystemSetting(tool) }
@@ -1060,7 +1127,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "get_system_setting",
             descriptionGenerator = { tool ->
                 val key = tool.parameters.find { it.name == "key" }?.value ?: ""
-                "获取系统设置: $key"
+                s(R.string.toolreg_get_system_setting_desc, key)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.getSystemSetting(tool) }
@@ -1073,7 +1140,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = { true },
             descriptionGenerator = { tool ->
                 val path = tool.parameters.find { it.name == "path" }?.value ?: ""
-                "安装应用: $path"
+                s(R.string.toolreg_install_app_desc, path)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.installApp(tool) }
@@ -1086,7 +1153,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = { true },
             descriptionGenerator = { tool ->
                 val packageName = tool.parameters.find { it.name == "package_name" }?.value ?: ""
-                "卸载应用: $packageName"
+                s(R.string.toolreg_uninstall_app_desc, packageName)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.uninstallApp(tool) }
@@ -1096,7 +1163,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     // 获取已安装应用列表
     handler.registerTool(
             name = "list_installed_apps",
-            descriptionGenerator = { _ -> "列出已安装应用" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_list_installed_apps_desc) },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.listInstalledApps(tool) }
             }
@@ -1107,7 +1174,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "start_app",
             descriptionGenerator = { tool ->
                 val packageName = tool.parameters.find { it.name == "package_name" }?.value ?: ""
-                "启动应用: $packageName"
+                s(R.string.toolreg_start_app_desc, packageName)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.startApp(tool) }
@@ -1120,7 +1187,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             dangerCheck = { true },
             descriptionGenerator = { tool ->
                 val packageName = tool.parameters.find { it.name == "package_name" }?.value ?: ""
-                "停止应用: $packageName"
+                s(R.string.toolreg_stop_app_desc, packageName)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.stopApp(tool) }
@@ -1135,8 +1202,11 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val includeOngoing =
                         tool.parameters.find { it.name == "include_ongoing" }?.value == "true"
 
-                val description = "获取设备通知 (最多 $limit 条)"
-                if (includeOngoing) "$description，包括常驻通知" else description
+                if (includeOngoing) {
+                    s(R.string.toolreg_get_notifications_desc_with_ongoing, limit)
+                } else {
+                    s(R.string.toolreg_get_notifications_desc, limit)
+                }
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.getNotifications(tool) }
@@ -1149,7 +1219,11 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val highAccuracy =
                         tool.parameters.find { it.name == "high_accuracy" }?.value == "true"
-                if (highAccuracy) "获取设备位置 (高精度)" else "获取设备位置"
+                if (highAccuracy) {
+                    s(R.string.toolreg_get_device_location_high_accuracy_desc)
+                } else {
+                    s(R.string.toolreg_get_device_location_desc)
+                }
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) { systemOperationTools.getDeviceLocation(tool) }
@@ -1159,7 +1233,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     // 获取当前页面/窗口信息
     handler.registerTool(
             name = "get_page_info",
-            descriptionGenerator = { _ -> "获取当前页面信息" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_get_page_info_desc) },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) {
                     executeUiToolWithVisibility(tool) { uiTools.getPageInfo(it) }
@@ -1169,7 +1243,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
 
     handler.registerTool(
             name = "capture_screenshot",
-            descriptionGenerator = { _ -> "截取屏幕截图，返回文件路径" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_capture_screenshot_desc) },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) {
                     executeUiToolWithVisibility(
@@ -1195,11 +1269,11 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val maxSteps = tool.parameters.find { it.name == "max_steps" }?.value ?: "20"
                 val agentId = tool.parameters.find { it.name == "agent_id" }?.value
                 buildString {
-                    append("运行UI子代理以完成任务: $intent (最多执行 $maxSteps 步)")
+                    append(s(R.string.toolreg_run_ui_subagent_desc, intent, maxSteps))
                     if (!agentId.isNullOrBlank()) {
-                        append(" (agent_id=$agentId)")
+                        append(s(R.string.toolreg_agent_id_suffix, agentId))
                     }
-                    append("。建议在多次调用中尽量复用同一个 agent_id，以持续操作同一虚拟屏幕会话（可沿用上一次返回的 agentId 作为 agent_id）。")
+                    append(s(R.string.toolreg_run_ui_subagent_hint))
                 }
             },
             executor = { tool -> runBlocking(Dispatchers.IO) { uiTools.runUiSubAgent(tool) } }
@@ -1210,7 +1284,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "set_input_text",
             descriptionGenerator = { tool ->
                 val text = tool.parameters.find { it.name == "text" }?.value ?: ""
-                "设置输入文本: $text"
+                s(R.string.toolreg_set_input_text_desc, text)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) {
@@ -1224,7 +1298,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             name = "press_key",
             descriptionGenerator = { tool ->
                 val keyCode = tool.parameters.find { it.name == "key_code" }?.value ?: ""
-                "按下按键: $keyCode"
+                s(R.string.toolreg_press_key_desc, keyCode)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) {
@@ -1241,7 +1315,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
                 val startY = tool.parameters.find { it.name == "start_y" }?.value ?: "?"
                 val endX = tool.parameters.find { it.name == "end_x" }?.value ?: "?"
                 val endY = tool.parameters.find { it.name == "end_y" }?.value ?: "?"
-                "滑动: ($startX,$startY) -> ($endX,$endY)"
+                s(R.string.toolreg_swipe_desc, startX, startY, endX, endY)
             },
             executor = { tool ->
                 runBlocking(Dispatchers.IO) {
@@ -1250,15 +1324,13 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             }
     )
 
-
-
     // FFmpeg工具 - 执行通用FFmpeg命令
     handler.registerTool(
             name = "ffmpeg_execute",
             dangerCheck = { true }, // 总是危险操作，因为可能会修改文件
             descriptionGenerator = { tool ->
                 val command = tool.parameters.find { it.name == "command" }?.value ?: ""
-                "执行FFmpeg命令: $command"
+                s(R.string.toolreg_ffmpeg_execute_desc, command)
             },
             executor = { tool ->
                 val ffmpegTool = ToolGetter.getFFmpegToolExecutor(context)
@@ -1269,7 +1341,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
     // FFmpeg信息工具 - 获取FFmpeg信息
     handler.registerTool(
             name = "ffmpeg_info",
-            descriptionGenerator = { _ -> "获取FFmpeg信息" },
+            descriptionGenerator = { _ -> s(R.string.toolreg_ffmpeg_info_desc) },
             executor = { tool ->
                 val ffmpegInfoTool = ToolGetter.getFFmpegInfoToolExecutor()
                 ffmpegInfoTool.invoke(tool)
@@ -1283,7 +1355,7 @@ fun registerAllTools(handler: AIToolHandler, context: Context) {
             descriptionGenerator = { tool ->
                 val inputPath = tool.parameters.find { it.name == "input_path" }?.value ?: ""
                 val outputPath = tool.parameters.find { it.name == "output_path" }?.value ?: ""
-                "转换视频: $inputPath → $outputPath"
+                s(R.string.toolreg_ffmpeg_convert_desc, inputPath, outputPath)
             },
             executor = { tool ->
                 val ffmpegConvertTool = ToolGetter.getFFmpegConvertToolExecutor(context)

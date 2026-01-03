@@ -17,6 +17,7 @@ import com.ai.assistance.operit.data.model.AITool
 import com.ai.assistance.operit.data.model.FunctionType
 import com.ai.assistance.operit.data.model.ToolResult
 import com.ai.assistance.operit.util.AppLogger
+import com.ai.assistance.operit.util.LocaleUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -142,13 +143,19 @@ class AutoGlmViewModel(private val context: Context) : ViewModel() {
     }
 
     private fun buildUiAutomationSystemPrompt(): String {
-        val calendar = Calendar.getInstance()
-        val sdf = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
-        val datePart = sdf.format(Date())
-        val weekdayNames = arrayOf("星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六")
-        val weekday = weekdayNames[calendar.get(Calendar.DAY_OF_WEEK) - 1]
-        val formattedDate = "$datePart $weekday"
-        return FunctionalPrompts.UI_AUTOMATION_AGENT_PROMPT.replace("{{current_date}}", formattedDate)
+        val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
+        val formattedDate =
+            if (useEnglish) {
+                SimpleDateFormat("yyyy-MM-dd EEEE", Locale.ENGLISH).format(Date())
+            } else {
+                val calendar = Calendar.getInstance()
+                val sdf = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
+                val datePart = sdf.format(Date())
+                val weekdayNames = arrayOf("星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六")
+                val weekday = weekdayNames[calendar.get(Calendar.DAY_OF_WEEK) - 1]
+                "$datePart $weekday"
+            }
+        return FunctionalPrompts.buildUiAutomationAgentPrompt(formattedDate, useEnglish)
     }
     
     private fun extractTagContent(text: String, tag: String): String? {

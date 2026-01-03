@@ -66,6 +66,8 @@ import com.ai.assistance.operit.data.preferences.FunctionalConfigManager
 import com.ai.assistance.operit.data.preferences.ModelConfigManager
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicInteger
+import com.ai.assistance.operit.core.config.FunctionalPrompts
+import com.ai.assistance.operit.util.LocaleUtils
 
 /**
  * Collection of file system operation tools for the AI assistant These tools use Java File APIs for
@@ -334,20 +336,15 @@ open class StandardFileSystemTools(protected val context: Context) {
             val overallStartTime = System.currentTimeMillis()
             ToolProgressBus.update(toolName, 0f, "Preparing search...")
 
+            val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
+
             val initialPrompt =
-                """
-你是一个代码检索助手。你需要为 grep_code 工具生成用于搜索的正则表达式。
-
-用户意图：$intent
-搜索路径：$displayPath
-文件过滤：$filePattern
-
-要求：
-1) 输出严格 JSON，不要输出任何其他文字。
-2) 生成 8 个 queries，每个 query 是一个正则表达式字符串。
-
-输出格式：{"queries":["...", "...", "...", "...", "...", "...", "...", "..."]}
-""".trimIndent()
+                FunctionalPrompts.grepContextInitialPrompt(
+                    intent = intent,
+                    displayPath = displayPath,
+                    filePattern = filePattern,
+                    useEnglish = useEnglish
+                )
 
             val fallback = listOf(intent.take(60)).filter { it.isNotBlank() }
             ToolProgressBus.update(toolName, 0.05f, "Generating search queries...")
@@ -397,22 +394,13 @@ open class StandardFileSystemTools(protected val context: Context) {
                 if (round < 3) {
                     val digest = buildCandidateDigestForModel(batchCandidates.take(24), 800)
                     val refinePrompt =
-                        """
-你是一个代码检索助手。你需要根据上一轮 grep_code 的命中结果，进一步改进搜索 query。
-
-用户意图：$intent
-搜索路径：$displayPath
-文件过滤：$filePattern
-
-上一轮命中摘要：
-$digest
-
-要求：
-1) 输出严格 JSON，不要输出任何其他文字。
-2) 生成 8 个 queries，尽量与已命中的文件/符号更相关，避免与上一轮重复。
-
-输出格式：{"queries":["...", "...", "...", "...", "...", "...", "...", "..."]}
-""".trimIndent()
+                        FunctionalPrompts.grepContextRefinePrompt(
+                            intent = intent,
+                            displayPath = displayPath,
+                            filePattern = filePattern,
+                            lastRoundDigest = digest,
+                            useEnglish = useEnglish
+                        )
                     ToolProgressBus.update(toolName, roundBase + perRoundSearchSpan, "Refining queries (round $round/3)...")
                     val refineStart = System.currentTimeMillis()
                     val refinedRaw = runGrepModel(refinePrompt)
@@ -448,21 +436,13 @@ $digest
 
             val selectionDigest = buildCandidateDigestForModel(allCandidates.take(60), 1000)
             val selectPrompt =
-                """
-你是一个代码检索助手。你需要从候选片段中选择最相关的部分。
-
-用户意图：$intent
-搜索路径：$displayPath
-
-候选列表（每条以 #id 开头）：
-$selectionDigest
-
-要求：
-1) 输出严格 JSON，不要输出任何其他文字。
-2) 从候选中选择最多 $maxResults 条，按相关度从高到低输出 id。
-
-输出格式：{"selected":[0,1,2]}
-""".trimIndent()
+                FunctionalPrompts.grepContextSelectPrompt(
+                    intent = intent,
+                    displayPath = displayPath,
+                    candidatesDigest = selectionDigest,
+                    maxResults = maxResults,
+                    useEnglish = useEnglish
+                )
 
             ToolProgressBus.update(toolName, 0.85f, "Selecting most relevant matches...")
             val selectStart = System.currentTimeMillis()

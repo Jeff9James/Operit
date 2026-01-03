@@ -524,6 +524,7 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
           packageManager: PackageManager,
           workspacePath: String?,
           customIntroPrompt: String,
+          useEnglish: Boolean = false,
           thinkingGuidance: Boolean = false,
           customSystemPromptTemplate: String = "",
           enableTools: Boolean = true,
@@ -538,20 +539,20 @@ AVAILABLE_TOOLS_SECTION""".trimIndent()
   ): String {
     // Get the base system prompt
     val basePrompt = getSystemPrompt(
-        packageManager,
-        workspacePath,
-        false,
-        thinkingGuidance,
-        customSystemPromptTemplate,
-        enableTools,
-        enableMemoryQuery,
-        hasImageRecognition,
-        chatModelHasDirectImage,
-        hasAudioRecognition,
-        hasVideoRecognition,
-        chatModelHasDirectAudio,
-        chatModelHasDirectVideo,
-        useToolCallApi
+        packageManager = packageManager,
+        workspacePath = workspacePath,
+        useEnglish = useEnglish,
+        thinkingGuidance = thinkingGuidance,
+        customSystemPromptTemplate = customSystemPromptTemplate,
+        enableTools = enableTools,
+        enableMemoryQuery = enableMemoryQuery,
+        hasImageRecognition = hasImageRecognition,
+        chatModelHasDirectImage = chatModelHasDirectImage,
+        hasAudioRecognition = hasAudioRecognition,
+        hasVideoRecognition = hasVideoRecognition,
+        chatModelHasDirectAudio = chatModelHasDirectAudio,
+        chatModelHasDirectVideo = chatModelHasDirectVideo,
+        useToolCallApi = useToolCallApi
     )
 
     // Apply custom prompts

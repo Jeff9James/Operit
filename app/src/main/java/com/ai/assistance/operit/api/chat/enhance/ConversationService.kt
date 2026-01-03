@@ -82,20 +82,8 @@ class ConversationService(
             multiServiceManager: MultiServiceManager
     ): String {
         try {
-            // 使用更结构化、更详细的提示词
-            var systemPrompt = FunctionalPrompts.SUMMARY_PROMPT.trimIndent()
-
-            // 如果存在上一次的摘要，将其添加到系统提示中，为模型提供更明确的上下文。
-            if (previousSummary != null && previousSummary.isNotBlank()) {
-                systemPrompt +=
-                        """
-
-                上一次的摘要（用于继承上下文）：
-                ${previousSummary.trim()}
-                请将以上摘要中的关键信息，与本次新的对话内容相融合，生成一份全新的、更完整的摘要。
-                """
-                AppLogger.d(TAG, "添加上一条摘要内容到系统提示")
-            }
+            val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
+            val systemPrompt = FunctionalPrompts.buildSummarySystemPrompt(previousSummary, useEnglish)
 
             val finalMessages = listOf(Pair("system", systemPrompt)) + messages
 
@@ -211,11 +199,14 @@ class ConversationService(
                 // 获取工具启用状态
                 val enableTools = apiPreferences.enableToolsFlow.first()
 
+                val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
+
                 // 获取系统提示词，现在传入workspacePath和识图配置状态
                 val systemPrompt = SystemPromptConfig.getSystemPromptWithCustomPrompts(
                     packageManager = packageManager,
                     workspacePath = workspacePath,
                     customIntroPrompt = introPrompt,
+                    useEnglish = useEnglish,
                     thinkingGuidance = thinkingGuidance,
                     customSystemPromptTemplate = finalCustomSystemPromptTemplate,
                     enableTools = enableTools,
