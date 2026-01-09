@@ -13,8 +13,7 @@ object SpeechServiceFactory {
         SHERPA_NCNN,
         /** 基于Sherpa-mnn的本地识别实现，集成VAD能力 */
         SHERPA_MNN,
-        // 如果未来有基于HTTP的STT，可以在此添加
-        // HTTP_STT 
+        OPENAI_STT,
     }
 
     /**
@@ -29,10 +28,28 @@ object SpeechServiceFactory {
         val prefs = SpeechServicesPreferences(context)
         val type = runBlocking { prefs.sttServiceTypeFlow.first() }
 
-        return when (type) {
-            SpeechServiceType.SHERPA_NCNN -> SherpaSpeechProvider(context)
-            SpeechServiceType.SHERPA_MNN -> SherpaMnnSpeechProvider(context)
-            // case SpeechServiceType.HTTP_STT -> HttpSttProvider(context, ...)
+        return createSpeechService(context, type)
+    }
+
+    fun createSpeechService(
+        context: Context,
+        type: SpeechServiceType,
+    ): SpeechService {
+        val prefs = SpeechServicesPreferences(context)
+        return runBlocking {
+            when (type) {
+                SpeechServiceType.SHERPA_NCNN -> SherpaSpeechProvider(context)
+                SpeechServiceType.SHERPA_MNN -> SherpaMnnSpeechProvider(context)
+                SpeechServiceType.OPENAI_STT -> {
+                    val sttConfig = prefs.sttHttpConfigFlow.first()
+                    OpenAISttProvider(
+                        context = context,
+                        endpointUrl = sttConfig.endpointUrl,
+                        apiKey = sttConfig.apiKey,
+                        model = sttConfig.modelName,
+                    )
+                }
+            }
         }
     }
 

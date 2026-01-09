@@ -48,6 +48,7 @@ import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.ai.assistance.operit.ui.features.settings.components.CharacterCardDialog
+import com.ai.assistance.operit.ui.common.rememberLocal
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -918,7 +919,14 @@ fun CharacterCardTab(
     onNavigateToPersonaGeneration: () -> Unit,
     onImportTavernCard: () -> Unit
 ) {
-    var sortOption by remember { mutableStateOf(CharacterCardSortOption.DEFAULT) }
+    val sortOptionNameState = rememberLocal(
+        key = "ModelPromptsSettingsScreen.CharacterCardTab.sortOption",
+        defaultValue = CharacterCardSortOption.DEFAULT.name
+    )
+    val sortOption = remember(sortOptionNameState.value) {
+        runCatching { CharacterCardSortOption.valueOf(sortOptionNameState.value) }
+            .getOrDefault(CharacterCardSortOption.DEFAULT)
+    }
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
     val sortedCharacterCards = remember(characterCards, sortOption) {
@@ -1009,21 +1017,21 @@ fun CharacterCardTab(
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.character_card_sort_default)) },
                             onClick = {
-                                sortOption = CharacterCardSortOption.DEFAULT
+                                sortOptionNameState.value = CharacterCardSortOption.DEFAULT.name
                                 sortMenuExpanded = false
                             }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.character_card_sort_by_name)) },
                             onClick = {
-                                sortOption = CharacterCardSortOption.NAME_ASC
+                                sortOptionNameState.value = CharacterCardSortOption.NAME_ASC.name
                                 sortMenuExpanded = false
                             }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.character_card_sort_by_created)) },
                             onClick = {
-                                sortOption = CharacterCardSortOption.CREATED_DESC
+                                sortOptionNameState.value = CharacterCardSortOption.CREATED_DESC.name
                                 sortMenuExpanded = false
                             }
                         )

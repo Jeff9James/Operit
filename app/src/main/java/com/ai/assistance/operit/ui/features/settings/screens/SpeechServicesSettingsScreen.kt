@@ -114,7 +114,12 @@ fun SpeechServicesSettingsScreen(
 
     // --- State for STT Settings ---
     val sttServiceType by prefs.sttServiceTypeFlow.collectAsState(initial = SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN)
+    val sttHttpConfig by prefs.sttHttpConfigFlow.collectAsState(initial = SpeechServicesPreferences.DEFAULT_STT_HTTP_PRESET)
     var sttServiceTypeInput by remember(sttServiceType) { mutableStateOf(sttServiceType) }
+
+    var sttEndpointUrlInput by remember(sttHttpConfig) { mutableStateOf(sttHttpConfig.endpointUrl) }
+    var sttApiKeyInput by remember(sttHttpConfig) { mutableStateOf(sttHttpConfig.apiKey) }
+    var sttModelNameInput by remember(sttHttpConfig) { mutableStateOf(sttHttpConfig.modelName) }
 
     // 同步 DataStore 的数据到 State
     LaunchedEffect(ttsCleanerRegexs) {
@@ -168,7 +173,15 @@ fun SpeechServicesSettingsScreen(
                 )
                 
                 // 保存 STT 设置
-                prefs.saveSttSettings(sttServiceTypeInput)
+                val sttHttpConfigData = SpeechServicesPreferences.SttHttpConfig(
+                    endpointUrl = sttEndpointUrlInput,
+                    apiKey = sttApiKeyInput,
+                    modelName = sttModelNameInput,
+                )
+                prefs.saveSttSettings(
+                    serviceType = sttServiceTypeInput,
+                    httpConfig = sttHttpConfigData,
+                )
                 
                 // 重置服务实例以应用新设置
                 VoiceServiceFactory.resetInstance()
@@ -1090,6 +1103,7 @@ fun SpeechServicesSettingsScreen(
                                 value = when(sttServiceTypeInput) {
                                     SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> stringResource(R.string.speech_services_stt_type_sherpa)
                                     SpeechServiceFactory.SpeechServiceType.SHERPA_MNN -> stringResource(R.string.speech_services_stt_type_sherpa_mnn)
+                                    SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> stringResource(R.string.speech_services_stt_type_openai)
                                 },
                                 onValueChange = {},
                                 readOnly = true,
@@ -1110,6 +1124,7 @@ fun SpeechServicesSettingsScreen(
                                                 text = when(type) {
                                                     SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> stringResource(R.string.speech_services_stt_type_sherpa)
                                                     SpeechServiceFactory.SpeechServiceType.SHERPA_MNN -> stringResource(R.string.speech_services_stt_type_sherpa_mnn)
+                                                    SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> stringResource(R.string.speech_services_stt_type_openai)
                                                 },
                                                 fontWeight = if (sttServiceTypeInput == type) FontWeight.Medium else FontWeight.Normal
                                             ) 
@@ -1118,11 +1133,59 @@ fun SpeechServicesSettingsScreen(
                                             sttServiceTypeInput = type
                                             sttDropdownExpanded = false
                                         },
-                                        // 支持本地识别引擎
-                                        enabled = type == SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN || 
-                                                 type == SpeechServiceFactory.SpeechServiceType.SHERPA_MNN
+                                        enabled = true
                                     )
                                 }
+                            }
+                        }
+
+                        AnimatedVisibility(visible = sttServiceTypeInput == SpeechServiceFactory.SpeechServiceType.OPENAI_STT) {
+                            Column(modifier = Modifier.padding(top = 16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.speech_services_openai_stt_config),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = sttEndpointUrlInput,
+                                    onValueChange = { sttEndpointUrlInput = it },
+                                    label = { Text(stringResource(R.string.speech_services_openai_stt_url)) },
+                                    placeholder = { Text(stringResource(R.string.speech_services_openai_stt_url_placeholder)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    supportingText = {
+                                        Text(
+                                            text = stringResource(R.string.speech_services_openai_stt_url_hint),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = sttApiKeyInput,
+                                    onValueChange = { sttApiKeyInput = it },
+                                    label = { Text(stringResource(R.string.speech_services_openai_stt_api_key)) },
+                                    placeholder = { Text(stringResource(R.string.speech_services_openai_stt_api_key_placeholder)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = sttModelNameInput,
+                                    onValueChange = { sttModelNameInput = it },
+                                    label = { Text(stringResource(R.string.speech_services_openai_stt_model)) },
+                                    placeholder = { Text(stringResource(R.string.speech_services_openai_stt_model_placeholder)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
                             }
                         }
                         

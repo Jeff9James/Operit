@@ -1312,4 +1312,15 @@
     <string name="mood_tag_block">Etiqueta de Ánimo</string>
     
     <string name="provider_doubao">Doubao (Modelo Volcano)</string>
+
+    <string name="speech_services_stt_type_openai">OpenAI STT (Remoto)</string>
+    <string name="speech_services_openai_stt_config">Configuración de OpenAI STT</string>
+    <string name="speech_services_openai_stt_url">URL</string>
+    <string name="speech_services_openai_stt_url_placeholder">p. ej.: https://api.openai.com/v1/audio/transcriptions</string>
+    <string name="speech_services_openai_stt_url_hint">Debe ingresar la URL completa del endpoint, incluyendo /v1/audio/transcriptions</string>
+    <string name="speech_services_openai_stt_api_key">Clave API</string>
+    <string name="speech_services_openai_stt_api_key_placeholder">p. ej.: sk-xxxxxx</string>
+    <string name="speech_services_openai_stt_model">model</string>
+    <string name="speech_services_openai_stt_model_placeholder">p. ej.: whisper-1 o gpt-4o-mini-transcribe</string>
+    <string name="speech_services_stt_info">Admite motores Sherpa locales y OpenAI STT (remoto).</string>
 </resources>

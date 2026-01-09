@@ -1880,6 +1880,7 @@
     <!-- STT Service Types -->
     <string name="speech_services_stt_type_sherpa">Sherpa NCNN (本地)</string>
     <string name="speech_services_stt_type_sherpa_mnn">Sherpa MNN (本地, 带VAD)</string>
+    <string name="speech_services_stt_type_openai">OpenAI STT (远程)</string>
     
     <!-- TTS Cleaner Regex -->
     <string name="speech_services_tts_cleaner_title">TTS 清理正则列表</string>
@@ -1948,8 +1949,17 @@
     <string name="speech_services_openai_voice_id">voice</string>
     <string name="speech_services_openai_voice_id_placeholder">例如：alloy</string>
 
+    <string name="speech_services_openai_stt_config">OpenAI STT 配置</string>
+    <string name="speech_services_openai_stt_url">URL</string>
+    <string name="speech_services_openai_stt_url_placeholder">例如：https://api.openai.com/v1/audio/transcriptions</string>
+    <string name="speech_services_openai_stt_url_hint">需要填写完整接口地址，必须包含 /v1/audio/transcriptions</string>
+    <string name="speech_services_openai_stt_api_key">API 密钥</string>
+    <string name="speech_services_openai_stt_api_key_placeholder">例如：sk-xxxxxx</string>
+    <string name="speech_services_openai_stt_model">model</string>
+    <string name="speech_services_openai_stt_model_placeholder">例如：whisper-1 或 gpt-4o-mini-transcribe</string>
+
     <!-- STT Configuration -->
-    <string name="speech_services_stt_info">支持本地 Sherpa-NCNN 和 Sherpa-MNN 引擎。</string>
+    <string name="speech_services_stt_info">支持本地 Sherpa 引擎以及 OpenAI STT（远程）。</string>
     
     <!-- Save Actions -->
     <string name="speech_services_save_button">保存设置</string>
@@ -2391,6 +2401,9 @@
     <string name="settings_cancel">取消</string>
     <string name="settings_reset_confirmation">重置确认</string>
     <string name="settings_reset_warning">这将清除所有Token使用记录，此操作不可恢复。</string>
+    <string name="settings_reset_model_counts">重置该模型</string>
+    <string name="settings_reset_model_confirmation">重置模型确认</string>
+    <string name="settings_reset_model_warning">这将清除 %1$s 的Token和请求次数统计，此操作不可恢复。</string>
     <string name="settings_reset">重置</string>
     <string name="settings_edit_pricing">编辑定价</string>
     <string name="settings_input_tokens">输入Token</string>

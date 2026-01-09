@@ -8,6 +8,8 @@ import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
@@ -262,11 +264,40 @@ class FloatingChatService : Service(), FloatingWindowCallback {
                             this
                     )
             createNotificationChannel()
-            startForeground(NOTIFICATION_ID, createNotification())
+            val notification = createNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val types =
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                        } else {
+                            0
+                        } or
+                        if (
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                                hasRecordAudioPermission()
+                        ) {
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                        } else {
+                            0
+                        }
+                startForeground(NOTIFICATION_ID, notification, types)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
 
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error in onCreate", e)
             stopSelf()
+        }
+    }
+
+    private fun hasRecordAudioPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        } else {
+            true
         }
     }
 

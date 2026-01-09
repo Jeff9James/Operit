@@ -34,6 +34,7 @@ class SherpaMnnSpeechProvider(private val context: Context) : SpeechService {
 
     private var recognizer: OnlineRecognizer? = null
     private var vad: Vad? = null
+    private var sileroVad: OnnxSileroVad? = null
     private var stream: OnlineStream? = null
     private var audioRecord: AudioRecord? = null
     private var recordingJob: Job? = null
@@ -74,14 +75,18 @@ class SherpaMnnSpeechProvider(private val context: Context) : SpeechService {
                 createRecognizer()
                 // VAD 是可选的，失败不影响整体初始化
                 try {
-                    createVad()
+                    createSileroVad()
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "Failed to create VAD, continuing without VAD support", e)
                     vad = null
+                    sileroVad = null
                 }
                 
                 if (recognizer != null) {
-                    AppLogger.d(TAG, "sherpa-mnn initialized successfully (VAD: ${if (vad != null) "enabled" else "disabled"})")
+                    AppLogger.d(
+                        TAG,
+                        "sherpa-mnn initialized successfully (VAD: ${if (vad != null || sileroVad != null) "enabled" else "disabled"})"
+                    )
                     _isInitialized.value = true
                     _recognitionState.value = SpeechService.RecognitionState.IDLE
                     true
@@ -256,6 +261,43 @@ class SherpaMnnSpeechProvider(private val context: Context) : SpeechService {
         */
     }
 
+    private fun createSileroVad() {
+        try {
+            sileroVad?.close()
+        } catch (_: Exception) {
+        }
+        sileroVad = OnnxSileroVad(context = context)
+    }
+
+    private fun detectSpeechBySilero(
+        vad: OnnxSileroVad,
+        pending: ShortArray,
+        buffer: ShortArray,
+        size: Int,
+    ): Pair<Boolean, ShortArray> {
+        val frameSize = 512
+        val merged = ShortArray(pending.size + size)
+        if (pending.isNotEmpty()) {
+            java.lang.System.arraycopy(pending, 0, merged, 0, pending.size)
+        }
+        java.lang.System.arraycopy(buffer, 0, merged, pending.size, size)
+
+        val frame = ShortArray(frameSize)
+        var offset = 0
+        var hasSpeech = false
+        while (offset + frameSize <= merged.size) {
+            java.lang.System.arraycopy(merged, offset, frame, 0, frameSize)
+            if (vad.isSpeech(frame)) {
+                hasSpeech = true
+            }
+            offset += frameSize
+        }
+
+        val remain = merged.size - offset
+        val newPending = if (remain > 0) merged.copyOfRange(offset, merged.size) else ShortArray(0)
+        return Pair(hasSpeech, newPending)
+    }
+
     /**
      * 计算音频缓冲区的音量级别
      */
@@ -293,6 +335,7 @@ class SherpaMnnSpeechProvider(private val context: Context) : SpeechService {
         
         // 重置 VAD 和创建新的 stream
         vad?.reset()
+        sileroVad?.reset()
         // 安全释放旧的 stream
         try {
             stream?.release()
@@ -325,6 +368,7 @@ class SherpaMnnSpeechProvider(private val context: Context) : SpeechService {
             val audioBuffer = ShortArray(bufferSize)
             var lastText = ""
             var hasSpeechDetected = false
+            var vadPending = ShortArray(0)
 
             while (isActive &&
                     _recognitionState.value == SpeechService.RecognitionState.RECOGNIZING) {
@@ -342,11 +386,12 @@ class SherpaMnnSpeechProvider(private val context: Context) : SpeechService {
                     val samples = FloatArray(ret) { i -> audioBuffer[i] / 32768.0f }
                     
                     // VAD 检测
-                    if (vad != null) {
-                        val vadInstance = vad!!
-                        vadInstance.acceptWaveform(samples)
-                        val isSpeech = vadInstance.isSpeechDetected()
-                        
+                    val silero = sileroVad
+                    if (silero != null) {
+                        val (isSpeech, newPending) =
+                            detectSpeechBySilero(silero, vadPending, audioBuffer, ret)
+                        vadPending = newPending
+
                         if (isSpeech) {
                             hasSpeechDetected = true
                             // 有语音时送入识别器
@@ -542,6 +587,11 @@ class SherpaMnnSpeechProvider(private val context: Context) : SpeechService {
                 stream = null
                 vad?.release()
                 vad = null
+                try {
+                    sileroVad?.close()
+                } catch (_: Exception) {
+                }
+                sileroVad = null
                 recognizer?.release()
                 recognizer = null
             }

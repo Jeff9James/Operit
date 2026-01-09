@@ -13,14 +13,23 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.provider.Settings
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.graphics.PixelFormat
 import com.ai.assistance.operit.util.AppLogger
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.ai.assistance.operit.R
-import com.ai.assistance.operit.api.speech.SherpaSpeechProvider
+import com.ai.assistance.operit.api.speech.SpeechService
+import com.ai.assistance.operit.api.speech.SpeechServiceFactory
 import com.ai.assistance.operit.core.chat.AIMessageManager
 import com.ai.assistance.operit.core.application.ActivityLifecycleManager
+import com.ai.assistance.operit.data.preferences.SpeechServicesPreferences
 import com.ai.assistance.operit.services.FloatingChatService
 import com.ai.assistance.operit.services.UIDebuggerService
 import com.ai.assistance.operit.data.preferences.DisplayPreferencesManager
@@ -32,12 +41,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.isActive
 import java.io.InputStream
 
 /** 前台服务，用于在AI进行长时间处理时保持应用活跃，防止被系统杀死。 该服务不执行实际工作，仅通过显示一个持久通知来提升应用的进程优先级。 */
@@ -81,8 +92,22 @@ class AIForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val wakePrefs by lazy { WakeWordPreferences(applicationContext) }
-    private val wakeSpeechProvider by lazy { SherpaSpeechProvider(applicationContext) }
+    private val wakeSpeechProvider: SpeechService by lazy {
+        val prefs = SpeechServicesPreferences(applicationContext)
+        val selectedType = runBlocking { prefs.sttServiceTypeFlow.first() }
+        val effectiveType =
+            if (selectedType == SpeechServiceFactory.SpeechServiceType.OPENAI_STT) {
+                SpeechServiceFactory.SpeechServiceType.SHERPA_MNN
+            } else {
+                selectedType
+            }
+        SpeechServiceFactory.createSpeechService(applicationContext, effectiveType)
+    }
     private val workflowRepository by lazy { WorkflowRepository(applicationContext) }
+
+    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
+    private var keepAliveOverlayView: View? = null
+    private var keepAliveOverlayPermissionLogged = false
 
     private var wakeMonitorJob: Job? = null
     private var wakeListeningJob: Job? = null
@@ -108,14 +133,50 @@ class AIForegroundService : Service() {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             )
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
         startWakeMonitoring()
         AppLogger.d(TAG, "AI 前台服务已启动。")
+    }
+
+    private fun hasRecordAudioPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    private suspend fun tryPromoteToMicrophoneForeground(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false
+        if (!hasRecordAudioPermission()) return false
+
+        var waitedMs = 0L
+        while (waitedMs < 3500L && ActivityLifecycleManager.getCurrentActivity() == null) {
+            delay(150)
+            waitedMs += 150
+        }
+
+        if (ActivityLifecycleManager.getCurrentActivity() == null) {
+            AppLogger.w(TAG, "promote microphone foreground skipped: app not in foreground")
+            return false
+        }
+
+        val types =
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        return try {
+            startForeground(NOTIFICATION_ID, createNotification(), types)
+            true
+        } catch (e: SecurityException) {
+            AppLogger.e(TAG, "promote microphone foreground failed: ${e.message}", e)
+            false
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -230,6 +291,7 @@ class AIForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning.set(false)
+        hideKeepAliveOverlay()
         stopWakeMonitoring()
         AppLogger.d(TAG, "AI 前台服务已销毁。")
     }
@@ -282,8 +344,10 @@ class AIForegroundService : Service() {
                     wakeListeningEnabled = enabled
                     AppLogger.d(TAG, "唤醒监听开关更新: enabled=$enabled")
                     if (enabled) {
+                        showKeepAliveOverlayIfPossible()
                         startWakeListening()
                     } else {
+                        hideKeepAliveOverlay()
                         stopWakeListening()
                     }
 
@@ -300,6 +364,7 @@ class AIForegroundService : Service() {
         wakeResumeJob = null
         wakeListeningJob?.cancel()
         wakeListeningJob = null
+        hideKeepAliveOverlay()
         try {
             serviceScope.cancel()
         } catch (_: Exception) {
@@ -307,6 +372,84 @@ class AIForegroundService : Service() {
         try {
             wakeSpeechProvider.shutdown()
         } catch (_: Exception) {
+        }
+    }
+
+    private fun runOnMainThread(action: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action()
+        } else {
+            mainHandler.post {
+                try {
+                    action()
+                } catch (e: Exception) {
+                    AppLogger.e(TAG, "Error on main thread", e)
+                }
+            }
+        }
+    }
+
+    private fun showKeepAliveOverlayIfPossible() {
+        if (keepAliveOverlayView != null) return
+        if (!Settings.canDrawOverlays(this)) {
+            if (!keepAliveOverlayPermissionLogged) {
+                keepAliveOverlayPermissionLogged = true
+                AppLogger.w(TAG, "Keep-alive overlay skipped: missing overlay permission")
+            }
+            return
+        }
+
+        runOnMainThread {
+            if (keepAliveOverlayView != null) return@runOnMainThread
+            try {
+                val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                val view = View(this)
+                val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.TYPE_PHONE
+                }
+                val params = WindowManager.LayoutParams(
+                    1,
+                    1,
+                    layoutType,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    PixelFormat.TRANSLUCENT
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.START
+                    x = 0
+                    y = 0
+                }
+
+                wm.addView(view, params)
+                keepAliveOverlayView = view
+                AppLogger.d(TAG, "Keep-alive overlay shown")
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to show keep-alive overlay: ${e.message}", e)
+                keepAliveOverlayView = null
+            }
+        }
+    }
+
+    private fun hideKeepAliveOverlay() {
+        val view = keepAliveOverlayView ?: return
+        runOnMainThread {
+            val current = keepAliveOverlayView ?: return@runOnMainThread
+            try {
+                val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                wm.removeView(current)
+                AppLogger.d(TAG, "Keep-alive overlay hidden")
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to hide keep-alive overlay: ${e.message}", e)
+            } finally {
+                if (keepAliveOverlayView === view) {
+                    keepAliveOverlayView = null
+                }
+            }
         }
     }
 
@@ -329,6 +472,10 @@ class AIForegroundService : Service() {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.notify(NOTIFICATION_ID, createNotification())
             return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            tryPromoteToMicrophoneForeground()
         }
 
         wakeResumeJob?.cancel()

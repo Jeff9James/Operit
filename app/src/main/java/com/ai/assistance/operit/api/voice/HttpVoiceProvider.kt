@@ -1,11 +1,15 @@
 package com.ai.assistance.operit.api.voice
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.MediaPlayer
+import com.ai.assistance.operit.data.preferences.SpeechServicesPreferences
 import com.ai.assistance.operit.util.AppLogger
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.net.URLEncoder
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -13,9 +17,12 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
@@ -25,11 +32,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import android.media.AudioAttributes
-import com.ai.assistance.operit.data.preferences.SpeechServicesPreferences
-import kotlinx.coroutines.delay
-import java.io.FileInputStream
-import java.net.URLEncoder
 
 /**
  * 基于HTTP请求的TTS语音服务实现
@@ -71,15 +73,17 @@ class HttpVoiceProvider(
 
     // 媒体播放器实例
     private var mediaPlayer: MediaPlayer? = null
-    
+
+    private val speakMutex = Mutex()
+
     // 缓存的音频文件映射表
     private val audioCache = ConcurrentHashMap<String, File>()
-    
+
     // 当前语音参数
     private var currentRate: Float = 1.0f
     private var currentPitch: Float = 1.0f
     private var currentVoiceId: String? = null
-    
+
     // 临时文件目录
     private val cacheDir by lazy { context.cacheDir }
 
@@ -130,7 +134,7 @@ class HttpVoiceProvider(
             if (e is TtsException) throw e
             else throw TtsException("初始化HTTP TTS服务时发生意外错误", cause = e)
         }
-        
+
         return@withContext _isInitialized.value
     }
 
@@ -151,47 +155,49 @@ class HttpVoiceProvider(
         pitch: Float,
         extraParams: Map<String, String>
     ): Boolean = withContext(Dispatchers.IO) {
-        // 检查初始化状态
-        if (!isInitialized) {
-            val initResult = initialize()
-            if (!initResult) {
-                return@withContext false
-            }
-        }
-        
-        // 如果需要中断当前播放，则停止
-        if (interrupt && isSpeaking) {
-            stop()
-        }
-        
-        try {
-            // 生成缓存键
-            val cacheKey = generateCacheKey(text, rate, pitch, currentVoiceId, extraParams)
-            var audioFile = audioCache[cacheKey]
-            
-            // 如果缓存中没有，则请求新的音频
-            if (audioFile == null || !audioFile.exists()) {
-                audioFile = fetchAudioFromServer(text, rate, pitch, currentVoiceId, extraParams)
-                if (audioFile != null) {
-                    audioCache[cacheKey] = audioFile
-                } else {
-                    return@withContext false
+        speakMutex.withLock {
+            // 检查初始化状态
+            if (!isInitialized) {
+                val initResult = initialize()
+                if (!initResult) {
+                    return@withLock false
                 }
             }
-            
-            // 播放音频文件
-            playAudioFile(audioFile)
-            return@withContext true
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "HTTP TTS播放失败", e)
-            throw e
+
+            // 如果需要中断当前播放，则停止
+            if (interrupt && isSpeaking) {
+                stop()
+            }
+
+            try {
+                // 生成缓存键
+                val cacheKey = generateCacheKey(text, rate, pitch, currentVoiceId, extraParams)
+                var audioFile = audioCache[cacheKey]
+
+                // 如果缓存中没有，则请求新的音频
+                if (audioFile == null || !audioFile.exists()) {
+                    audioFile = fetchAudioFromServer(text, rate, pitch, currentVoiceId, extraParams)
+                    if (audioFile != null) {
+                        audioCache[cacheKey] = audioFile
+                    } else {
+                        return@withLock false
+                    }
+                }
+
+                // 播放音频文件
+                playAudioFile(audioFile)
+                return@withLock true
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "HTTP TTS播放失败", e)
+                throw e
+            }
         }
     }
 
     /** 停止当前正在播放的语音 */
     override suspend fun stop(): Boolean = withContext(Dispatchers.IO) {
         if (!isInitialized) return@withContext false
-        
+
         try {
             mediaPlayer?.let {
                 if (it.isPlaying) {
@@ -211,7 +217,7 @@ class HttpVoiceProvider(
     /** 暂停当前正在播放的语音 */
     override suspend fun pause(): Boolean = withContext(Dispatchers.IO) {
         if (!isInitialized) return@withContext false
-        
+
         try {
             mediaPlayer?.let {
                 if (it.isPlaying) {
@@ -230,7 +236,7 @@ class HttpVoiceProvider(
     /** 继续播放暂停的语音 */
     override suspend fun resume(): Boolean = withContext(Dispatchers.IO) {
         if (!isInitialized) return@withContext false
-        
+
         try {
             mediaPlayer?.let {
                 if (!it.isPlaying) {
@@ -263,7 +269,7 @@ class HttpVoiceProvider(
                     _isSpeaking.value = false
                 }
             }
-            
+
             // 清除缓存文件
             clearCache()
         } catch (e: Exception) {
@@ -282,7 +288,7 @@ class HttpVoiceProvider(
         currentVoiceId = voiceId
         return@withContext true
     }
-    
+
     /**
      * 从服务器获取音频数据
      *
@@ -321,7 +327,7 @@ class HttpVoiceProvider(
                     AppLogger.e(TAG, "Base URL is invalid: $baseUrl")
                     return@withContext null
                 }
-                
+
                 // Replace placeholders in the request body template
                 var requestBody = httpConfig.requestBody
                     .replace("{text}", text, ignoreCase = true) // Don't encode for JSON body
@@ -339,38 +345,38 @@ class HttpVoiceProvider(
 
                 val mediaType = httpConfig.contentType.toMediaType()
                 val body = requestBody.toRequestBody(mediaType)
-                
+
                 requestBuilder
                     .url(httpUrl)
                     .post(body)
                     .addHeader("Content-Type", httpConfig.contentType)
             } else {
                 // For GET requests, use the existing logic with URL parameters
-            var finalUrl = httpConfig.urlTemplate
-                .replace("{text}", encodedText, ignoreCase = true)
-                .replace("{rate}", encodedRate, ignoreCase = true)
-                .replace("{pitch}", encodedPitch, ignoreCase = true)
+                var finalUrl = httpConfig.urlTemplate
+                    .replace("{text}", encodedText, ignoreCase = true)
+                    .replace("{rate}", encodedRate, ignoreCase = true)
+                    .replace("{pitch}", encodedPitch, ignoreCase = true)
 
-            if (voiceId != null) {
-                finalUrl = finalUrl.replace("{voice}", encodedVoiceId, ignoreCase = true)
-            }
+                if (voiceId != null) {
+                    finalUrl = finalUrl.replace("{voice}", encodedVoiceId, ignoreCase = true)
+                }
 
-            // Replace any extra parameters
-            extraParams.forEach { (key, value) ->
-                finalUrl = finalUrl.replace("{$key}", URLEncoder.encode(value, "UTF-8"), ignoreCase = true)
-            }
+                // Replace any extra parameters
+                extraParams.forEach { (key, value) ->
+                    finalUrl = finalUrl.replace("{$key}", URLEncoder.encode(value, "UTF-8"), ignoreCase = true)
+                }
 
-            val httpUrl = finalUrl.toHttpUrlOrNull()
-            if (httpUrl == null) {
-                AppLogger.e(TAG, "Constructed URL is invalid: $finalUrl")
-                return@withContext null
-            }
-            
+                val httpUrl = finalUrl.toHttpUrlOrNull()
+                if (httpUrl == null) {
+                    AppLogger.e(TAG, "Constructed URL is invalid: $finalUrl")
+                    return@withContext null
+                }
+
                 requestBuilder
-                .url(httpUrl)
-                .get()
+                    .url(httpUrl)
+                    .get()
             }
-            
+
             // Add API key if present
             if (httpConfig.apiKey.isNotBlank()) {
                 requestBuilder.addHeader("Authorization", "Bearer ${httpConfig.apiKey}")
@@ -380,9 +386,9 @@ class HttpVoiceProvider(
             httpConfig.headers.forEach { (key, value) ->
                 requestBuilder.addHeader(key, value)
             }
-            
+
             val request = requestBuilder.build()
-            
+
             AppLogger.i(TAG, "Executing TTS Request: ${request.method} ${request.url}")
             AppLogger.i(TAG, "Request Headers:\n${request.headers}")
 
@@ -391,17 +397,17 @@ class HttpVoiceProvider(
                     override fun onFailure(call: Call, e: IOException) {
                         continuation.resumeWithException(e)
                     }
-                    
+
                     override fun onResponse(call: Call, response: Response) {
                         continuation.resume(response)
                     }
                 })
             }
-            
+
             if (response.isSuccessful) {
                 // 创建临时文件
                 val tempFile = File(cacheDir, "tts_${UUID.randomUUID()}.mp3")
-                
+
                 // 写入音频数据
                 response.body?.let { responseBody ->
                     FileOutputStream(tempFile).use { output ->
@@ -409,7 +415,7 @@ class HttpVoiceProvider(
                             input.copyTo(output)
                         }
                     }
-                    
+
                     return@withContext tempFile
                 }
                 // Should not happen if response is successful and body is present
@@ -430,7 +436,7 @@ class HttpVoiceProvider(
             throw TtsException("获取HTTP TTS音频失败", cause = e)
         }
     }
-    
+
     /**
      * 播放音频文件
      *
@@ -443,11 +449,10 @@ class HttpVoiceProvider(
             return
         }
 
-        var mediaPlayer: MediaPlayer? = null
         try {
             withContext(Dispatchers.IO) {
                 FileInputStream(audioFile).use { fis ->
-                    mediaPlayer = MediaPlayer().apply {
+                    val mp = MediaPlayer().apply {
                         setAudioAttributes(
                             AudioAttributes.Builder()
                                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
@@ -458,11 +463,15 @@ class HttpVoiceProvider(
                         prepare() // Synchronous preparation
                         start()
                     }
+
+                    this@HttpVoiceProvider.mediaPlayer?.release()
+                    this@HttpVoiceProvider.mediaPlayer = mp
+                    _isSpeaking.value = true
                 }
             }
 
             // Wait for playback to complete
-            mediaPlayer?.let {
+            this@HttpVoiceProvider.mediaPlayer?.let {
                 while (it.isPlaying) {
                     delay(100)
                 }
@@ -470,15 +479,23 @@ class HttpVoiceProvider(
         } catch (e: Exception) {
             AppLogger.e(TAG, "播放HTTP TTS音频失败", e)
         } finally {
-            mediaPlayer?.apply {
-                if (isPlaying) {
-                    stop()
+            _isSpeaking.value = false
+            this@HttpVoiceProvider.mediaPlayer?.apply {
+                try {
+                    if (isPlaying) {
+                        stop()
+                    }
+                } catch (_: Exception) {
                 }
-                release()
+                try {
+                    release()
+                } catch (_: Exception) {
+                }
             }
+            this@HttpVoiceProvider.mediaPlayer = null
         }
     }
-    
+
     /**
      * 生成缓存键
      *

@@ -1842,6 +1842,7 @@
     <!-- STT Service Types -->
     <string name="speech_services_stt_type_sherpa">Sherpa NCNN (Local)</string>
     <string name="speech_services_stt_type_sherpa_mnn">Sherpa MNN (Local, with VAD)</string>
+    <string name="speech_services_stt_type_openai">OpenAI STT (Remote)</string>
     
     <!-- TTS Cleaner Regex -->
     <string name="speech_services_tts_cleaner_title">TTS Cleaner Regex List</string>
@@ -1910,8 +1911,17 @@
     <string name="speech_services_openai_voice_id">voice</string>
     <string name="speech_services_openai_voice_id_placeholder">e.g.: alloy</string>
 
+    <string name="speech_services_openai_stt_config">OpenAI STT Configuration</string>
+    <string name="speech_services_openai_stt_url">URL</string>
+    <string name="speech_services_openai_stt_url_placeholder">e.g.: https://api.openai.com/v1/audio/transcriptions</string>
+    <string name="speech_services_openai_stt_url_hint">You must enter the full endpoint URL, including /v1/audio/transcriptions</string>
+    <string name="speech_services_openai_stt_api_key">API Key</string>
+    <string name="speech_services_openai_stt_api_key_placeholder">e.g.: sk-xxxxxx</string>
+    <string name="speech_services_openai_stt_model">model</string>
+    <string name="speech_services_openai_stt_model_placeholder">e.g.: whisper-1 or gpt-4o-mini-transcribe</string>
+
     <!-- STT Configuration -->
-    <string name="speech_services_stt_info">Supports local Sherpa-NCNN and Sherpa-MNN engines.</string>
+    <string name="speech_services_stt_info">Supports local Sherpa engines and OpenAI STT (remote).</string>
     
     <!-- Save Actions -->
     <string name="speech_services_save_button">Save Settings</string>
@@ -2354,6 +2364,9 @@
     <string name="settings_cancel">Cancel</string>
     <string name="settings_reset_confirmation">Reset Confirmation</string>
     <string name="settings_reset_warning">This will clear all token usage records. This action cannot be undone.</string>
+    <string name="settings_reset_model_counts">Reset This Model</string>
+    <string name="settings_reset_model_confirmation">Reset Model Confirmation</string>
+    <string name="settings_reset_model_warning">This will clear token and request count statistics for %1$s. This action cannot be undone.</string>
     <string name="settings_reset">Reset</string>
     <string name="settings_edit_pricing">Edit Pricing</string>
     <string name="settings_input_tokens">Input Tokens</string>

@@ -125,7 +125,7 @@ fun SpeechToTextScreen(navController: NavController) {
 
     // speechService 实例仅在 recognitionMode 改变时重新创建
     val speechService = remember(recognitionMode) {
-        SpeechServiceFactory.createSpeechService(context)
+        SpeechServiceFactory.createSpeechService(context, recognitionMode)
     }
 
     // 保证在服务实例被替换或屏幕离开时，旧的服务实例被正确关闭
@@ -174,9 +174,9 @@ fun SpeechToTextScreen(navController: NavController) {
         coroutineScope.launch {
             try {
                 // 对于Sherpa引擎，启用连续模式和部分结果
-                val continuousMode = recognitionMode == SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN || 
+                val continuousMode = recognitionMode == SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN ||
                                     recognitionMode == SpeechServiceFactory.SpeechServiceType.SHERPA_MNN
-                val partialResults = recognitionMode == SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN || 
+                val partialResults = recognitionMode == SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN ||
                                     recognitionMode == SpeechServiceFactory.SpeechServiceType.SHERPA_MNN
                 speechService.startRecognition(selectedLanguage, continuousMode, partialResults)
             } catch (e: Exception) {
@@ -202,6 +202,8 @@ fun SpeechToTextScreen(navController: NavController) {
             SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> 
                 SpeechServiceFactory.SpeechServiceType.SHERPA_MNN
             SpeechServiceFactory.SpeechServiceType.SHERPA_MNN -> 
+                SpeechServiceFactory.SpeechServiceType.OPENAI_STT
+            SpeechServiceFactory.SpeechServiceType.OPENAI_STT ->
                 SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN
         }
     }
@@ -211,6 +213,7 @@ fun SpeechToTextScreen(navController: NavController) {
         return when (mode) {
             SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> context.getString(R.string.sherpa_ncnn_best)
             SpeechServiceFactory.SpeechServiceType.SHERPA_MNN -> context.getString(R.string.speech_services_stt_type_sherpa_mnn)
+            SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> context.getString(R.string.speech_services_stt_type_openai)
         }
     }
     

@@ -37,6 +37,13 @@ class SpeechServicesPreferences(private val context: Context) {
         val modelName: String = "" // TTS模型名称（用于SiliconFlow等）
     )
 
+    @Serializable
+    data class SttHttpConfig(
+        val endpointUrl: String,
+        val apiKey: String,
+        val modelName: String,
+    )
+
     companion object {
         // TTS Preference Keys
         val TTS_SERVICE_TYPE = stringPreferencesKey("tts_service_type")
@@ -62,7 +69,13 @@ class SpeechServicesPreferences(private val context: Context) {
             voiceId = "",
             modelName = ""
         )
-        
+
+        val DEFAULT_STT_HTTP_PRESET = SttHttpConfig(
+            endpointUrl = "https://api.openai.com/v1/audio/transcriptions",
+            apiKey = "",
+            modelName = "whisper-1",
+        )
+
         // TTS Cleaner 的默认正则表达式列表（去除中英文括号内容）
         val DEFAULT_TTS_CLEANER_REGEXS = listOf(
             "\\([^)]+\\)",  // 英文括号
@@ -105,7 +118,20 @@ class SpeechServicesPreferences(private val context: Context) {
             prefs[STT_SERVICE_TYPE] ?: DEFAULT_STT_SERVICE_TYPE.name
         )
     }
-    
+
+    val sttHttpConfigFlow: Flow<SttHttpConfig> = dataStore.data.map { prefs ->
+        val json = prefs[STT_HTTP_CONFIG]
+        if (json != null) {
+            try {
+                Json.decodeFromString<SttHttpConfig>(json)
+            } catch (e: Exception) {
+                DEFAULT_STT_HTTP_PRESET
+            }
+        } else {
+            DEFAULT_STT_HTTP_PRESET
+        }
+    }
+
     // --- Save TTS Settings ---
     suspend fun saveTtsSettings(
         serviceType: VoiceServiceFactory.VoiceServiceType,
@@ -114,7 +140,7 @@ class SpeechServicesPreferences(private val context: Context) {
     ) {
         dataStore.edit { prefs ->
             prefs[TTS_SERVICE_TYPE] = serviceType.name
-            
+
             cleanerRegexs?.let {
                 prefs[TTS_CLEANER_REGEXS] = it.filter { regex -> regex.isNotBlank() }.toSet()
             }
@@ -146,10 +172,21 @@ class SpeechServicesPreferences(private val context: Context) {
 
     // --- Save STT Settings ---
     suspend fun saveSttSettings(
-        serviceType: SpeechServiceFactory.SpeechServiceType
+        serviceType: SpeechServiceFactory.SpeechServiceType,
+        httpConfig: SttHttpConfig? = null,
     ) {
         dataStore.edit { prefs ->
             prefs[STT_SERVICE_TYPE] = serviceType.name
+
+            when (serviceType) {
+                SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> {
+                }
+                SpeechServiceFactory.SpeechServiceType.SHERPA_MNN -> {
+                }
+                SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> {
+                    httpConfig?.let { prefs[STT_HTTP_CONFIG] = Json.encodeToString(it) }
+                }
+            }
         }
     }
-} 
+}

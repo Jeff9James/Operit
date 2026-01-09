@@ -48,6 +48,8 @@ fun TokenUsageStatisticsScreen(
     var showPricingDialog by remember { mutableStateOf(false) }
     var selectedModel by remember { mutableStateOf("") }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showResetModelDialog by remember { mutableStateOf(false) }
+    var resetModel by remember { mutableStateOf("") }
     
     // Collect tokens for ALL provider models from ApiPreferences
     LaunchedEffect(Unit) {
@@ -351,6 +353,10 @@ fun TokenUsageStatisticsScreen(
                         onClick = {
                             selectedModel = providerModel
                             showPricingDialog = true
+                        },
+                        onResetClick = {
+                            resetModel = providerModel
+                            showResetModelDialog = true
                         }
                     )
                 }
@@ -494,6 +500,42 @@ fun TokenUsageStatisticsScreen(
         )
     }
 
+    // Reset Single Model Dialog
+    if (showResetModelDialog && resetModel.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showResetModelDialog = false },
+            title = {
+                Text(text = stringResource(id = R.string.settings_reset_model_confirmation))
+            },
+            text = {
+                Text(text = stringResource(id = R.string.settings_reset_model_warning, resetModel))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            apiPreferences.resetProviderModelTokenCounts(resetModel)
+                            providerModelRequestCounts.remove(resetModel)
+                        }
+                        showResetModelDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(id = R.string.settings_reset))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showResetModelDialog = false }
+                ) {
+                    Text(stringResource(id = R.string.settings_cancel))
+                }
+            }
+        )
+    }
+
     // Reset Dialog
     if (showResetDialog) {
         AlertDialog(
@@ -543,7 +585,8 @@ private fun TokenUsageModelCard(
     outputPrice: Double,
     billingMode: BillingMode,
     pricePerRequest: Double,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onResetClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -588,12 +631,26 @@ private fun TokenUsageModelCard(
                         modifier = Modifier.height(24.dp)
                     )
                 }
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = stringResource(id = R.string.settings_edit_pricing),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onResetClick
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RestartAlt,
+                            contentDescription = stringResource(id = R.string.settings_reset_model_counts),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(id = R.string.settings_edit_pricing),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.height(8.dp))
