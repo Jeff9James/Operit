@@ -61,6 +61,7 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.api.chat.AIForegroundService
 import com.ai.assistance.operit.data.model.AttachmentInfo
 import com.ai.assistance.operit.data.model.ChatMessage
 import com.ai.assistance.operit.data.model.InputProcessingState
@@ -646,6 +647,11 @@ class FloatingWindowManager(
             cancelFocusBeforeExit()
         }
 
+        val wasFullscreen =
+            state.currentMode.value == FloatingMode.FULLSCREEN ||
+                state.currentMode.value == FloatingMode.SCREEN_OCR
+        val willFullscreen = newMode == FloatingMode.FULLSCREEN || newMode == FloatingMode.SCREEN_OCR
+
         // 取消之前的动画
         sizeAnimator?.cancel()
 
@@ -692,6 +698,16 @@ class FloatingWindowManager(
 
         state.currentMode.value = newMode
         callback.saveState()
+
+        if (wasFullscreen != willFullscreen) {
+            try {
+                AIForegroundService.setWakeListeningSuspendedForFloatingFullscreen(
+                    context.applicationContext,
+                    willFullscreen
+                )
+            } catch (_: Exception) {
+            }
+        }
 
         // 计算目标尺寸和位置
         data class TargetParams(

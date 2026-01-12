@@ -440,28 +440,39 @@ class MemoryRepository(private val context: Context, profileId: String) {
     suspend fun searchMemories(
         query: String,
         folderPath: String? = null,
-        semanticThreshold: Float = 0.6f
+        semanticThreshold: Float = 0.6f,
+        createdAtStartMs: Long? = null,
+        createdAtEndMs: Long? = null
     ): List<Memory> = withContext(Dispatchers.IO) {
         val normalizedFolderPath = normalizeFolderPath(folderPath)
+
+        val memoriesInScope = if (normalizedFolderPath == null) {
+            if (folderPath == "未分类") {
+                memoryBox.all.filter { normalizeFolderPath(it.folderPath) == null }
+            } else {
+                memoryBox.all
+            }
+        } else {
+            getMemoriesByFolderPath(normalizedFolderPath)
+        }
+
+        val timeFilteredMemoriesInScope = if (createdAtStartMs == null && createdAtEndMs == null) {
+            memoriesInScope
+        } else {
+            memoriesInScope.filter { memory ->
+                val createdAtMs = memory.createdAt.time
+                (createdAtStartMs == null || createdAtMs >= createdAtStartMs) &&
+                    (createdAtEndMs == null || createdAtMs <= createdAtEndMs)
+            }
+        }
+
         // 支持通配符搜索：如果查询是 "*"，返回所有记忆（在文件夹过滤后）
         if (query.trim() == "*") {
-            return@withContext if (normalizedFolderPath == null) {
-                if (folderPath == "未分类") {
-                    memoryBox.all.filter { normalizeFolderPath(it.folderPath) == null }
-                } else {
-                    memoryBox.all
-                }
-            } else {
-                getMemoriesByFolderPath(normalizedFolderPath)
-            }
+            return@withContext timeFilteredMemoriesInScope
         }
         
         if (query.isBlank()) {
-            return@withContext if (normalizedFolderPath == null) {
-                memoryBox.all.filter { normalizeFolderPath(it.folderPath) == null }
-            } else {
-                getMemoriesByFolderPath(normalizedFolderPath)
-            }
+            return@withContext timeFilteredMemoriesInScope
         }
 
         // 支持两种分隔符：'|' 或空格
@@ -480,15 +491,7 @@ class MemoryRepository(private val context: Context, profileId: String) {
         // --- PRE-FILTERING BY FOLDER ---
         // If a folder path is provided, all subsequent searches will be performed on this subset.
         // Otherwise, search all memories.
-        val memoriesToSearch = if (normalizedFolderPath == null) {
-            if (folderPath == "未分类") {
-                memoryBox.all.filter { normalizeFolderPath(it.folderPath) == null }
-            } else {
-                memoryBox.all
-            }
-        } else {
-            getMemoriesByFolderPath(normalizedFolderPath)
-        }
+        val memoriesToSearch = timeFilteredMemoriesInScope
 
         if (memoriesToSearch.isEmpty()) {
             com.ai.assistance.operit.util.AppLogger.d("MemoryRepo", "No memories found in folder '$folderPath' to search.")

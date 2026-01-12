@@ -309,9 +309,11 @@ fun getJsToolsDefinition(): String {
             // 记忆管理
             Memory: {
                 // 查询记忆库
-                query: (query, folderPath, threshold, limit) => {
+                query: (query, folderPath, threshold, limit, startTime, endTime) => {
                     const params = { query };
                     if (folderPath) params.folder_path = folderPath;
+                    if (startTime !== undefined) params.start_time = startTime;
+                    if (endTime !== undefined) params.end_time = endTime;
                     if (threshold !== undefined) params.threshold = threshold;
                     if (limit !== undefined) params.limit = limit;
                     return toolCall("query_memory", params);

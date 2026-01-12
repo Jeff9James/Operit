@@ -57,6 +57,37 @@ class MemoryQueryToolExecutor(private val context: Context) : ToolExecutor {
         val threshold = tool.parameters.find { it.name == "threshold" }?.value?.toFloatOrNull() ?: 0.25f
         val limitParam = tool.parameters.find { it.name == "limit" }?.value
         val limit = limitParam?.toIntOrNull()
+        val startTimeParam = tool.parameters.find { it.name == "start_time" }?.value
+        val endTimeParam = tool.parameters.find { it.name == "end_time" }?.value
+
+        val startTimeMs = startTimeParam?.takeIf { it.isNotBlank() }?.toLongOrNull()
+        if (!startTimeParam.isNullOrBlank() && startTimeMs == null) {
+            return ToolResult(
+                toolName = tool.name,
+                success = false,
+                result = StringResultData(""),
+                error = "Invalid start_time. Expected Unix timestamp in milliseconds."
+            )
+        }
+
+        val endTimeMs = endTimeParam?.takeIf { it.isNotBlank() }?.toLongOrNull()
+        if (!endTimeParam.isNullOrBlank() && endTimeMs == null) {
+            return ToolResult(
+                toolName = tool.name,
+                success = false,
+                result = StringResultData(""),
+                error = "Invalid end_time. Expected Unix timestamp in milliseconds."
+            )
+        }
+
+        if (startTimeMs != null && endTimeMs != null && startTimeMs > endTimeMs) {
+            return ToolResult(
+                toolName = tool.name,
+                success = false,
+                result = StringResultData(""),
+                error = "Invalid time range: start_time must be <= end_time."
+            )
+        }
         
         // 如果查询是 "*" 且用户没有显式指定 limit，则返回所有结果
         val isWildcardQuery = query.trim() == "*"
@@ -76,13 +107,18 @@ class MemoryQueryToolExecutor(private val context: Context) : ToolExecutor {
         // limit 无上限，但至少为 1
         val validLimit = if (finalLimit < 1) 1 else finalLimit
 
-        AppLogger.d(TAG, "Executing memory query: '$query' in folder: '${folderPath ?: "All"}', threshold: $validThreshold, limit: $validLimit")
+        AppLogger.d(
+            TAG,
+            "Executing memory query: '$query' in folder: '${folderPath ?: "All"}', start_time: ${startTimeMs ?: "null"}, end_time: ${endTimeMs ?: "null"}, threshold: $validThreshold, limit: $validLimit"
+        )
 
         return try {
             val results = memoryRepository.searchMemories(
                 query = query,
                 folderPath = folderPath,
-                semanticThreshold = validThreshold
+                semanticThreshold = validThreshold,
+                createdAtStartMs = startTimeMs,
+                createdAtEndMs = endTimeMs
             )
             
             val formattedResult = buildResultData(results.take(validLimit), query, validLimit)
