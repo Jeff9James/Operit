@@ -379,7 +379,9 @@ object ColorQrCodeUtil {
                     points[0] = x + ox
                     points[1] = y + oy
                     transform.transformPoints(points)
-                    val c = sampleColorAtFloat(bitmap, points[0], points[1])
+                    val px = points[0].roundToInt().coerceIn(0, bitmap.width - 1)
+                    val py = points[1].roundToInt().coerceIn(0, bitmap.height - 1)
+                    val c = sampleColor(bitmap, px, py)
                     val idx = nearestPaletteIndex(c, palette, hueOffsetDegrees)
                     if (i == 0) centerIndex = idx
                     counts[idx]++
@@ -408,17 +410,14 @@ object ColorQrCodeUtil {
         return (requiredBits + bitsPerSymbol - 1) / bitsPerSymbol
     }
 
-    private fun sampleColorAtFloat(bitmap: Bitmap, fx: Float, fy: Float): Int {
-        val x0 = fx.toInt().coerceIn(0, bitmap.width - 1)
-        val y0 = fy.toInt().coerceIn(0, bitmap.height - 1)
+    private fun sampleColor(bitmap: Bitmap, x: Int, y: Int): Int {
         val hsv = FloatArray(3)
-
-        var best = bitmap.getPixel(x0, y0)
+        var best = bitmap.getPixel(x, y)
         var bestSat = -1f
         for (dy in -1..1) {
-            val py = (y0 + dy).coerceIn(0, bitmap.height - 1)
+            val py = (y + dy).coerceIn(0, bitmap.height - 1)
             for (dx in -1..1) {
-                val px = (x0 + dx).coerceIn(0, bitmap.width - 1)
+                val px = (x + dx).coerceIn(0, bitmap.width - 1)
                 val c = bitmap.getPixel(px, py)
                 Color.colorToHSV(c, hsv)
                 val sat = hsv[1]

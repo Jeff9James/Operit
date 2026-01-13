@@ -35,6 +35,8 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
+import android.content.ClipData
+import android.content.ClipboardManager
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.data.model.CharacterCard
 import com.ai.assistance.operit.data.model.PromptTag
@@ -70,6 +72,12 @@ import androidx.core.content.FileProvider
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.util.Base64
+import java.util.zip.CRC32
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -118,13 +126,19 @@ fun ModelPromptsSettingsScreen(
     var importErrorMessage by remember { mutableStateOf("") }
     var showChatManagementPrompt by remember { mutableStateOf(false) }
 
-    var showColorQrExportDialog by remember { mutableStateOf(false) }
+    var showExportModeDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
     var exportCharacterCardId by remember { mutableStateOf("") }
     var exportCharacterCardName by remember { mutableStateOf("") }
+    var exportMode by remember { mutableStateOf(ExportMode.COLOR_QR) }
     var exportColorCount by remember { mutableStateOf(8) }
-    var exportQrBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var exportQrBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var exportTavernJson by remember { mutableStateOf("") }
+    var exportTavernPngBytes by remember { mutableStateOf<ByteArray?>(null) }
     var exportErrorMessage by remember { mutableStateOf("") }
     var isExportGenerating by remember { mutableStateOf(false) }
+    var showExportSavedDialog by remember { mutableStateOf(false) }
+    var exportSavedPath by remember { mutableStateOf("") }
 
     // Avatar picker and cropper launcher
     val cropAvatarLauncher = rememberLauncherForActivityResult(CropImageContract()) { result ->
@@ -621,10 +635,13 @@ fun ModelPromptsSettingsScreen(
                         onExportCharacterCard = { cardId, cardName ->
                             exportCharacterCardId = cardId
                             exportCharacterCardName = cardName
+                            exportMode = ExportMode.COLOR_QR
+                            exportTavernJson = ""
                             exportColorCount = 8
                             exportQrBitmap = null
+                            exportTavernPngBytes = null
                             exportErrorMessage = ""
-                            showColorQrExportDialog = true
+                            showExportModeDialog = true
                         }
                     )
                     1 -> TagTab(
@@ -1037,28 +1054,231 @@ fun ModelPromptsSettingsScreen(
         )
     }
 
-    if (showColorQrExportDialog) {
-        LaunchedEffect(exportCharacterCardId, exportColorCount) {
+    if (showExportModeDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportModeDialog = false },
+            title = { Text(stringResource(R.string.export)) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = exportCharacterCardName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (exportCharacterCardId.isBlank() || isExportGenerating) return@OutlinedCard
+                                showExportModeDialog = false
+                                scope.launch {
+                                    try {
+                                        isExportGenerating = true
+                                        exportErrorMessage = ""
+                                        val json = characterCardManager
+                                            .exportCharacterCardToTavernJson(exportCharacterCardId)
+                                            .getOrThrow()
+                                        val fileName = "tavern_card_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.json"
+                                        val ok = saveBytesToDownloads(
+                                            context = context,
+                                            bytes = json.toByteArray(Charsets.UTF_8),
+                                            fileName = fileName,
+                                            mimeType = "application/json"
+                                        )
+                                        if (ok) {
+                                            exportSavedPath = "${Environment.DIRECTORY_DOWNLOADS}/Operit/exports/$fileName"
+                                            showExportSavedDialog = true
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, (e.message ?: context.getString(R.string.save_failed)), Toast.LENGTH_SHORT).show()
+                                    } finally {
+                                        isExportGenerating = false
+                                    }
+                                }
+                            }
+                        ) {
+                            ListItem(
+                                headlineContent = { Text("酒馆 JSON") },
+                                supportingContent = { Text("导出为 .json 并保存到 Download/Operit/exports") },
+                                leadingContent = { Icon(Icons.Default.DataObject, contentDescription = null) }
+                            )
+                        }
+
+                        OutlinedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (exportCharacterCardId.isBlank() || isExportGenerating) return@OutlinedCard
+                                showExportModeDialog = false
+                                scope.launch {
+                                    try {
+                                        isExportGenerating = true
+                                        exportErrorMessage = ""
+                                        val json = characterCardManager
+                                            .exportCharacterCardToTavernJson(exportCharacterCardId)
+                                            .getOrThrow()
+
+                                        val avatarUri = withContext(Dispatchers.IO) {
+                                            runCatching {
+                                                userPreferencesManager.getAiAvatarForCharacterCardFlow(exportCharacterCardId).first()
+                                            }.getOrNull()
+                                        }
+
+                                        val base = withContext(Dispatchers.IO) {
+                                            val src = avatarUri?.let { uriStr ->
+                                                runCatching {
+                                                    val uri = Uri.parse(uriStr)
+                                                    context.contentResolver.openInputStream(uri).use { input ->
+                                                        if (input == null) null else BitmapFactory.decodeStream(input)
+                                                    }
+                                                }.getOrNull()
+                                            }
+                                            if (src != null) {
+                                                centerCropSquare(src, 512)
+                                            } else {
+                                                Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888).apply {
+                                                    eraseColor(android.graphics.Color.WHITE)
+                                                }
+                                            }
+                                        }
+
+                                        val rawPng = withContext(Dispatchers.Default) {
+                                            ByteArrayOutputStream().use { out ->
+                                                base.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                                                out.toByteArray()
+                                            }
+                                        }
+                                        val pngBytes = insertTavernTextChunk(rawPng, json)
+                                        val fileName = "tavern_card_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.png"
+                                        val ok = saveBytesToDownloads(
+                                            context = context,
+                                            bytes = pngBytes,
+                                            fileName = fileName,
+                                            mimeType = "image/png"
+                                        )
+                                        if (ok) {
+                                            exportSavedPath = "${Environment.DIRECTORY_DOWNLOADS}/Operit/exports/$fileName"
+                                            showExportSavedDialog = true
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, (e.message ?: context.getString(R.string.save_failed)), Toast.LENGTH_SHORT).show()
+                                    } finally {
+                                        isExportGenerating = false
+                                    }
+                                }
+                            }
+                        ) {
+                            ListItem(
+                                headlineContent = { Text("酒馆 PNG") },
+                                supportingContent = { Text("导出为可导入酒馆的图片，并保存到 Download/Operit/exports") },
+                                leadingContent = { Icon(Icons.Default.Image, contentDescription = null) }
+                            )
+                        }
+
+                        OutlinedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                if (exportCharacterCardId.isBlank()) return@OutlinedCard
+                                exportMode = ExportMode.COLOR_QR
+                                exportTavernJson = ""
+                                exportColorCount = 8
+                                exportQrBitmap = null
+                                exportTavernPngBytes = null
+                                exportErrorMessage = ""
+                                showExportModeDialog = false
+                                showExportDialog = true
+                            }
+                        ) {
+                            ListItem(
+                                headlineContent = { Text("多维码") },
+                                supportingContent = { Text("进入多维码预览，可选颜色数并保存") },
+                                leadingContent = { Icon(Icons.Default.QrCode2, contentDescription = null) }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showExportModeDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        )
+    }
+
+    if (showExportSavedDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportSavedDialog = false },
+            title = { Text(stringResource(R.string.save_successful)) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("已保存到：", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SelectionContainer {
+                        Text(exportSavedPath)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.setPrimaryClip(ClipData.newPlainText("export_path", exportSavedPath))
+                        Toast.makeText(context, context.getString(R.string.copy), Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text(stringResource(R.string.copy))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExportSavedDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        )
+    }
+
+    if (showExportDialog) {
+        LaunchedEffect(exportCharacterCardId) {
             if (exportCharacterCardId.isBlank()) return@LaunchedEffect
             isExportGenerating = true
             exportErrorMessage = ""
             exportQrBitmap = null
+            exportTavernJson = ""
+            exportTavernPngBytes = null
 
             val jsonResult = characterCardManager.exportCharacterCardToTavernJson(exportCharacterCardId)
             jsonResult.onSuccess { json ->
-                try {
-                    exportQrBitmap = withContext(Dispatchers.Default) {
-                        ColorQrCodeUtil.generate(
-                            text = json,
-                            colorCount = exportColorCount,
-                            moduleSizePx = 10,
-                            marginModules = 4
-                        )
-                    }
-                } catch (e: Exception) {
-                    exportErrorMessage = e.message ?: context.getString(R.string.unknown_error)
-                }
+                exportTavernJson = json
             }.onFailure { e ->
+                exportErrorMessage = e.message ?: context.getString(R.string.unknown_error)
+            }
+            isExportGenerating = false
+        }
+
+        LaunchedEffect(exportTavernJson, exportColorCount) {
+            if (exportTavernJson.isBlank()) return@LaunchedEffect
+            exportErrorMessage = ""
+            isExportGenerating = true
+            exportQrBitmap = null
+            try {
+                exportQrBitmap = withContext(Dispatchers.Default) {
+                    ColorQrCodeUtil.generate(
+                        text = exportTavernJson,
+                        colorCount = exportColorCount,
+                        moduleSizePx = 10,
+                        marginModules = 4
+                    )
+                }
+            } catch (e: Exception) {
                 exportErrorMessage = e.message ?: context.getString(R.string.unknown_error)
             }
             isExportGenerating = false
@@ -1066,10 +1286,12 @@ fun ModelPromptsSettingsScreen(
 
         AlertDialog(
             onDismissRequest = {
-                showColorQrExportDialog = false
+                showExportDialog = false
                 exportCharacterCardId = ""
                 exportCharacterCardName = ""
+                exportTavernJson = ""
                 exportQrBitmap = null
+                exportTavernPngBytes = null
                 exportErrorMessage = ""
                 isExportGenerating = false
             },
@@ -1091,9 +1313,7 @@ fun ModelPromptsSettingsScreen(
                         val options = listOf(2, 4, 8, 16)
                         options.forEach { count ->
                             val selected = exportColorCount == count
-                            val onClick = {
-                                exportColorCount = count
-                            }
+                            val onClick = { exportColorCount = count }
                             if (selected) {
                                 Button(
                                     onClick = onClick,
@@ -1166,7 +1386,7 @@ fun ModelPromptsSettingsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showColorQrExportDialog = false }) {
+                TextButton(onClick = { showExportDialog = false }) {
                     Text(stringResource(R.string.close))
                 }
             }
@@ -1210,6 +1430,12 @@ enum class CharacterCardSortOption {
     DEFAULT,
     NAME_ASC,
     CREATED_DESC
+}
+
+enum class ExportMode {
+    TAVERN_JSON,
+    TAVERN_PNG,
+    COLOR_QR
 }
 
 // 角色卡标签页
@@ -1450,162 +1676,152 @@ fun CharacterCardItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = characterCard.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (isActive) {
-                            Spacer(Modifier.width(8.dp))
-                            AssistChip(
-                                onClick = { },
-                                label = { Text(stringResource(R.string.currently_active), fontSize = 10.sp) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = stringResource(R.string.currently_active),
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                },
-                                modifier = Modifier.height(24.dp)
+                                                    Text(
+                    text = characterCard.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                                        )
+                if (isActive) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AssistChip(
+                        onClick = { },
+                        label = { Text(stringResource(R.string.currently_active), fontSize = 10.sp) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = stringResource(R.string.currently_active),
+                                modifier = Modifier.size(14.dp)
                             )
-                        }
-                    }
-                    if (characterCard.description.isNotBlank()) {
-                                Text(
-                            text = characterCard.description,
-                            style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-                // 三点菜单
-                var showMenu by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            Icons.Outlined.MoreVert,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        if (!isActive) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.set_active)) },
-                                onClick = {
-                                    onSetActive()
-                                    showMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            )
-                        }
-                        
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.edit)) },
-                            onClick = {
-                                onEdit()
-                                showMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        )
-                        
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.duplicate)) },
-                            onClick = {
-                                onDuplicate()
-                                showMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.ContentCopy,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        )
-
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.export)) },
-                            onClick = {
-                                onExport()
-                                showMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Share,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        )
-                        
-                        if (characterCard.isDefault) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.reset)) },
-                                onClick = {
-                                    onReset()
-                                    showMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Restore,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            )
-                        }
-                        
-                        if (!characterCard.isDefault) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete)) },
-                                onClick = {
-                                    onDelete()
-                                    showMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                colors = MenuDefaults.itemColors(
-                                    textColor = MaterialTheme.colorScheme.error
-                                )
-                            )
-                        }
-                    }
+                        },
+                        modifier = Modifier.height(24.dp)
+                    )
                 }
             }
 
-            // 角色设定预览
-            if (characterCard.characterSetting.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
+            // 三点菜单
+            var showMenu by remember { mutableStateOf(false) }
+            Box {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Outlined.MoreVert,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    if (!isActive) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.set_active)) },
+                            onClick = {
+                                onSetActive()
+                                showMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        )
+                    }
+                    
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.edit)) },
+                        onClick = {
+                            onEdit()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    )
+                    
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.duplicate)) },
+                        onClick = {
+                            onDuplicate()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.export)) },
+                        onClick = {
+                            onExport()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    )
+                    
+                    if (characterCard.isDefault) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.reset)) },
+                            onClick = {
+                                onReset()
+                                showMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Restore,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        )
+                    }
+                    
+                    if (!characterCard.isDefault) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete)) },
+                            onClick = {
+                                onDelete()
+                                showMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = MaterialTheme.colorScheme.error
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // 角色设定预览
+        if (characterCard.characterSetting.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                     text = stringResource(R.string.character_setting_preview, characterCard.characterSetting.take(40)),
                     style = MaterialTheme.typography.bodySmall,
@@ -1914,7 +2130,7 @@ fun TagDialog(
     )
 }
 
-private suspend fun saveBitmapToGallery(context: Context, bitmap: android.graphics.Bitmap, fileName: String): Boolean =
+private suspend fun saveBitmapToGallery(context: Context, bitmap: Bitmap, fileName: String): Boolean =
     withContext(Dispatchers.IO) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -1934,7 +2150,7 @@ private suspend fun saveBitmapToGallery(context: Context, bitmap: android.graphi
 
                 uri?.let { imageUri ->
                     context.contentResolver.openOutputStream(imageUri)?.use { outputStream ->
-                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
                         return@withContext true
                     }
                 }
@@ -1944,7 +2160,7 @@ private suspend fun saveBitmapToGallery(context: Context, bitmap: android.graphi
                 val targetDir = File(imagesDir, "Operit").apply { if (!exists()) mkdirs() }
                 val imageFile = File(targetDir, fileName)
                 FileOutputStream(imageFile).use { outputStream ->
-                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
                 }
                 MediaScannerConnection.scanFile(
                     context,
@@ -1958,5 +2174,106 @@ private suspend fun saveBitmapToGallery(context: Context, bitmap: android.graphi
             return@withContext false
         }
     }
+
+private suspend fun saveBytesToDownloads(context: Context, bytes: ByteArray, fileName: String, mimeType: String): Boolean =
+    withContext(Dispatchers.IO) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                    put(
+                        MediaStore.MediaColumns.RELATIVE_PATH,
+                        "${Environment.DIRECTORY_DOWNLOADS}/Operit/exports"
+                    )
+                }
+
+                val uri = context.contentResolver.insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    contentValues
+                )
+
+                uri?.let { downloadUri ->
+                    context.contentResolver.openOutputStream(downloadUri)?.use { outputStream ->
+                        outputStream.write(bytes)
+                        outputStream.flush()
+                        return@withContext true
+                    }
+                }
+                return@withContext false
+            } else {
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val targetDir = File(downloadsDir, "Operit/exports").apply { if (!exists()) mkdirs() }
+                val outFile = File(targetDir, fileName)
+                FileOutputStream(outFile).use { outputStream ->
+                    outputStream.write(bytes)
+                    outputStream.flush()
+                }
+                MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(outFile.absolutePath),
+                    arrayOf(mimeType),
+                    null
+                )
+                return@withContext true
+            }
+        } catch (e: Exception) {
+            return@withContext false
+        }
+    }
+
+private fun insertTavernTextChunk(pngBytes: ByteArray, tavernJson: String): ByteArray {
+    if (pngBytes.size < 8) throw IllegalArgumentException("invalid png")
+
+    val keyword = "chara"
+    val base64 = Base64.encodeToString(tavernJson.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+    val data = (keyword + '\u0000' + base64).toByteArray(Charsets.ISO_8859_1)
+
+    val type = byteArrayOf('t'.code.toByte(), 'E'.code.toByte(), 'X'.code.toByte(), 't'.code.toByte())
+    val crc = CRC32().apply {
+        update(type)
+        update(data)
+    }.value.toInt()
+
+    val chunk = ByteArrayOutputStream().use { out ->
+        val lenBuf = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(data.size).array()
+        val crcBuf = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(crc).array()
+        out.write(lenBuf)
+        out.write(type)
+        out.write(data)
+        out.write(crcBuf)
+        out.toByteArray()
+    }
+
+    var offset = 8
+    while (offset + 8 <= pngBytes.size) {
+        if (offset + 8 > pngBytes.size) break
+        val len = ByteBuffer.wrap(pngBytes, offset, 4).order(ByteOrder.BIG_ENDIAN).int
+        val chunkType = String(pngBytes, offset + 4, 4, Charsets.ISO_8859_1)
+        val next = offset + 8 + len + 4
+        if (chunkType == "IEND") {
+            val out = ByteArrayOutputStream()
+            out.write(pngBytes, 0, offset)
+            out.write(chunk)
+            out.write(pngBytes, offset, pngBytes.size - offset)
+            return out.toByteArray()
+        }
+        offset = next
+    }
+
+    throw IllegalArgumentException("invalid png")
+}
+
+private fun centerCropSquare(src: Bitmap, size: Int): Bitmap {
+    val minDim = minOf(src.width, src.height)
+    val left = (src.width - minDim) / 2
+    val top = (src.height - minDim) / 2
+    val cropped = Bitmap.createBitmap(src, left, top, minDim, minDim)
+    return if (cropped.width == size && cropped.height == size) {
+        cropped
+    } else {
+        Bitmap.createScaledBitmap(cropped, size, size, true)
+    }
+}
 
 // 旧配置查看对话框已废弃
