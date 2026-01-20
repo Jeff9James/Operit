@@ -124,9 +124,12 @@ fun getJsToolsDefinition(): String {
                     if (environment) params.environment = environment;
                     return toolCall("share_file", params);
                 },
-                download: (url, destination, environment) => {
+                download: (url, destination, environment, headers) => {
                     const params = { url, destination };
                     if (environment) params.environment = environment;
+                    if (headers !== undefined && headers !== null && typeof headers === 'object') {
+                        params.headers = JSON.stringify(headers);
+                    }
                     return toolCall("download_file", params);
                 },
             },
@@ -146,6 +149,9 @@ fun getJsToolsDefinition(): String {
                         return toolCall("visit_web", { url: params });
                     }
                     // 否则，假定为参数对象
+                    if (params && typeof params === 'object' && params.headers !== undefined && typeof params.headers === 'object') {
+                        params = { ...params, headers: JSON.stringify(params.headers) };
+                    }
                     return toolCall("visit_web", params);
                 },
                 // 新增增强版HTTP请求

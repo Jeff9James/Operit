@@ -534,9 +534,9 @@ const UIAutomationSubAgentTools = (function () {
             targetAppForRun = matched.run;
         }
         const result = await Tools.UI.runSubAgent(intent, max_steps, agentIdToUse, targetAppForRun);
-        if (result && result.agentId) {
-            setCachedAgentId(result.agentId);
-        }
+        const agentId = result === null || result === void 0 ? void 0 : result.agentId;
+        if (agentId)
+            setCachedAgentId(agentId);
         return {
             success: true,
             message: 'UI子代理执行完成',
@@ -544,16 +544,17 @@ const UIAutomationSubAgentTools = (function () {
         };
     }
     async function run_subagent_parallel(params) {
+        var _a;
         const slots = [1, 2, 3, 4];
         const activeSlots = slots
             .map((i) => {
-                const intent = params[`intent_${i}`];
-                if (!intent || String(intent).trim().length === 0)
-                    return null;
-                const targetApp = params[`target_app_${i}`];
-                return { index: i, targetApp };
-            })
-            .filter(Boolean);
+            const intent = params[`intent_${i}`];
+            if (!intent || intent.trim().length === 0)
+                return null;
+            const targetApp = params[`target_app_${i}`];
+            return { index: i, targetApp };
+        })
+            .filter((x) => Boolean(x));
         const missingTargets = activeSlots
             .filter((s) => s.targetApp === undefined || s.targetApp === null || String(s.targetApp).trim().length === 0)
             .map((s) => s.index);
@@ -574,7 +575,7 @@ const UIAutomationSubAgentTools = (function () {
             else
                 resolvedBySlot.set(s.index, m);
         }
-        if (missingApps.length > 0) {
+        if (missingApps.length) {
             return {
                 success: false,
                 message: `目标应用不存在：当前给定的 target_app 列表中包含未安装/不存在的应用：${missingApps.map((s) => `“${String(s).trim()}”`).join('，')}。已返回已安装应用名列表。`,
@@ -586,7 +587,7 @@ const UIAutomationSubAgentTools = (function () {
         }
         const used = {};
         for (const s of activeSlots) {
-            const key = (resolvedBySlot.get(s.index) || { key: String(s.targetApp).trim().toLowerCase() }).key;
+            const key = ((_a = resolvedBySlot.get(s.index)) === null || _a === void 0 ? void 0 : _a.key) || String(s.targetApp).trim().toLowerCase();
             const prev = used[key];
             if (prev !== undefined) {
                 return {
@@ -598,23 +599,24 @@ const UIAutomationSubAgentTools = (function () {
         }
         const tasks = slots
             .map((i) => {
-                const intent = params[`intent_${i}`];
-                if (!intent || String(intent).trim().length === 0)
-                    return null;
-                const maxSteps = params[`max_steps_${i}`];
-                const agentId = params[`agent_id_${i}`];
-                const targetApp = (resolvedBySlot.get(i) || { run: params[`target_app_${i}`] }).run;
-                return (async () => {
-                    try {
-                        const result = await Tools.UI.runSubAgent(String(intent), maxSteps === undefined ? undefined : Number(maxSteps), agentId === undefined || agentId === null || String(agentId).length === 0 ? undefined : String(agentId), targetApp);
-                        return { index: i, success: true, result };
-                    }
-                    catch (e) {
-                        return { index: i, success: false, error: errorMessage(e) };
-                    }
-                })();
-            })
-            .filter(Boolean);
+            var _a, _b;
+            const intent = params[`intent_${i}`];
+            if (!intent || intent.trim().length === 0)
+                return null;
+            const maxSteps = params[`max_steps_${i}`];
+            const agentId = params[`agent_id_${i}`];
+            const targetApp = (_b = (_a = resolvedBySlot.get(i)) === null || _a === void 0 ? void 0 : _a.run) !== null && _b !== void 0 ? _b : params[`target_app_${i}`];
+            return (async () => {
+                try {
+                    const result = await Tools.UI.runSubAgent(String(intent), maxSteps === undefined ? undefined : Number(maxSteps), agentId === undefined || agentId === null || String(agentId).length === 0 ? undefined : String(agentId), targetApp);
+                    return { index: i, success: true, result };
+                }
+                catch (e) {
+                    return { index: i, success: false, error: errorMessage(e) };
+                }
+            })();
+        })
+            .filter((x) => x !== null);
         const results = await Promise.all(tasks);
         const okCount = results.filter((r) => r.success).length;
         return {

@@ -223,7 +223,7 @@ def main() -> int:
         - Imperative mood (e.g., 'Fix', 'Add', 'Refactor').
         - Prefer Conventional Commits if obvious (feat/fix/refactor/chore/docs/test/build), otherwise a normal subject.
         - No trailing period.
-        - Try to keep <= 72 characters.
+        - Try to keep <= 250 characters.
 
         Optional author notes (may be Chinese):
         {extra_zh or '[none]'}

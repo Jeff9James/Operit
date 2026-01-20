@@ -79,6 +79,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.OkHttpClient
+import org.json.JSONObject
 
 /** Tool for web page visiting and content extraction */
 class StandardWebVisitTool(private val context: Context) : ToolExecutor {
@@ -87,7 +88,10 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
         private const val TAG = "WebVisitTool"
         private const val USER_AGENT =
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
-        
+
+        private const val USER_AGENT_MOBILE_ANDROID =
+                "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+
         // Cache to store visit results
         private val visitCache = ConcurrentHashMap<String, VisitWebResultData>()
     }
@@ -118,6 +122,9 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
         val url = tool.parameters.find { it.name == "url" }?.value
         val visitKey = tool.parameters.find { it.name == "visit_key" }?.value
         val linkNumberStr = tool.parameters.find { it.name == "link_number" }?.value
+        val headersParam = tool.parameters.find { it.name == "headers" }?.value
+        val userAgentParam = tool.parameters.find { it.name == "user_agent" }?.value
+        val userAgentPresetParam = tool.parameters.find { it.name == "user_agent_preset" }?.value
 
         val targetUrl = when {
             !visitKey.isNullOrBlank() && !linkNumberStr.isNullOrBlank() -> {
@@ -125,7 +132,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                 if (linkNumber == null) {
                     return ToolResult(tool.name, false, StringResultData(""), "Invalid link number.")
                 }
-                
+
                 val cachedVisit = visitCache[visitKey]
                 if (cachedVisit == null) {
                     return ToolResult(tool.name, false, StringResultData(""), "Invalid visit key.")
@@ -148,8 +155,39 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
             }
         }
 
+        fun parseHeaders(headersJson: String?): Map<String, String> {
+            if (headersJson.isNullOrBlank()) return emptyMap()
+            return try {
+                val obj = JSONObject(headersJson)
+                val keys = obj.keys()
+                val result = mutableMapOf<String, String>()
+                while (keys.hasNext()) {
+                    val rawName = keys.next()
+                    val rawValue = obj.optString(rawName, "")
+                    val name = sanitizeHeaderName(rawName) ?: continue
+                    val value = sanitizeHeaderValue(rawValue)
+                    result[name] = value
+                }
+                result
+            } catch (_: Exception) {
+                emptyMap()
+            }
+        }
+
+        fun resolveUserAgent(preset: String?, override: String?): String {
+            if (!override.isNullOrBlank()) return override
+            return when (preset?.trim()?.lowercase()) {
+                "desktop", "pc", "default", "windows" -> USER_AGENT
+                "android", "mobile_android", "mobile" -> USER_AGENT_MOBILE_ANDROID
+                else -> USER_AGENT
+            }
+        }
+
+        val headers = parseHeaders(headersParam)
+        val resolvedUserAgent = resolveUserAgent(userAgentPresetParam, userAgentParam)
+
         return try {
-            val pageContent = visitWebPage(targetUrl)
+            val pageContent = visitWebPage(targetUrl, headers, resolvedUserAgent)
             ToolResult(toolName = tool.name, success = true, result = pageContent, error = null)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error visiting web page", e)
@@ -294,9 +332,9 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
     }
 
     /** Visit web page and extract content */
-    private fun visitWebPage(url: String): VisitWebResultData {
+    private fun visitWebPage(url: String, headers: Map<String, String>, userAgent: String): VisitWebResultData {
         // Use WebView to visit the page and extract content
-        val extractedJson = runBlocking { loadWebPageAndExtractContent(url) }
+        val extractedJson = runBlocking { loadWebPageAndExtractContent(url, headers, userAgent) }
 
         return try {
             val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
@@ -377,7 +415,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
     }
 
     /** 使用WebView加载页面并提取内容 */
-    private suspend fun loadWebPageAndExtractContent(url: String): String {
+    private suspend fun loadWebPageAndExtractContent(url: String, headers: Map<String, String>, userAgent: String): String {
         return suspendCancellableCoroutine { continuation ->
             AppLogger.d(TAG, "Starting to load web page: $url")
 
@@ -425,6 +463,8 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                     composeView.setContent {
                         WebVisitUI(
                                 url = url,
+                                headers = headers,
+                                userAgent = userAgent,
                                 onWebViewCreated = { webView ->
                                     // 存储WebView引用以便清理
                                     webViewReference = webView
@@ -617,7 +657,11 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
         val view =
                 ComposeView(context).apply {
                     setBackgroundColor(AndroidColor.TRANSPARENT)
-                    setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+                    setViewCompositionStrategy(
+                            ViewCompositionStrategy.DisposeOnDetachedFromWindow
+                    )
+
+                    // 使用自定义的生命周期所有者
                     setViewTreeLifecycleOwner(lifecycleOwner)
                     setViewTreeViewModelStoreOwner(lifecycleOwner)
                     setViewTreeSavedStateRegistryOwner(lifecycleOwner)
@@ -790,6 +834,8 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
     @Composable
     private fun WebVisitUI(
             url: String,
+            headers: Map<String, String>,
+            userAgent: String,
             onWebViewCreated: (WebView) -> Unit,
             onContentExtracted: (String) -> Unit,
             onCaptchaStateChanged: (Boolean) -> Unit,
@@ -926,7 +972,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                         // WebView
                         AndroidView(
                                 factory = { context ->
-                                    createOptimizedWebView(context, url) { webView ->
+                                    createOptimizedWebView(context, url, userAgent, headers) { webView ->
                                         // Register created WebView instance for later cleanup
                                         onWebViewCreated(webView)
 
@@ -1028,6 +1074,11 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                                                         // 设置页面正在加载状态
                                                         isLoading.value = true
                                                         pageLoaded.value = false
+
+                                                        if (headers.isNotEmpty() && request.isForMainFrame) {
+                                                            view.loadUrl(newUrl, headers)
+                                                            return true
+                                                        }
 
                                                         return false // 允许WebView处理URL加载
                                                     }
@@ -1197,6 +1248,8 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
     private fun createOptimizedWebView(
             context: Context,
             url: String,
+            userAgent: String,
+            headers: Map<String, String>,
             configure: (WebView) -> WebView
     ): WebView {
         return WebView(context).apply {
@@ -1216,7 +1269,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                 loadWithOverviewMode = true
                 builtInZoomControls = true
                 displayZoomControls = false
-                userAgentString = USER_AGENT
+                userAgentString = userAgent
 
                 // 启用App Cache
 //                try {
@@ -1261,7 +1314,11 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
             setWillNotDraw(false)
 
             // 加载URL
-            loadUrl(url)
+            if (headers.isNotEmpty()) {
+                loadUrl(url, headers)
+            } else {
+                loadUrl(url)
+            }
 
             // 应用额外配置
             configure(this)
@@ -1381,6 +1438,21 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
             AppLogger.e(TAG, "Exception during JavaScript evaluation", e)
             callback("Error evaluating JavaScript: ${e.message}")
         }
+    }
+
+    private fun sanitizeHeaderName(name: String?): String? {
+        val trimmed = name?.trim().orEmpty()
+        if (trimmed.isEmpty()) return null
+        if (trimmed.contains("\r") || trimmed.contains("\n")) return null
+        if (trimmed.contains(":")) return null
+        return trimmed
+    }
+
+    private fun sanitizeHeaderValue(value: String?): String {
+        return value
+            ?.replace("\r", "")
+            ?.replace("\n", "")
+            ?: ""
     }
 
     /** 自动滚动页面到底部以触发可能的懒加载内容 */

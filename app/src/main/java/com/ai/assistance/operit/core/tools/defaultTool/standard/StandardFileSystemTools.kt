@@ -3806,10 +3806,27 @@ open class StandardFileSystemTools(protected val context: Context) {
     open suspend fun downloadFile(tool: AITool): ToolResult {
         val url = tool.parameters.find { it.name == "url" }?.value ?: ""
         val destPath = tool.parameters.find { it.name == "destination" }?.value ?: ""
+        val headersParam = tool.parameters.find { it.name == "headers" }?.value
         val environment = tool.parameters.find { it.name == "environment" }?.value
         PathValidator.validateAndroidPath(destPath, tool.name, "destination")?.let { return it }
 
         val actualDestPath = PathMapper.resolvePath(context, destPath, environment)
+
+        fun parseHeaders(headersJson: String?): Map<String, String> {
+            if (headersJson.isNullOrBlank()) return emptyMap()
+            return try {
+                val result = mutableMapOf<String, String>()
+                val jsonObj = JSONObject(headersJson)
+                val keys = jsonObj.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    result[key] = jsonObj.getString(key)
+                }
+                result
+            } catch (_: Exception) {
+                emptyMap()
+            }
+        }
 
         if (url.isBlank() || destPath.isBlank()) {
             return ToolResult(
@@ -3862,7 +3879,8 @@ open class StandardFileSystemTools(protected val context: Context) {
                 }
 
                 val lastEmitMs = java.util.concurrent.atomic.AtomicLong(0L)
-                HttpMultiPartDownloader.download(url, destFile, threadCount = 4) { downloaded, total ->
+                val headers = parseHeaders(headersParam)
+                HttpMultiPartDownloader.download(url, destFile, headers = headers, threadCount = 4) { downloaded, total ->
                     val now = System.currentTimeMillis()
                     val last = lastEmitMs.get()
                     if (now - last < 200L) return@download

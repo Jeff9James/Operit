@@ -38,12 +38,170 @@
     <string name="workflow_delete">删除工作流</string>
     <string name="workflow_empty_state">暂无工作流，点击右上角创建</string>
     <string name="workflow_nodes_empty">暂无节点</string>
+    <string name="workflow_nodes_empty_hint_add">点击右上角 + 按钮添加节点</string>
     <string name="workflow_create_connection">创建连接</string>
     <string name="workflow_delete_connection">删除连接</string>
     <string name="workflow_select_target_node">选择目标节点</string>
     <string name="workflow_manage_connections">管理连接</string>
     <string name="workflow_existing_connections">已有连接</string>
     <string name="workflow_close">关闭</string>
+    <string name="workflow_action_trigger">触发工作流</string>
+    <string name="workflow_action_add_node">添加节点</string>
+    <string name="workflow_action_edit_workflow">编辑工作流</string>
+    <string name="workflow_open_action_menu">打开操作菜单</string>
+    <string name="workflow_action_edit_node">编辑节点</string>
+    <string name="workflow_action_delete_node">删除节点</string>
+    <string name="workflow_source_node_format">源节点: %1$s</string>
+    <string name="workflow_no_connectable_nodes">没有可连接的节点</string>
+    <string name="workflow_connection_condition_arrow_format">→ %1$s</string>
+    <string name="workflow_edit_connection_condition">编辑</string>
+    <string name="workflow_edit_connection_condition_title">编辑连线条件</string>
+    <string name="workflow_connection_condition_default_true">true(默认)</string>
+    <string name="workflow_connection_condition_default_none">无条件</string>
+    <string name="workflow_connection_condition_regex_format">正则: %1$s</string>
+    <string name="workflow_connection_condition_default_true_branch">默认(true 分支)</string>
+    <string name="workflow_connection_condition_default_no_condition">默认(无条件)</string>
+    <string name="workflow_connection_condition_false_branch">false 分支</string>
+    <string name="workflow_connection_condition_custom">自定义(正则/文本)</string>
+    <string name="workflow_schedule_dialog_title">定时配置</string>
+    <string name="workflow_schedule_type_label">定时类型</string>
+    <string name="workflow_schedule_type_interval">固定间隔</string>
+    <string name="workflow_schedule_type_specific_time">特定时间</string>
+    <string name="workflow_schedule_type_cron">Cron表达式</string>
+    <string name="workflow_interval_unit_minutes">分钟</string>
+    <string name="workflow_interval_unit_hours">小时</string>
+    <string name="workflow_interval_unit_days">天</string>
+    <string name="workflow_interval_config_title">固定间隔配置</string>
+    <string name="workflow_interval_value_label">间隔</string>
+    <string name="workflow_interval_unit_label">单位</string>
+    <string name="workflow_schedule_min_interval_hint">注意：WorkManager 最小间隔为 15 分钟</string>
+    <string name="workflow_specific_time_config_title">特定时间配置</string>
+    <string name="workflow_date_label">日期</string>
+    <string name="workflow_time_label">时间</string>
+    <string name="workflow_select_date">选择日期</string>
+    <string name="workflow_select_time">选择时间</string>
+    <string name="workflow_schedule_execute_time_format">执行时间：%1$s</string>
+    <string name="workflow_cron_config_title">Cron 表达式配置</string>
+    <string name="workflow_select_preset_template">选择预设模板</string>
+    <string name="workflow_preset_template_label">预设模板</string>
+    <string name="workflow_cron_expression_label">Cron 表达式</string>
+    <string name="workflow_cron_expression_placeholder">0 0 * * *</string>
+    <string name="workflow_cron_format_help">格式：分 时 日 月 周\n支持：固定值、*、*/N</string>
+    <string name="workflow_common_settings_title">通用设置</string>
+    <string name="workflow_repeat_label">重复执行</string>
+    <string name="workflow_schedule_enabled_label">启用定时</string>
+    <string name="workflow_cron_preset_daily_midnight">每天午夜</string>
+    <string name="workflow_cron_preset_daily_9am">每天上午9点</string>
+    <string name="workflow_cron_preset_daily_noon">每天中午12点</string>
+    <string name="workflow_cron_preset_daily_6pm">每天下午6点</string>
+    <string name="workflow_cron_preset_every_2_hours">每2小时</string>
+    <string name="workflow_cron_preset_every_6_hours">每6小时</string>
+    <string name="workflow_cron_preset_every_15_minutes">每15分钟</string>
+    <string name="workflow_cron_preset_every_30_minutes">每30分钟</string>
+    <string name="workflow_cron_preset_every_monday_midnight">每周一午夜</string>
+    <string name="workflow_cron_preset_workday_9am">工作日上午9点</string>
+    <string name="workflow_node_label_trigger">触发</string>
+    <string name="workflow_node_label_execute">执行</string>
+    <string name="workflow_node_label_condition">条件</string>
+    <string name="workflow_node_label_logic">逻辑</string>
+    <string name="workflow_node_label_extract">运算</string>
+    <string name="workflow_node_label_unknown">未知</string>
+    <string name="workflow_node_skipped">跳过</string>
+    <string name="workflow_not_found">工作流不存在</string>
+    <string name="workflow_confirm_delete_title">确认删除</string>
+    <string name="workflow_confirm_delete_workflow_message">确定要删除工作流 "%1$s" 吗？此操作不可恢复。</string>
+    <string name="workflow_confirm_delete_node_message">确定要删除节点 "%1$s" 吗？</string>
+    <string name="workflow_execution_result_title">执行结果</string>
+    <string name="workflow_edit_dialog_title">编辑工作流</string>
+    <string name="workflow_enabled_label">启用工作流</string>
+    <string name="workflow_node_dialog_title_add">添加节点</string>
+    <string name="workflow_node_dialog_title_edit">编辑节点</string>
+    <string name="workflow_node_type_label">节点类型</string>
+    <string name="workflow_node_name_label">节点名称（留空自动生成）</string>
+    <string name="workflow_node_description_label">描述（可选）</string>
+    <string name="workflow_node_type_trigger">触发节点</string>
+    <string name="workflow_node_type_execute">执行节点</string>
+    <string name="workflow_node_type_condition">条件节点</string>
+    <string name="workflow_node_type_logic">逻辑节点</string>
+    <string name="workflow_node_type_extract">运算节点</string>
+    <string name="workflow_trigger_type_label">触发类型</string>
+    <string name="workflow_trigger_type_manual">手动触发</string>
+    <string name="workflow_trigger_type_schedule">定时触发</string>
+    <string name="workflow_trigger_type_tasker">Tasker 触发</string>
+    <string name="workflow_trigger_type_intent">Intent 触发</string>
+    <string name="workflow_trigger_type_speech">语音触发</string>
+    <string name="workflow_trigger_fallback">触发器</string>
+
+    <string name="workflow_execute_config_title">执行配置</string>
+    <string name="workflow_tool_name_label">工具名称</string>
+    <string name="workflow_tool_name_placeholder">例如: execute_shell</string>
+    <string name="workflow_tool_params_title">工具参数</string>
+    <string name="workflow_param_name_label">参数名</string>
+    <string name="workflow_param_value_label">参数值</string>
+    <string name="workflow_add_param">添加参数</string>
+    <string name="workflow_delete_param">删除参数</string>
+
+    <string name="workflow_condition_config_title">条件配置</string>
+    <string name="workflow_operator_label">运算符</string>
+    <string name="workflow_left_value_label">左值</string>
+    <string name="workflow_right_value_label">右值</string>
+    <string name="workflow_condition_contains">包含</string>
+    <string name="workflow_condition_not_contains">不包含</string>
+
+    <string name="workflow_logic_config_title">逻辑配置</string>
+    <string name="workflow_logic_operator_label">逻辑运算</string>
+
+    <string name="workflow_extract_config_title">运算配置</string>
+    <string name="workflow_mode_label">模式</string>
+    <string name="workflow_extract_mode_regex">正则</string>
+    <string name="workflow_extract_mode_sub">截取</string>
+    <string name="workflow_extract_mode_concat">拼接</string>
+    <string name="workflow_extract_mode_random_int">随机数</string>
+    <string name="workflow_extract_mode_random_string">随机字符串</string>
+    <string name="workflow_regex_expression_label">正则表达式</string>
+    <string name="workflow_json_path_label">JSON 路径</string>
+    <string name="workflow_group_index_label">分组编号</string>
+    <string name="workflow_default_value_label">默认值</string>
+    <string name="workflow_start_index_label">起始下标</string>
+    <string name="workflow_length_label">长度（-1 到结尾）</string>
+    <string name="workflow_source_label">来源</string>
+    <string name="workflow_concat_item_label">拼接项</string>
+    <string name="workflow_add_concat_item">添加拼接项</string>
+    <string name="workflow_delete_concat_item">删除拼接项</string>
+    <string name="workflow_use_fixed_value">使用固定值</string>
+    <string name="workflow_use_random_value">使用随机值</string>
+    <string name="workflow_fixed_integer_label">固定整数</string>
+    <string name="workflow_min_value_label">最小值</string>
+    <string name="workflow_max_value_label">最大值</string>
+    <string name="workflow_fixed_string_label">固定字符串</string>
+    <string name="workflow_string_length_label">长度</string>
+    <string name="workflow_charset_label">字符集</string>
+
+    <string name="workflow_configure_schedule_trigger">配置定时触发</string>
+    <string name="workflow_schedule_configured">已配置定时</string>
+    <string name="workflow_trigger_config_title">触发配置</string>
+    <string name="workflow_trigger_config_json_label">触发配置 (JSON)</string>
+    <string name="workflow_trigger_config_json_placeholder">{"key": "value"}</string>
+    <string name="workflow_speech_trigger_help">说明：语音触发基于后台语音识别（STT）输出的文本事件（partial/final）来匹配 pattern。需要开启“始终监听”且唤醒识别模式为“STT”。如果当前使用“个人化模板唤醒”，由于不产生 STT 文本事件，该触发器不会生效。</string>
+
+    <string name="workflow_select_predecessor_node">选择前置节点</string>
+    <string name="workflow_no_available_predecessor_nodes">无可用前置节点</string>
+    <string name="workflow_use_static_value">使用静态值</string>
+    <string name="workflow_unknown_node">[未知节点]</string>
+
+    <string name="workflow_schema_required">必需</string>
+    <string name="workflow_schema_optional">可选</string>
+    <string name="workflow_schema_default_format">, 默认: %1$s</string>
+    <string name="workflow_schema_hint_format">%1$s（%2$s）: %3$s%4$s</string>
+
+    <string name="workflow_example_format">如: %1$s</string>
+    <string name="workflow_default_execute_action">执行动作</string>
+    <string name="workflow_node_default_name_condition">条件判断</string>
+    <string name="workflow_node_default_name_logic">逻辑判断</string>
+    <string name="workflow_node_default_name_extract">运算</string>
+    <string name="workflow_node_fallback">节点</string>
+
+    <string name="error_title">错误</string>
 
     <!-- 附件面板 -->
     <string name="screen_content">屏幕内容</string>
@@ -2417,8 +2575,6 @@
     <string name="settings_part_size_subtitle">分段读取文件时，每个部分的行数</string>
     <string name="settings_max_text_result">文本结果最大长度</string>
     <string name="settings_max_text_result_subtitle">通用文本结果的最大字符数限制</string>
-    <string name="settings_max_http_response">HTTP响应最大长度</string>
-    <string name="settings_max_http_response_subtitle">网络请求响应的最大字符数限制</string>
     <string name="settings_max_image_history_user_turns">历史图片保留回合数</string>
     <string name="settings_max_image_history_user_turns_subtitle">仅保留最近 N 次用户对话中的图片，避免历史图片重复发送</string>
     <string name="settings_max_media_history_user_turns">历史音视频保留回合数</string>
@@ -2765,6 +2921,8 @@
     <string name="provider_infiniai">无问芯穹</string>
     <string name="provider_alipay_bailing">支付宝百灵大模型</string>
     <string name="provider_lmstudio">LM Studio</string>
+    <string name="provider_mnn">MNN 本地推理</string>
+    <string name="provider_llama_cpp">llama.cpp 本地推理</string>
     <string name="provider_ppinfra">派欧云</string>
     <string name="provider_openai_generic">OpenAI通用</string>
     <string name="provider_other">其他供应商</string>
@@ -3338,12 +3496,19 @@
     <string name="go_clear">去清空</string>
     
     <!-- MNN 本地推理 -->
-    <string name="provider_mnn">MNN (本地推理)</string>
     <string name="mnn_local_model_tip">本地运行模型理解能力较差，建议关闭记忆链接、开启禁用工具进行对话</string>
     <string name="mnn_model_path">模型文件路径</string>
     <string name="mnn_model_path_placeholder">输入MNN模型文件的完整路径</string>
     <string name="mnn_forward_type">计算类型</string>
     <string name="mnn_thread_count">线程数</string>
+
+    <!-- llama.cpp 本地推理 -->
+    <string name="llama_local_model_tip">本地运行模型理解能力较差，建议关闭记忆链接、开启禁用工具进行对话</string>
+    <string name="llama_local_model_download_tip">llama.cpp 模型需要自行下载（.gguf）。请将模型文件放入以下文件夹，然后在“模型名称”中填写文件名：</string>
+    <string name="llama_local_model_dir">默认模型目录：%1$s</string>
+    <string name="llama_select_downloaded_model">选择已下载的模型</string>
+    <string name="llama_thread_count">线程数</string>
+    <string name="llama_context_size">上下文长度</string>
     
     <!-- 工作流执行状态 -->
     <string name="workflow_execution_running">执行中…</string>

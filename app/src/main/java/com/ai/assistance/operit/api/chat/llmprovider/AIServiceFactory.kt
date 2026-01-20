@@ -141,6 +141,15 @@ object AIServiceFactory {
                 supportsVideo = supportsVideo
             )
 
+            // llama.cpp 本地推理引擎
+            ApiProviderType.LLAMA_CPP -> LlamaProvider(
+                context = context,
+                modelName = config.modelName,
+                threadCount = config.llamaThreadCount,
+                contextSize = config.llamaContextSize,
+                providerType = config.apiProviderType
+            )
+
             // 阿里云（通义千问）使用专用的QwenProvider
             ApiProviderType.ALIYUN ->
                 QwenAIProvider(

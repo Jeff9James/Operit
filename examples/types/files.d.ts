@@ -213,7 +213,8 @@ export namespace Files {
      * @param url - Source URL
      * @param destination - Destination path
      * @param environment - Execution environment ("android" or "linux"), default "android"
+     * @param headers - Optional headers for the request
      */
-    function download(url: string, destination: string, environment?: FileEnvironment): Promise<FileOperationData>;
+    function download(url: string, destination: string, environment?: FileEnvironment, headers?: Record<string, string>): Promise<FileOperationData>;
 
 } 

@@ -36,20 +36,172 @@
     <string name="workflow_delete">Delete Workflow</string>
     <string name="workflow_empty_state">No workflows yet, click the button in the top right to create one</string>
     <string name="workflow_nodes_empty">No nodes yet</string>
+    <string name="workflow_nodes_empty_hint_add">Tap the + button in the top right to add nodes</string>
     <string name="workflow_create_connection">Create Connection</string>
     <string name="workflow_delete_connection">Delete Connection</string>
     <string name="workflow_select_target_node">Select Target Node</string>
     <string name="workflow_manage_connections">Manage Connections</string>
     <string name="workflow_existing_connections">Existing Connections</string>
     <string name="workflow_close">Close</string>
-    <string name="workflow_execution_running">Running…</string>
-    <string name="workflow_execution_success">Execution Successful</string>
-    <string name="workflow_execution_failed">Execution Failed</string>
-    <string name="workflow_node_pending">Pending</string>
-    <string name="workflow_node_running">Running</string>
-    <string name="workflow_node_success">Success</string>
-    <string name="workflow_node_failed">Failed</string>
-    
+    <string name="workflow_action_trigger">Trigger Workflow</string>
+    <string name="workflow_action_add_node">Add Node</string>
+    <string name="workflow_action_edit_workflow">Edit Workflow</string>
+    <string name="workflow_open_action_menu">Open action menu</string>
+    <string name="workflow_action_edit_node">Edit node</string>
+    <string name="workflow_action_delete_node">Delete node</string>
+    <string name="workflow_source_node_format">Source node: %1$s</string>
+    <string name="workflow_no_connectable_nodes">No connectable nodes</string>
+    <string name="workflow_connection_condition_arrow_format">→ %1$s</string>
+    <string name="workflow_edit_connection_condition">Edit</string>
+    <string name="workflow_edit_connection_condition_title">Edit connection condition</string>
+    <string name="workflow_connection_condition_default_true">true (default)</string>
+    <string name="workflow_connection_condition_default_none">No condition</string>
+    <string name="workflow_connection_condition_regex_format">Regex: %1$s</string>
+    <string name="workflow_connection_condition_default_true_branch">Default (true branch)</string>
+    <string name="workflow_connection_condition_default_no_condition">Default (no condition)</string>
+    <string name="workflow_connection_condition_false_branch">false branch</string>
+    <string name="workflow_connection_condition_custom">Custom (regex/text)</string>
+    <string name="workflow_schedule_dialog_title">Schedule</string>
+    <string name="workflow_schedule_type_label">Schedule type</string>
+    <string name="workflow_schedule_type_interval">Fixed interval</string>
+    <string name="workflow_schedule_type_specific_time">Specific time</string>
+    <string name="workflow_schedule_type_cron">Cron expression</string>
+    <string name="workflow_interval_unit_minutes">Minutes</string>
+    <string name="workflow_interval_unit_hours">Hours</string>
+    <string name="workflow_interval_unit_days">Days</string>
+    <string name="workflow_interval_config_title">Fixed Interval</string>
+    <string name="workflow_interval_value_label">Interval</string>
+    <string name="workflow_interval_unit_label">Unit</string>
+    <string name="workflow_schedule_min_interval_hint">Note: WorkManager minimum interval is 15 minutes</string>
+    <string name="workflow_specific_time_config_title">Specific Time</string>
+    <string name="workflow_date_label">Date</string>
+    <string name="workflow_time_label">Time</string>
+    <string name="workflow_select_date">Select date</string>
+    <string name="workflow_select_time">Select time</string>
+    <string name="workflow_schedule_execute_time_format">Execution time: %1$s</string>
+    <string name="workflow_cron_config_title">Cron Expression</string>
+    <string name="workflow_select_preset_template">Select preset</string>
+    <string name="workflow_preset_template_label">Preset</string>
+    <string name="workflow_cron_expression_label">Cron expression</string>
+    <string name="workflow_cron_expression_placeholder">0 0 * * *</string>
+    <string name="workflow_cron_format_help">Format: min hour day month weekday\nSupports: fixed value, *, */N</string>
+    <string name="workflow_common_settings_title">Common settings</string>
+    <string name="workflow_repeat_label">Repeat</string>
+    <string name="workflow_schedule_enabled_label">Enable schedule</string>
+    <string name="workflow_cron_preset_daily_midnight">Daily at midnight</string>
+    <string name="workflow_cron_preset_daily_9am">Daily at 9 AM</string>
+    <string name="workflow_cron_preset_daily_noon">Daily at noon</string>
+    <string name="workflow_cron_preset_daily_6pm">Daily at 6 PM</string>
+    <string name="workflow_cron_preset_every_2_hours">Every 2 hours</string>
+    <string name="workflow_cron_preset_every_6_hours">Every 6 hours</string>
+    <string name="workflow_cron_preset_every_15_minutes">Every 15 minutes</string>
+    <string name="workflow_cron_preset_every_30_minutes">Every 30 minutes</string>
+    <string name="workflow_cron_preset_every_monday_midnight">Every Monday at midnight</string>
+    <string name="workflow_cron_preset_workday_9am">Weekdays at 9 AM</string>
+    <string name="workflow_node_label_trigger">Trigger</string>
+    <string name="workflow_node_label_execute">Execute</string>
+    <string name="workflow_node_label_condition">Condition</string>
+    <string name="workflow_node_label_logic">Logic</string>
+    <string name="workflow_node_label_extract">Compute</string>
+    <string name="workflow_node_label_unknown">Unknown</string>
+    <string name="workflow_node_skipped">Skipped</string>
+    <string name="workflow_not_found">Workflow not found</string>
+    <string name="workflow_confirm_delete_title">Confirm deletion</string>
+    <string name="workflow_confirm_delete_workflow_message">Are you sure you want to delete workflow "%1$s"? This action cannot be undone.</string>
+    <string name="workflow_confirm_delete_node_message">Are you sure you want to delete node "%1$s"?</string>
+    <string name="workflow_execution_result_title">Execution Result</string>
+    <string name="workflow_edit_dialog_title">Edit Workflow</string>
+    <string name="workflow_enabled_label">Enable workflow</string>
+
+    <string name="workflow_node_dialog_title_add">Add Node</string>
+    <string name="workflow_node_dialog_title_edit">Edit Node</string>
+    <string name="workflow_node_type_label">Node type</string>
+    <string name="workflow_node_name_label">Node name (auto-generate if empty)</string>
+    <string name="workflow_node_description_label">Description (optional)</string>
+    <string name="workflow_node_type_trigger">Trigger Node</string>
+    <string name="workflow_node_type_execute">Execute Node</string>
+    <string name="workflow_node_type_condition">Condition Node</string>
+    <string name="workflow_node_type_logic">Logic Node</string>
+    <string name="workflow_node_type_extract">Compute Node</string>
+    <string name="workflow_trigger_type_label">Trigger type</string>
+    <string name="workflow_trigger_type_manual">Manual</string>
+    <string name="workflow_trigger_type_schedule">Schedule</string>
+    <string name="workflow_trigger_type_tasker">Tasker</string>
+    <string name="workflow_trigger_type_intent">Intent</string>
+    <string name="workflow_trigger_type_speech">Speech</string>
+    <string name="workflow_trigger_fallback">Trigger</string>
+
+    <string name="workflow_execute_config_title">Execution Config</string>
+    <string name="workflow_tool_name_label">Tool name</string>
+    <string name="workflow_tool_name_placeholder">e.g.: execute_shell</string>
+    <string name="workflow_tool_params_title">Tool parameters</string>
+    <string name="workflow_param_name_label">Parameter name</string>
+    <string name="workflow_param_value_label">Parameter value</string>
+    <string name="workflow_add_param">Add parameter</string>
+    <string name="workflow_delete_param">Delete parameter</string>
+
+    <string name="workflow_condition_config_title">Condition Config</string>
+    <string name="workflow_operator_label">Operator</string>
+    <string name="workflow_left_value_label">Left</string>
+    <string name="workflow_right_value_label">Right</string>
+    <string name="workflow_condition_contains">Contains</string>
+    <string name="workflow_condition_not_contains">Does not contain</string>
+
+    <string name="workflow_logic_config_title">Logic Config</string>
+    <string name="workflow_logic_operator_label">Logic operator</string>
+
+    <string name="workflow_extract_config_title">Compute Config</string>
+    <string name="workflow_mode_label">Mode</string>
+    <string name="workflow_extract_mode_regex">Regex</string>
+    <string name="workflow_extract_mode_sub">Substring</string>
+    <string name="workflow_extract_mode_concat">Concatenate</string>
+    <string name="workflow_extract_mode_random_int">Random integer</string>
+    <string name="workflow_extract_mode_random_string">Random string</string>
+    <string name="workflow_regex_expression_label">Regex expression</string>
+    <string name="workflow_json_path_label">JSON path</string>
+    <string name="workflow_group_index_label">Group index</string>
+    <string name="workflow_default_value_label">Default value</string>
+    <string name="workflow_start_index_label">Start index</string>
+    <string name="workflow_length_label">Length (-1 to end)</string>
+    <string name="workflow_source_label">Source</string>
+    <string name="workflow_concat_item_label">Item</string>
+    <string name="workflow_add_concat_item">Add item</string>
+    <string name="workflow_delete_concat_item">Delete item</string>
+    <string name="workflow_use_fixed_value">Use fixed value</string>
+    <string name="workflow_use_random_value">Use random value</string>
+    <string name="workflow_fixed_integer_label">Fixed integer</string>
+    <string name="workflow_min_value_label">Min</string>
+    <string name="workflow_max_value_label">Max</string>
+    <string name="workflow_fixed_string_label">Fixed string</string>
+    <string name="workflow_string_length_label">Length</string>
+    <string name="workflow_charset_label">Charset</string>
+
+    <string name="workflow_configure_schedule_trigger">Configure schedule trigger</string>
+    <string name="workflow_schedule_configured">Schedule configured</string>
+    <string name="workflow_trigger_config_title">Trigger Config</string>
+    <string name="workflow_trigger_config_json_label">Trigger config (JSON)</string>
+    <string name="workflow_trigger_config_json_placeholder">{"key": "value"}</string>
+    <string name="workflow_speech_trigger_help">Note: Speech trigger matches pattern against the background STT (speech-to-text) output events (partial/final). You must enable “Always listen” and set wake-up recognition mode to “STT”. If you are using “Personalized template wake-up”, no STT text events are produced, so this trigger will not work.</string>
+
+    <string name="workflow_select_predecessor_node">Select predecessor node</string>
+    <string name="workflow_no_available_predecessor_nodes">No available predecessor nodes</string>
+    <string name="workflow_use_static_value">Use static value</string>
+    <string name="workflow_unknown_node">[Unknown node]</string>
+
+    <string name="workflow_schema_required">Required</string>
+    <string name="workflow_schema_optional">Optional</string>
+    <string name="workflow_schema_default_format">, default: %1$s</string>
+    <string name="workflow_schema_hint_format">%1$s (%2$s): %3$s%4$s</string>
+
+    <string name="workflow_example_format">e.g.: %1$s</string>
+    <string name="workflow_default_execute_action">Execute action</string>
+    <string name="workflow_node_default_name_condition">Condition</string>
+    <string name="workflow_node_default_name_logic">Logic</string>
+    <string name="workflow_node_default_name_extract">Compute</string>
+    <string name="workflow_node_fallback">Node</string>
+
+    <string name="error_title">Error</string>
+
     <!-- Attachment Panel -->
     <string name="screen_content">Screen Content</string>
     <string name="current_notifications">Current Notifications</string>
@@ -2379,8 +2531,6 @@
     <string name="settings_part_size_subtitle">Number of lines per section when reading files partially</string>
     <string name="settings_max_text_result">Max Text Result Length</string>
     <string name="settings_max_text_result_subtitle">Maximum character limit for generic text results</string>
-    <string name="settings_max_http_response">Max HTTP Response Length</string>
-    <string name="settings_max_http_response_subtitle">Maximum character limit for network request responses</string>
     <string name="settings_max_image_history_user_turns">Keep Image History Turns</string>
     <string name="settings_max_image_history_user_turns_subtitle">Only keep images from the last N user turns to avoid resending old images</string>
     <string name="settings_max_media_history_user_turns">Keep Media History Turns</string>
@@ -2724,8 +2874,20 @@
     <string name="provider_ppinfra">PPInfra Cloud</string>
     <string name="provider_openai_generic">OpenAI (Generic)</string>
     <string name="provider_other">Other Providers</string>
+    <string name="provider_doubao">Doubao</string>
+    <string name="provider_llama_cpp">llama.cpp Local Inference</string>
+    <string name="provider_mnn">MNN Local Inference</string>
     <string name="select_api_provider_title">Select API Provider</string>
     <string name="search_providers">Search providers</string>
+
+    <!-- llama.cpp Local Inference -->
+    <string name="llama_local_model_tip">Local models are usually weaker. Consider disabling memory links and disabling tools for chat.</string>
+    <string name="llama_local_model_download_tip">llama.cpp models must be downloaded manually (.gguf). Put the model file in the folder below, then enter the file name in “Model name”:</string>
+    <string name="llama_local_model_dir">Default model folder: %1$s</string>
+    <string name="llama_select_downloaded_model">Select downloaded model</string>
+    <string name="llama_thread_count">Thread count</string>
+    <string name="llama_context_size">Context size</string>
+
     <!-- ModelParametersSection strings -->
     <string name="max_tokens_name">Max Tokens</string>
     <string name="max_tokens_description">Controls the maximum number of tokens AI generates each time</string>
@@ -3253,7 +3415,6 @@
     <string name="go_clear">Clear Now</string>
     
     <!-- MNN Local Inference -->
-    <string name="provider_mnn">MNN (Local Inference)</string>
     <string name="screen_title_mnn_model_download">MNN Model Download</string>
     <string name="mnn_model_download">Download MNN Model</string>
     <string name="mnn_model_management">Model Management</string>
@@ -3746,7 +3907,6 @@
     <string name="backup_memory_import_profile_title">Select Profile</string>
     <string name="backup_confirm">Confirm</string>
     <string name="backup_cancel">Cancel</string>
-    <string name="provider_doubao">Doubao (Volcano Model)</string>
 
     <!-- Help Screen - Mirror Selection Dialog -->
     <string name="help_loading_message">Loading user guide...</string>
@@ -3890,5 +4050,75 @@
     <string name="toolreg_ffmpeg_execute_desc">Execute FFmpeg command: %1$s</string>
     <string name="toolreg_ffmpeg_info_desc">Get FFmpeg info</string>
     <string name="toolreg_ffmpeg_convert_desc">Convert video: %1$s → %2$s</string>
+
+    <!-- AutoGLM One-Click Configuration -->
+    <string name="autoglm_config_name">AutoGLM Configuration</string>
+    <string name="autoglm_one_click_title">AutoGLM One-Click Config</string>
+    <string name="autoglm_one_click_subtitle">Automatically create Zhipu autoglm-phone model configuration for UI controller and switch to AutoGLM toolkit.</string>
+    <string name="autoglm_open_apikey_center">Go to Zhipu API Key Page</string>
+    <string name="autoglm_open_apikey_tip">After logging in, create and copy your API Key on the Zhipu platform</string>
+    <string name="autoglm_api_key_placeholder">Paste your Zhipu API Key here</string>
+    <string name="autoglm_one_click_button">One-Click AutoGLM Config</string>
+    <string name="autoglm_status_running">Running one-click configuration, please wait...</string>
+    <string name="autoglm_status_success">AutoGLM one-click configuration completed:\nModel: %1$s\nAPI Key: %2$s\nToolkit: AutoGLM\n\nYou can now use AutoGLM mode in the chat interface.</string>
+    <string name="autoglm_status_error">One-click configuration failed: %1$s</string>
+    <string name="autoglm_error_empty_api_key">Please fill in the Zhipu API Key first.</string>
+
+    <!-- Skill Market -->
+    <string name="available_skills_market">Available Skills</string>
+    <string name="beta_plan">Beta Program</string>
+    <string name="beta_plan_desc">After joining, when there are updated test versions, patch updates of about 30MB will be automatically downloaded over WiFi.</string>
+    <string name="beta_plan_enabled">Joined Beta Program</string>
+    <string name="beta_plan_disabled">Not in Beta Program</string>
+    <string name="beta_plan_join">Join</string>
+    <string name="beta_plan_leave">Leave</string>
+    <string name="click_button_publish_first_skill">Click the button above to publish your first Skill</string>
+    <string name="confirm_remove_skill_from_market">Are you sure you want to remove Skill "%1$s" from the market? This will close the corresponding Issue but will not delete your code repository.</string>
+    <string name="confirm_skill_git_import_deployment">I confirm that this Skill can be properly installed and used through the app\'s Git repository import method</string>
+    <string name="experimental_virtual_display">Experimental Virtual Display</string>
+    <string name="experimental_virtual_display_description">Use ADB+Shizuku automation based on virtual display. This feature is still experimental and may be unstable.</string>
+    <string name="get_skill">Get Skill</string>
+    <string name="import_or_install_skill">Import Skill</string>
+    <string name="login_github_for_skill_market">Login to GitHub for better Skill market experience</string>
+    <string name="manage_my_skills">Manage My Skills</string>
+    <string name="need_login_github_manage_skills">Need to login to GitHub to manage your published Skills</string>
+    <string name="no_matching_skills_found">No matching Skills found</string>
+    <string name="no_published_skills_yet">No Skills published yet</string>
+    <string name="no_skills_available">No Skills available</string>
+    <string name="overwrite_existing">Overwrite existing Skill with same name</string>
+    <string name="patch_update">Patch Update</string>
+    <string name="patch_update_desc">Download patch and install after synthesizing APK locally</string>
+    <string name="patch_update_failed">Patch update failed: %1$s</string>
+    <string name="patch_update_success">Patch update prepared, opening installation interface</string>
+    <string name="prepare_patch_update">Preparing patch update...</string>
+    <string name="publish_new_skill">Publish New Skill</string>
+    <string name="screen_title_autoglm_one_click">AutoGLM One-Click Config</string>
+    <string name="screen_title_autoglm_tool">AutoGLM Execution</string>
+    <string name="screen_title_skill_detail">Skill Detail</string>
+    <string name="screen_title_skill_manage">Manage My Skills</string>
+    <string name="screen_title_skill_market">Skill Market</string>
+    <string name="screen_title_skill_publish">Publish Skill</string>
+    <string name="select_skill_plugin_zip">Select Skill ZIP package</string>
+    <string name="skill_description_required">Skill Description *</string>
+    <string name="skill_edit_info_description">You are editing published Skill information. Modified information will be updated to the corresponding Issue in the market repository.</string>
+    <string name="skill_name_required">Skill Name *</string>
+    <string name="skill_publish_info_description">Your Skill information will be published as a GitHub Issue to the market repository. Please ensure the information provided is accurate and complete. Form content will be automatically saved as a draft until successfully published.</string>
+    <string name="skill_publish_success_message">Your Skill has been successfully published to the market and will be available for other users to discover and use after approval.</string>
+    <string name="skill_repo_address_required">GitHub Repository Address *</string>
+    <string name="skill_update_success_message">Your Skill information has been successfully updated.</string>
+    <string name="skill_zip_package">Skill ZIP Package</string>
+    <string name="tool_autoglm_one_click">AutoGLM One-Click Config</string>
+    <string name="tool_autoglm_one_click_desc">One-click configure autoglm-phone model for UI controller and switch to AutoGLM toolkit</string>
+    <string name="tool_autoglm_tool">AutoGLM Execution</string>
+    <string name="tool_autoglm_tool_desc">Use autoglm-phone agent to execute mobile automation tasks step by step</string>
+    <string name="ui_accessibility_mode">Accessibility Mode</string>
+    <string name="ui_accessibility_mode_description">Optimize UI automation behavior for accessibility users like TalkBack, prioritize providing readable operation steps, and carefully execute automatic taps.</string>
+    <string name="workflow_execution_failed">Execution Failed</string>
+    <string name="workflow_execution_running">Running…</string>
+    <string name="workflow_execution_success">Execution Successful</string>
+    <string name="workflow_node_failed">Failed</string>
+    <string name="workflow_node_pending">Pending</string>
+    <string name="workflow_node_running">Running</string>
+    <string name="workflow_node_success">Success</string>
 
 </resources>
