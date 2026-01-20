@@ -644,29 +644,25 @@ fun ModelApiSettingsSection(
             )
 
 
-            if (selectedApiProvider != ApiProviderType.MNN) {
-                SettingsSwitchRow(
-                        title = stringResource(R.string.enable_direct_image_processing),
-                        subtitle = stringResource(R.string.enable_direct_image_processing_desc),
-                            checked = enableDirectImageProcessingInput,
-                            onCheckedChange = { enableDirectImageProcessingInput = it }
-                    )
-            }
+            SettingsSwitchRow(
+                title = stringResource(R.string.enable_direct_image_processing),
+                subtitle = stringResource(R.string.enable_direct_image_processing_desc),
+                checked = enableDirectImageProcessingInput,
+                onCheckedChange = { enableDirectImageProcessingInput = it }
+            )
 
-            if (selectedApiProvider != ApiProviderType.MNN) {
-                SettingsSwitchRow(
-                    title = stringResource(R.string.enable_direct_audio_processing),
-                    subtitle = stringResource(R.string.enable_direct_audio_processing_desc),
-                    checked = enableDirectAudioProcessingInput,
-                    onCheckedChange = { enableDirectAudioProcessingInput = it }
-                )
-                SettingsSwitchRow(
-                    title = stringResource(R.string.enable_direct_video_processing),
-                    subtitle = stringResource(R.string.enable_direct_video_processing_desc),
-                    checked = enableDirectVideoProcessingInput,
-                    onCheckedChange = { enableDirectVideoProcessingInput = it }
-                )
-            }
+            SettingsSwitchRow(
+                title = stringResource(R.string.enable_direct_audio_processing),
+                subtitle = stringResource(R.string.enable_direct_audio_processing_desc),
+                checked = enableDirectAudioProcessingInput,
+                onCheckedChange = { enableDirectAudioProcessingInput = it }
+            )
+            SettingsSwitchRow(
+                title = stringResource(R.string.enable_direct_video_processing),
+                subtitle = stringResource(R.string.enable_direct_video_processing_desc),
+                checked = enableDirectVideoProcessingInput,
+                onCheckedChange = { enableDirectVideoProcessingInput = it }
+            )
             
             // Google Search Grounding 开关 (仅Gemini支持)
             if (selectedApiProvider == ApiProviderType.GOOGLE ||
@@ -679,15 +675,14 @@ fun ModelApiSettingsSection(
                     )
             }
             
-            // Tool Call 开关 (非MNN模型)
-            if (selectedApiProvider != ApiProviderType.MNN) {
-                SettingsSwitchRow(
-                        title = stringResource(R.string.enable_tool_call),
-                        subtitle = stringResource(R.string.enable_tool_call_desc),
-                            checked = enableToolCallInput,
-                            onCheckedChange = { enableToolCallInput = it }
-                    )
-            }
+            // Tool Call 开关
+            SettingsSwitchRow(
+                title = stringResource(R.string.enable_tool_call),
+                subtitle = stringResource(R.string.enable_tool_call_desc),
+                checked = enableToolCallInput,
+                onCheckedChange = { enableToolCallInput = it },
+                enabled = selectedApiProvider != ApiProviderType.MNN
+            )
             
             // DeepSeek推理模式开关 (仅DeepSeek)
             if (selectedApiProvider == ApiProviderType.DEEPSEEK) {

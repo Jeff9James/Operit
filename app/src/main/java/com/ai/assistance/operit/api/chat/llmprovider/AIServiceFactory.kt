@@ -135,7 +135,10 @@ object AIServiceFactory {
                 forwardType = config.mnnForwardType,
                 threadCount = config.mnnThreadCount,
                 providerType = config.apiProviderType,
-                enableToolCall = enableToolCall
+                enableToolCall = enableToolCall,
+                supportsVision = supportsVision,
+                supportsAudio = supportsAudio,
+                supportsVideo = supportsVideo
             )
 
             // 阿里云（通义千问）使用专用的QwenProvider

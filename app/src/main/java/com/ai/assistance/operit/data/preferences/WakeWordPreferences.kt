@@ -28,10 +28,23 @@ class WakeWordPreferences(private val context: Context) {
         explicitNulls = false
     }
 
+    @Serializable
+    enum class WakeRecognitionMode {
+        STT,
+        PERSONAL_TEMPLATE,
+    }
+
+    @Serializable
+    data class PersonalWakeTemplate(
+        val features: List<Float>,
+    )
+
     companion object {
         private val KEY_ALWAYS_LISTENING_ENABLED = booleanPreferencesKey("always_listening_enabled")
         private val KEY_WAKE_PHRASE = stringPreferencesKey("wake_phrase")
         private val KEY_WAKE_PHRASE_REGEX_ENABLED = booleanPreferencesKey("wake_phrase_regex_enabled")
+        private val KEY_WAKE_RECOGNITION_MODE = stringPreferencesKey("wake_recognition_mode")
+        private val KEY_PERSONAL_WAKE_TEMPLATES_JSON = stringPreferencesKey("personal_wake_templates_json")
         private val KEY_VOICE_CALL_INACTIVITY_TIMEOUT_SECONDS =
             intPreferencesKey("voice_call_inactivity_timeout_seconds")
         private val KEY_WAKE_GREETING_ENABLED = booleanPreferencesKey("wake_greeting_enabled")
@@ -47,6 +60,7 @@ class WakeWordPreferences(private val context: Context) {
         const val DEFAULT_WAKE_PHRASE = "小欧"
         const val DEFAULT_WAKE_PHRASE_REGEX_ENABLED = false
         const val DEFAULT_ALWAYS_LISTENING_ENABLED = false
+        const val DEFAULT_WAKE_RECOGNITION_MODE = "stt"
         const val DEFAULT_VOICE_CALL_INACTIVITY_TIMEOUT_SECONDS = 15
         const val DEFAULT_WAKE_GREETING_ENABLED = true
         const val DEFAULT_WAKE_GREETING_TEXT = "我在"
@@ -110,6 +124,27 @@ class WakeWordPreferences(private val context: Context) {
             prefs[KEY_WAKE_PHRASE_REGEX_ENABLED] ?: DEFAULT_WAKE_PHRASE_REGEX_ENABLED
         }
 
+    val wakeRecognitionModeFlow: Flow<WakeRecognitionMode> =
+        dataStore.data.map { prefs ->
+            val raw = prefs[KEY_WAKE_RECOGNITION_MODE] ?: DEFAULT_WAKE_RECOGNITION_MODE
+            when (raw.lowercase()) {
+                "personal_template" -> WakeRecognitionMode.PERSONAL_TEMPLATE
+                "stt" -> WakeRecognitionMode.STT
+                else -> WakeRecognitionMode.STT
+            }
+        }
+
+    val personalWakeTemplatesFlow: Flow<List<PersonalWakeTemplate>> =
+        dataStore.data.map { prefs ->
+            val raw = prefs[KEY_PERSONAL_WAKE_TEMPLATES_JSON]
+            if (raw.isNullOrBlank()) {
+                emptyList()
+            } else {
+                runCatching { json.decodeFromString<List<PersonalWakeTemplate>>(raw) }
+                    .getOrDefault(emptyList())
+            }
+        }
+
     val voiceCallInactivityTimeoutSecondsFlow: Flow<Int> =
         dataStore.data.map { prefs ->
             prefs[KEY_VOICE_CALL_INACTIVITY_TIMEOUT_SECONDS]
@@ -168,6 +203,23 @@ class WakeWordPreferences(private val context: Context) {
     suspend fun saveWakePhraseRegexEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[KEY_WAKE_PHRASE_REGEX_ENABLED] = enabled
+        }
+    }
+
+    suspend fun saveWakeRecognitionMode(mode: WakeRecognitionMode) {
+        dataStore.edit { prefs ->
+            prefs[KEY_WAKE_RECOGNITION_MODE] =
+                when (mode) {
+                    WakeRecognitionMode.STT -> "stt"
+                    WakeRecognitionMode.PERSONAL_TEMPLATE -> "personal_template"
+                }
+        }
+    }
+
+    suspend fun savePersonalWakeTemplates(templates: List<PersonalWakeTemplate>) {
+        val raw = json.encodeToString(templates)
+        dataStore.edit { prefs ->
+            prefs[KEY_PERSONAL_WAKE_TEMPLATES_JSON] = raw
         }
     }
 

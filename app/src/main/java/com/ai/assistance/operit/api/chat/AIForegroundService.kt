@@ -29,6 +29,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.api.speech.PersonalWakeListener
 import com.ai.assistance.operit.api.speech.SpeechPrerollStore
 import com.ai.assistance.operit.api.speech.SpeechService
 import com.ai.assistance.operit.api.speech.SpeechServiceFactory
@@ -221,7 +222,8 @@ class AIForegroundService : Service() {
         val callback =
             object : AudioManager.AudioRecordingCallback() {
                 override fun onRecordingConfigChanged(configs: List<AudioRecordingConfiguration>) {
-                    val isWakeListeningRunning = wakeListeningJob?.isActive == true
+                    val isWakeListeningRunning =
+                        wakeListeningJob?.isActive == true || personalWakeJob?.isActive == true
                     val myUid = Process.myUid()
                     val hasExternal =
                         if (isWakeListeningRunning) {
@@ -249,7 +251,8 @@ class AIForegroundService : Service() {
 
         try {
             val configs = am.activeRecordingConfigurations
-            val isWakeListeningRunning = wakeListeningJob?.isActive == true
+            val isWakeListeningRunning =
+                wakeListeningJob?.isActive == true || personalWakeJob?.isActive == true
             val myUid = Process.myUid()
             val hasExternal =
                 if (isWakeListeningRunning) {
@@ -305,11 +308,20 @@ class AIForegroundService : Service() {
     private var wakeListeningJob: Job? = null
     private var wakeResumeJob: Job? = null
 
+    private var personalWakeJob: Job? = null
+    private var personalWakeListener: PersonalWakeListener? = null
+
     @Volatile
     private var currentWakePhrase: String = WakeWordPreferences.DEFAULT_WAKE_PHRASE
 
     @Volatile
     private var wakePhraseRegexEnabled: Boolean = WakeWordPreferences.DEFAULT_WAKE_PHRASE_REGEX_ENABLED
+
+    @Volatile
+    private var wakeRecognitionMode: WakeWordPreferences.WakeRecognitionMode = WakeWordPreferences.WakeRecognitionMode.STT
+
+    @Volatile
+    private var personalWakeTemplates: List<FloatArray> = emptyList()
 
     @Volatile
     private var wakeListeningEnabled: Boolean = false
@@ -636,6 +648,25 @@ class AIForegroundService : Service() {
                     }
                 }
 
+                launch {
+                    wakePrefs.wakeRecognitionModeFlow.collectLatest { mode ->
+                        wakeRecognitionMode = mode
+                        AppLogger.d(TAG, "唤醒识别模式更新: $mode")
+                        applyWakeListeningState()
+                    }
+                }
+
+                launch {
+                    wakePrefs.personalWakeTemplatesFlow.collectLatest { templates ->
+                        personalWakeTemplates = templates.mapNotNull { t ->
+                            val feats = t.features
+                            if (feats.isEmpty()) null else feats.toFloatArray()
+                        }
+                        AppLogger.d(TAG, "个人化唤醒模板更新: count=${personalWakeTemplates.size}")
+                        applyWakeListeningState()
+                    }
+                }
+
                 wakePrefs.alwaysListeningEnabledFlow.collectLatest { enabled ->
                     wakeListeningEnabled = enabled
                     AppLogger.d(TAG, "唤醒监听开关更新: enabled=$enabled")
@@ -667,6 +698,10 @@ class AIForegroundService : Service() {
         wakeResumeJob = null
         wakeListeningJob?.cancel()
         wakeListeningJob = null
+        personalWakeListener?.stop()
+        personalWakeListener = null
+        personalWakeJob?.cancel()
+        personalWakeJob = null
         stopRecordingStateMonitoring()
         hideKeepAliveOverlay()
         try {
@@ -762,7 +797,24 @@ class AIForegroundService : Service() {
 
     private suspend fun startWakeListening() {
         if (!wakeListeningEnabled) return
-        if (wakeListeningJob?.isActive == true) return
+        if (wakeRecognitionMode == WakeWordPreferences.WakeRecognitionMode.STT) {
+            if (personalWakeJob?.isActive == true) {
+                AppLogger.d(TAG, "Switching wake listener: stopping personal wake before starting STT")
+                stopWakeListening(releaseProvider = true)
+            }
+            if (wakeListeningJob?.isActive == true) return
+        } else {
+            if (wakeListeningJob?.isActive == true) {
+                AppLogger.d(TAG, "Switching wake listener: stopping STT wake before starting personal")
+                stopWakeListening(releaseProvider = true)
+            }
+            if (personalWakeJob?.isActive == true) return
+        }
+
+        if (wakeRecognitionMode == WakeWordPreferences.WakeRecognitionMode.PERSONAL_TEMPLATE) {
+            startPersonalWakeListening()
+            return
+        }
 
         AppLogger.d(TAG, "startWakeListening: phrase='$currentWakePhrase'")
 
@@ -882,6 +934,49 @@ class AIForegroundService : Service() {
             }
     }
 
+    private suspend fun startPersonalWakeListening() {
+        if (!wakeListeningEnabled) return
+        if (personalWakeJob?.isActive == true) return
+
+        AppLogger.d(TAG, "startPersonalWakeListening: templates=${personalWakeTemplates.size}")
+        if (personalWakeTemplates.isEmpty()) {
+            AppLogger.w(TAG, "Personal wake listening skipped: no templates")
+            return
+        }
+
+        val listener =
+            PersonalWakeListener(
+                context = applicationContext,
+                templatesProvider = { personalWakeTemplates },
+                onTriggered = onTriggered@{ similarity ->
+                    val now = System.currentTimeMillis()
+                    if (now - lastWakeTriggerAtMs < 3000L) return@onTriggered
+                    lastWakeTriggerAtMs = now
+                    pendingWakeTriggeredAtMs = now
+                    wakeHandoffPending = true
+                    wakeStopInProgress = false
+
+                    AppLogger.d(TAG, "命中个人化唤醒: similarity=$similarity")
+                    SpeechPrerollStore.setPendingWakePhrase(
+                        phrase = currentWakePhrase,
+                        regexEnabled = wakePhraseRegexEnabled,
+                    )
+                    triggerWakeLaunch()
+                    scheduleWakeResume()
+                }
+            )
+        personalWakeListener = listener
+
+        personalWakeJob =
+            serviceScope.launch {
+                try {
+                    listener.runLoop()
+                } catch (e: Exception) {
+                    AppLogger.e(TAG, "Personal wake loop failed: ${e.message}", e)
+                }
+            }
+    }
+
     private suspend fun stopWakeListening(releaseProvider: Boolean = false) {
         AppLogger.d(TAG, "stopWakeListening")
         wakeResumeJob?.cancel()
@@ -889,6 +984,11 @@ class AIForegroundService : Service() {
 
         wakeListeningJob?.cancel()
         wakeListeningJob = null
+
+        personalWakeListener?.stop()
+        personalWakeListener = null
+        personalWakeJob?.cancel()
+        personalWakeJob = null
 
         try {
             wakeSpeechProvider?.cancelRecognition()
