@@ -29,6 +29,7 @@ export namespace Net {
         url?: string;
         visit_key?: string;
         link_number?: number;
+        include_image_links?: boolean;
         headers?: Record<string, string>;
         user_agent_preset?: string;
         user_agent?: string;

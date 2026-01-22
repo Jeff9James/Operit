@@ -94,6 +94,11 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
 
         // Cache to store visit results
         private val visitCache = ConcurrentHashMap<String, VisitWebResultData>()
+
+        fun getCachedVisitResult(visitKey: String): VisitWebResultData? {
+            if (visitKey.isBlank()) return null
+            return visitCache[visitKey]
+        }
     }
 
     // 创建OkHttpClient实例，配置超时
@@ -122,6 +127,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
         val url = tool.parameters.find { it.name == "url" }?.value
         val visitKey = tool.parameters.find { it.name == "visit_key" }?.value
         val linkNumberStr = tool.parameters.find { it.name == "link_number" }?.value
+        val includeImageLinksParam = tool.parameters.find { it.name == "include_image_links" }?.value
         val headersParam = tool.parameters.find { it.name == "headers" }?.value
         val userAgentParam = tool.parameters.find { it.name == "user_agent" }?.value
         val userAgentPresetParam = tool.parameters.find { it.name == "user_agent_preset" }?.value
@@ -183,11 +189,31 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
             }
         }
 
+        fun parseBoolean(raw: String?): Boolean {
+            return when (raw?.trim()?.lowercase()) {
+                "true", "1", "yes", "y", "on" -> true
+                else -> false
+            }
+        }
+
+        val includeImageLinks = parseBoolean(includeImageLinksParam)
+
+        val targetUri = runCatching { android.net.Uri.parse(targetUrl) }.getOrNull()
+        val targetScheme = targetUri?.scheme?.lowercase()
+        if (targetScheme != "http" && targetScheme != "https") {
+            return ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result = StringResultData(""),
+                    error = "Unsupported URL scheme: ${targetScheme ?: "unknown"}"
+            )
+        }
+
         val headers = parseHeaders(headersParam)
         val resolvedUserAgent = resolveUserAgent(userAgentPresetParam, userAgentParam)
 
         return try {
-            val pageContent = visitWebPage(targetUrl, headers, resolvedUserAgent)
+            val pageContent = visitWebPage(targetUrl, headers, resolvedUserAgent, includeImageLinks)
             ToolResult(toolName = tool.name, success = true, result = pageContent, error = null)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error visiting web page", e)
@@ -332,9 +358,9 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
     }
 
     /** Visit web page and extract content */
-    private fun visitWebPage(url: String, headers: Map<String, String>, userAgent: String): VisitWebResultData {
+    private fun visitWebPage(url: String, headers: Map<String, String>, userAgent: String, includeImageLinks: Boolean): VisitWebResultData {
         // Use WebView to visit the page and extract content
-        val extractedJson = runBlocking { loadWebPageAndExtractContent(url, headers, userAgent) }
+        val extractedJson = runBlocking { loadWebPageAndExtractContent(url, headers, userAgent, includeImageLinks) }
 
         return try {
             val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
@@ -403,6 +429,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                     content = content,
                     metadata = metadata,
                     links = result.links.map { VisitWebResultData.LinkData(it.url, it.text) },
+                    imageLinks = if (includeImageLinks) result.imageLinks else emptyList(),
                     visitKey = visitKey
             )
             visitCache[visitKey] = resultData
@@ -415,7 +442,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
     }
 
     /** 使用WebView加载页面并提取内容 */
-    private suspend fun loadWebPageAndExtractContent(url: String, headers: Map<String, String>, userAgent: String): String {
+    private suspend fun loadWebPageAndExtractContent(url: String, headers: Map<String, String>, userAgent: String, includeImageLinks: Boolean): String {
         return suspendCancellableCoroutine { continuation ->
             AppLogger.d(TAG, "Starting to load web page: $url")
 
@@ -465,6 +492,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                                 url = url,
                                 headers = headers,
                                 userAgent = userAgent,
+                                includeImageLinks = includeImageLinks,
                                 onWebViewCreated = { webView ->
                                     // 存储WebView引用以便清理
                                     webViewReference = webView
@@ -836,6 +864,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
             url: String,
             headers: Map<String, String>,
             userAgent: String,
+            includeImageLinks: Boolean,
             onWebViewCreated: (WebView) -> Unit,
             onContentExtracted: (String) -> Unit,
             onCaptchaStateChanged: (Boolean) -> Unit,
@@ -1046,7 +1075,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
 
                                                             if (!hasExtractedContent.value && autoModeEnabled.value) {
                                                                 isLoading.value = true
-                                                                extractPageContent(view) { content ->
+                                                                extractPageContent(view, includeImageLinks) { content ->
                                                                     isLoading.value = false
                                                                     hasExtractedContent.value = true
                                                                     pageContent.value = content
@@ -1066,12 +1095,18 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                                                             view: WebView,
                                                             request: WebResourceRequest
                                                     ): Boolean {
-                                                        // 记录URL变化，但允许所有导航
-                                                        val newUrl = request.url.toString()
+                                                        val uri = request.url
+                                                        val newUrl = uri.toString()
                                                         AppLogger.d(TAG, "URL变化: $newUrl")
+
+                                                        val scheme = uri.scheme?.lowercase()
+                                                        if (scheme != "http" && scheme != "https") {
+                                                            AppLogger.w(TAG, "Blocked navigation to unsupported URL scheme: $newUrl")
+                                                            return true
+                                                        }
+
                                                         currentUrl.value = newUrl
 
-                                                        // 设置页面正在加载状态
                                                         isLoading.value = true
                                                         pageLoaded.value = false
 
@@ -1080,7 +1115,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                                                             return true
                                                         }
 
-                                                        return false // 允许WebView处理URL加载
+                                                        return false
                                                     }
 
                                                     override fun onReceivedError(
@@ -1186,7 +1221,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
 
                                                 AppLogger.d(TAG, "触发内容提取，当前页面: ${currentUrl.value}")
 
-                                                extractPageContent(webView) { content ->
+                                                extractPageContent(webView, includeImageLinks) { content ->
                                                     isLoading.value = false
                                                     hasExtractedContent.value = true
                                                     pageContent.value = content
@@ -1326,7 +1361,7 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
     }
 
     /** 从加载的WebView提取页面内容 */
-    private fun extractPageContent(webView: WebView, callback: (String) -> Unit) {
+    private fun extractPageContent(webView: WebView, includeImageLinks: Boolean, callback: (String) -> Unit) {
         // 检查WebView是否有效
         if (!webView.isAttachedToWindow) {
             AppLogger.e(TAG, "WebView is not attached to window, cannot extract content")
@@ -1356,12 +1391,47 @@ class StandardWebVisitTool(private val context: Context) : ToolExecutor {
                         }
                     }
                     
+                    // 图片链接（可选）
+                    var imageLinks = [];
+                    if (${includeImageLinks.toString().lowercase()}) {
+                        var normalizeImageUrl = function(u) {
+                            if (!u) return null;
+                            try {
+                                u = String(u).trim();
+                            } catch (e) {
+                                return null;
+                            }
+                            if (!u) return null;
+                            // download_file only supports http(s)
+                            if (u.indexOf('http://') !== 0 && u.indexOf('https://') !== 0) return null;
+                            // drop non-downloadable / noisy sources
+                            if (u.indexOf('data:') === 0 || u.indexOf('blob:') === 0) return null;
+                            var clean = u.split('#')[0];
+                            var pathOnly = clean.split('?')[0].toLowerCase();
+                            // exclude common icon/svg noise
+                            if (pathOnly.endsWith('.svg')) return null;
+                            return clean;
+                        };
+                        var imgNodes = document.querySelectorAll('img');
+                        var imgSeen = {};
+                        for (var j = 0; j < imgNodes.length; j++) {
+                            var imgNode = imgNodes[j];
+                            var imgUrlRaw = imgNode.currentSrc || imgNode.src || imgNode.getAttribute('data-src');
+                            var imgUrl = normalizeImageUrl(imgUrlRaw);
+                            if (imgUrl && !imgSeen[imgUrl]) {
+                                imgSeen[imgUrl] = true;
+                                imageLinks.push(imgUrl);
+                            }
+                        }
+                    }
+
                     // 页面基本信息
                     var result = {
                         title: document.title || "No Title",
                         url: window.location.href,
                         content: "",
-                        links: links
+                        links: links,
+                        imageLinks: imageLinks
                     };
                     
                     // 直接获取整个文档的HTML和文本内容
@@ -1574,6 +1644,7 @@ private data class ExtractedWebData(
     val url: String,
     val content: String,
     val links: List<LinkInfo> = emptyList(),
+    val imageLinks: List<String> = emptyList(),
     val error: String? = null
 ) {
     @kotlinx.serialization.Serializable

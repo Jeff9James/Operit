@@ -44,6 +44,8 @@
 
 const ExtendedHttpTools = (function () {
 
+    const MAX_INLINE_HTTP_RESPONSE_CHARS = 24_000;
+
     interface ToolResponse {
         success: boolean;
         message: string;
@@ -61,6 +63,44 @@ const ExtendedHttpTools = (function () {
 
         const result = await toolCall({ name: "http_request", params: toolParams });
         const success = result.statusCode >= 200 && result.statusCode < 400;
+
+        const contentStr = typeof result?.content === "string" ? result.content : "";
+        if (contentStr.length > MAX_INLINE_HTTP_RESPONSE_CHARS) {
+            await Tools.Files.mkdir(OPERIT_CLEAN_ON_EXIT_DIR, true);
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+            const rand = Math.floor(Math.random() * 1_000_000);
+
+            let ext = "txt";
+            const ct = typeof result?.contentType === "string" ? result.contentType.toLowerCase() : "";
+            if (ct.includes("json")) ext = "json";
+            else if (ct.includes("html")) ext = "html";
+            else if (ct.includes("xml")) ext = "xml";
+
+            const filePath = `${OPERIT_CLEAN_ON_EXIT_DIR}/http_response_${timestamp}_${rand}.${ext}`;
+            await Tools.Files.write(filePath, contentStr, false);
+
+            const resultMeta = {
+                url: result?.url,
+                statusCode: result?.statusCode,
+                statusMessage: result?.statusMessage,
+                headers: result?.headers,
+                contentType: result?.contentType,
+                size: result?.size,
+                content: "(saved_to_file)",
+            };
+
+            return {
+                success,
+                message: `HTTP 请求完成；响应内容过大，已保存到文件：${filePath}。请使用 read_file_part 读取指定行范围，或用 grep_code 在该文件中检索关键字。`,
+                data: {
+                    result: resultMeta,
+                    content_saved_to: filePath,
+                    operit_clean_on_exit_dir: OPERIT_CLEAN_ON_EXIT_DIR,
+                },
+            };
+        }
+
         return { success, message: 'HTTP 请求完成', data: result };
     }
 

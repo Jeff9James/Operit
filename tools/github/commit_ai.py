@@ -117,8 +117,7 @@ def _extract_commit_subject(resp: dict) -> str:
     # Guard: keep it one-line and reasonably short
     if not subject:
         raise RuntimeError("AI returned an empty commit message.")
-    if len(subject) > 120:
-        subject = subject[:120].rstrip()
+    
     return subject
 
 

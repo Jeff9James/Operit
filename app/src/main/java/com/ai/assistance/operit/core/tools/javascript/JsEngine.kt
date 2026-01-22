@@ -137,6 +137,9 @@ class JsEngine(private val context: Context) {
             return // 如果已经初始化，直接返回
         }
 
+        val operitDownloadDir = "/sdcard/Download/Operit"
+        val operitCleanOnExitDir = "$operitDownloadDir/cleanOnExit"
+
         val initScript =
                 """
             // 添加全局错误处理器，捕获所有未处理的错误
@@ -448,6 +451,10 @@ class JsEngine(private val context: Context) {
                     return undefined;
                 }
             }
+
+            // Operit standard directories (injected from native)
+            var OPERIT_DOWNLOAD_DIR = ${JSONObject.quote(operitDownloadDir)};
+            var OPERIT_CLEAN_ON_EXIT_DIR = ${JSONObject.quote(operitCleanOnExitDir)};
             
             // 加载工具调用的便捷方法
             ${getJsToolsDefinition()}

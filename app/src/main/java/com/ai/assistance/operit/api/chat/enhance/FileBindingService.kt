@@ -59,8 +59,8 @@ class FileBindingService(context: Context) {
     ): Pair<String, String> {
         if (originalContent.isNotEmpty() && !aiGeneratedCode.contains("[START-")) {
             val errorMsg =
-                "如果你想覆盖这个文件，请删除文件后再写入;如果你想修改文件，请严格使用OLD/NEW的格式进行替换或者使用DELETE进行删除部分。" +
-                "所有补丁内容都必须写在 apply_file 的 content 参数里，并使用 [START-REPLACE]/[START-DELETE] + [OLD]/[NEW] 这样的结构化块，而不是直接输出整个文件的新内容进行覆盖。"
+                "如果你想重写整个已存在文件：请先 delete_file 再 write_file（不要直接覆盖）。" +
+                "如果你想修改文件：请用 apply_file 的 type=replace/delete 并提供 old/new（或 old）。"
             AppLogger.w(TAG, "Refusing full overwrite for existing content without structured edit blocks. $errorMsg")
             return Pair(originalContent, errorMsg)
         }

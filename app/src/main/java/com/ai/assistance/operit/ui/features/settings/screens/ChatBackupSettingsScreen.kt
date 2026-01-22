@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Settings
@@ -73,6 +74,7 @@ import com.ai.assistance.operit.data.backup.RoomDatabaseBackupManager
 import com.ai.assistance.operit.data.backup.RoomDatabaseBackupPreferences
 import com.ai.assistance.operit.data.backup.RoomDatabaseBackupScheduler
 import com.ai.assistance.operit.data.backup.RoomDatabaseRestoreManager
+import com.ai.assistance.operit.data.preferences.CharacterCardManager
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.data.preferences.ModelConfigManager
 import com.ai.assistance.operit.data.repository.ChatHistoryManager
@@ -101,6 +103,80 @@ enum class ChatHistoryOperation {
     FAILED
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CharacterCardManagementCard(
+    totalCharacterCardCount: Int,
+    operationState: CharacterCardOperation,
+    operationMessage: String,
+    onExport: () -> Unit,
+    onImport: () -> Unit
+) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            SectionHeader(
+                title = "角色卡",
+                subtitle = "备份与恢复角色卡配置",
+                icon = Icons.Default.Person
+            )
+
+            Text(
+                text = "当前共有 $totalCharacterCardCount 个角色卡。导出的文件会保存在「下载/Operit」文件夹中。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ManagementButton(
+                    text = "导出",
+                    icon = Icons.Default.CloudDownload,
+                    onClick = onExport,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                ManagementButton(
+                    text = "导入",
+                    icon = Icons.Default.CloudUpload,
+                    onClick = onImport,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
+
+            AnimatedVisibility(visible = operationState != CharacterCardOperation.IDLE) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    when (operationState) {
+                        CharacterCardOperation.EXPORTING -> OperationProgressView(message = "正在导出角色卡...")
+                        CharacterCardOperation.IMPORTING -> OperationProgressView(message = "正在导入角色卡...")
+                        CharacterCardOperation.EXPORTED -> OperationResultCard(
+                            title = "导出成功",
+                            message = operationMessage,
+                            icon = Icons.Default.CloudDownload
+                        )
+                        CharacterCardOperation.IMPORTED -> OperationResultCard(
+                            title = "导入成功",
+                            message = operationMessage,
+                            icon = Icons.Default.CloudUpload
+                        )
+                        CharacterCardOperation.FAILED -> OperationResultCard(
+                            title = "操作失败",
+                            message = operationMessage,
+                            icon = Icons.Default.Info,
+                            isError = true
+                        )
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
+}
+
 enum class RoomDatabaseBackupOperation {
     IDLE,
     BACKING_UP,
@@ -116,6 +192,15 @@ enum class RoomDatabaseRestoreOperation {
 }
 
 enum class MemoryOperation {
+    IDLE,
+    EXPORTING,
+    EXPORTED,
+    IMPORTING,
+    IMPORTED,
+    FAILED
+}
+
+enum class CharacterCardOperation {
     IDLE,
     EXPORTING,
     EXPORTED,
@@ -141,16 +226,20 @@ fun ChatBackupSettingsScreen() {
 
     val chatHistoryManager = remember { ChatHistoryManager.getInstance(context) }
     val userPreferencesManager = remember { UserPreferencesManager.getInstance(context) }
+    val characterCardManager = remember { CharacterCardManager.getInstance(context) }
     val modelConfigManager = remember { ModelConfigManager(context) }
     val activeProfileId by userPreferencesManager.activeProfileIdFlow.collectAsState(initial = "default")
     var memoryRepo by remember { mutableStateOf<MemoryRepository?>(null) }
 
     var totalChatCount by remember { mutableStateOf(0) }
+    var totalCharacterCardCount by remember { mutableStateOf(0) }
     var totalMemoryCount by remember { mutableStateOf(0) }
     var totalMemoryLinkCount by remember { mutableStateOf(0) }
     var totalModelConfigCount by remember { mutableStateOf(0) }
     var operationState by remember { mutableStateOf(ChatHistoryOperation.IDLE) }
     var operationMessage by remember { mutableStateOf("") }
+    var characterCardOperationState by remember { mutableStateOf(CharacterCardOperation.IDLE) }
+    var characterCardOperationMessage by remember { mutableStateOf("") }
     var memoryOperationState by remember { mutableStateOf(MemoryOperation.IDLE) }
     var memoryOperationMessage by remember { mutableStateOf("") }
     var modelConfigOperationState by remember { mutableStateOf(ModelConfigOperation.IDLE) }
@@ -173,6 +262,7 @@ fun ChatBackupSettingsScreen() {
 
     // Operit 目录备份文件统计
     var chatBackupFileCount by remember { mutableStateOf(0) }
+    var characterCardBackupFileCount by remember { mutableStateOf(0) }
     var memoryBackupFileCount by remember { mutableStateOf(0) }
     var modelConfigBackupFileCount by remember { mutableStateOf(0) }
     var roomDbBackupFileCount by remember { mutableStateOf(0) }
@@ -226,6 +316,12 @@ fun ChatBackupSettingsScreen() {
         }
     }
 
+    LaunchedEffect(Unit) {
+        characterCardManager.characterCardListFlow.collect { cardIds ->
+            totalCharacterCardCount = cardIds.size
+        }
+    }
+
     LaunchedEffect(memoryRepo) {
         memoryRepo?.let { repo ->
             val memories = repo.searchMemories("*")
@@ -257,6 +353,7 @@ fun ChatBackupSettingsScreen() {
                 }
 
                 val chatFiles = mergedFiles(OperitBackupDirs.chatDir())
+                val characterCardFiles = mergedFiles(OperitBackupDirs.characterCardsDir())
                 val memoryFiles = mergedFiles(OperitBackupDirs.memoryDir())
                 val modelConfigFiles = mergedFiles(OperitBackupDirs.modelConfigDir())
                 val roomDbFiles = mergedFiles(OperitBackupDirs.roomDbDir())
@@ -264,6 +361,10 @@ fun ChatBackupSettingsScreen() {
                 chatBackupFileCount = chatFiles.count { file ->
                     file.name.startsWith("chat_backup_") && file.extension == "json" ||
                         file.name.startsWith("chat_export_") && file.extension in listOf("json", "md", "html", "txt")
+                }
+
+                characterCardBackupFileCount = characterCardFiles.count { file ->
+                    file.name.startsWith("character_cards_backup_") && file.extension == "json"
                 }
 
                 memoryBackupFileCount = memoryFiles.count { file ->
@@ -283,6 +384,43 @@ fun ChatBackupSettingsScreen() {
                 e.printStackTrace()
             } finally {
                 isScanning = false
+            }
+        }
+    }
+
+    val characterCardFilePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                scope.launch {
+                    characterCardOperationState = CharacterCardOperation.IMPORTING
+                    characterCardOperationMessage = ""
+                    try {
+                        val inputStream = context.contentResolver.openInputStream(uri)
+                        val jsonContent = inputStream?.bufferedReader()?.use { it.readText() }
+                        if (jsonContent != null) {
+                            val importResult = characterCardManager.importAllCharacterCardsFromBackupContent(jsonContent)
+                            if (importResult.total > 0) {
+                                characterCardOperationState = CharacterCardOperation.IMPORTED
+                                characterCardOperationMessage = "成功导入角色卡：\n" +
+                                    "- 新增角色卡：${importResult.new}个\n" +
+                                    "- 更新角色卡：${importResult.updated}个" +
+                                    (if (importResult.skipped > 0) "\n- 跳过无效角色卡：${importResult.skipped}个" else "")
+                            } else {
+                                characterCardOperationState = CharacterCardOperation.FAILED
+                                characterCardOperationMessage = "导入失败：未找到有效的角色卡"
+                            }
+                        } else {
+                            characterCardOperationState = CharacterCardOperation.FAILED
+                            characterCardOperationMessage = "导入失败：无法读取文件"
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        characterCardOperationState = CharacterCardOperation.FAILED
+                        characterCardOperationMessage = "导入失败：${e.localizedMessage ?: e.toString()}"
+                    }
+                }
             }
         }
     }
@@ -378,6 +516,7 @@ fun ChatBackupSettingsScreen() {
         item {
             BackupFilesStatisticsCard(
                 chatBackupCount = chatBackupFileCount,
+                characterCardBackupCount = characterCardBackupFileCount,
                 memoryBackupCount = memoryBackupFileCount,
                 modelConfigBackupCount = modelConfigBackupFileCount,
                 roomDbBackupCount = roomDbBackupFileCount,
@@ -397,6 +536,7 @@ fun ChatBackupSettingsScreen() {
                             }
 
                             val chatFiles = mergedFiles(OperitBackupDirs.chatDir())
+                            val characterCardFiles = mergedFiles(OperitBackupDirs.characterCardsDir())
                             val memoryFiles = mergedFiles(OperitBackupDirs.memoryDir())
                             val modelConfigFiles = mergedFiles(OperitBackupDirs.modelConfigDir())
                             val roomDbFiles = mergedFiles(OperitBackupDirs.roomDbDir())
@@ -404,6 +544,10 @@ fun ChatBackupSettingsScreen() {
                             chatBackupFileCount = chatFiles.count { file ->
                                 file.name.startsWith("chat_backup_") && file.extension == "json" ||
                                     file.name.startsWith("chat_export_") && file.extension in listOf("json", "md", "html", "txt")
+                            }
+
+                            characterCardBackupFileCount = characterCardFiles.count { file ->
+                                file.name.startsWith("character_cards_backup_") && file.extension == "json"
                             }
 
                             memoryBackupFileCount = memoryFiles.count { file ->
@@ -721,6 +865,40 @@ fun ChatBackupSettingsScreen() {
                     chatFilePickerLauncher.launch(intent)
                 },
                 onDelete = { showDeleteConfirmDialog = true }
+            )
+        }
+        item {
+            CharacterCardManagementCard(
+                totalCharacterCardCount = totalCharacterCardCount,
+                operationState = characterCardOperationState,
+                operationMessage = characterCardOperationMessage,
+                onExport = {
+                    scope.launch {
+                        characterCardOperationState = CharacterCardOperation.EXPORTING
+                        characterCardOperationMessage = ""
+                        try {
+                            val filePath = characterCardManager.exportAllCharacterCardsToBackupFile()
+                            if (filePath != null) {
+                                characterCardOperationState = CharacterCardOperation.EXPORTED
+                                characterCardOperationMessage = "成功导出 $totalCharacterCardCount 个角色卡到：\n$filePath"
+                            } else {
+                                characterCardOperationState = CharacterCardOperation.FAILED
+                                characterCardOperationMessage = "导出失败：无法创建文件"
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            characterCardOperationState = CharacterCardOperation.FAILED
+                            characterCardOperationMessage = "导出失败：${e.localizedMessage ?: e.toString()}"
+                        }
+                    }
+                },
+                onImport = {
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "application/json"
+                    }
+                    characterCardFilePickerLauncher.launch(intent)
+                }
             )
         }
         item {
@@ -1148,6 +1326,7 @@ private fun OverviewCard(
 @Composable
 private fun BackupFilesStatisticsCard(
     chatBackupCount: Int,
+    characterCardBackupCount: Int,
     memoryBackupCount: Int,
     modelConfigBackupCount: Int,
     roomDbBackupCount: Int,
@@ -1206,6 +1385,12 @@ private fun BackupFilesStatisticsCard(
                     icon = Icons.Default.History,
                     count = chatBackupCount,
                     label = stringResource(R.string.backup_chat_files),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                BackupFileStatItem(
+                    icon = Icons.Default.Person,
+                    count = characterCardBackupCount,
+                    label = "角色卡",
                     color = MaterialTheme.colorScheme.primary
                 )
                 BackupFileStatItem(

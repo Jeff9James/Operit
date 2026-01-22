@@ -3514,7 +3514,9 @@ open class StandardFileSystemTools(protected val context: Context) {
     open fun applyFile(tool: AITool): Flow<ToolResult> = flow {
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
         val environment = tool.parameters.find { it.name == "environment" }?.value
-        val aiGeneratedCode = tool.parameters.find { it.name == "content" }?.value ?: ""
+        val typeParam = tool.parameters.find { it.name == "type" }?.value
+        val oldParam = tool.parameters.find { it.name == "old" }?.value
+        val newParam = tool.parameters.find { it.name == "new" }?.value
         ToolProgressBus.update(tool.name, 0f, "Preparing...")
         try {
             PathValidator.validateAndroidPath(path, tool.name)?.let {
@@ -3540,22 +3542,65 @@ open class StandardFileSystemTools(protected val context: Context) {
                 return@flow
             }
 
-            if (aiGeneratedCode.isBlank()) {
+            val legacyContentParam = tool.parameters.find { it.name == "content" }?.value
+            if (!legacyContentParam.isNullOrBlank()) {
                 emit(
                     ToolResult(
                         toolName = tool.name,
                         success = false,
                         result =
-                        FileOperationData(
-                            operation = "apply",
-                            path = path,
-                            successful = false,
-                            details = "Content parameter is required"
-                        ),
-                        error = "Content parameter is required"
+                            FileOperationData(
+                                operation = "apply",
+                                path = path,
+                                successful = false,
+                                details = "apply_file does not accept 'content'. Please use: type + old + new."
+                            ),
+                        error = "apply_file does not accept 'content'. Please use: type + old + new."
                     )
                 )
                 return@flow
+            }
+
+            val operationType = typeParam?.trim()?.lowercase()
+            if (operationType.isNullOrBlank()) {
+                emit(
+                    ToolResult(
+                        toolName = tool.name,
+                        success = false,
+                        result =
+                            FileOperationData(
+                                operation = "apply",
+                                path = path,
+                                successful = false,
+                                details = "Type parameter is required (replace | delete | create)"
+                            ),
+                        error = "Type parameter is required (replace | delete | create)"
+                    )
+                )
+                return@flow
+            }
+
+            fun buildReplacePatch(oldContent: String, newContent: String): String {
+                return listOf(
+                    "[START-REPLACE]",
+                    "[OLD]",
+                    oldContent,
+                    "[/OLD]",
+                    "[NEW]",
+                    newContent,
+                    "[/NEW]",
+                    "[END-REPLACE]"
+                ).joinToString("\n")
+            }
+
+            fun buildDeletePatch(oldContent: String): String {
+                return listOf(
+                    "[START-DELETE]",
+                    "[OLD]",
+                    oldContent,
+                    "[/OLD]",
+                    "[END-DELETE]"
+                ).joinToString("\n")
             }
 
             ToolProgressBus.update(tool.name, 0.05f, "Checking file...")
@@ -3572,21 +3617,60 @@ open class StandardFileSystemTools(protected val context: Context) {
             if (!fileExistsResult.success ||
                 !(fileExistsResult.result as FileExistsData).exists
             ) {
+                if (operationType != "create") {
+                    emit(
+                        ToolResult(
+                            toolName = tool.name,
+                            success = false,
+                            result =
+                                FileOperationData(
+                                    operation = "apply",
+                                    path = path,
+                                    successful = false,
+                                    details = "File does not exist. Use type=create with 'new' to create it."
+                                ),
+                            error = "File does not exist. Use type=create with 'new' to create it."
+                        )
+                    )
+                    return@flow
+                }
+
+                val newContent = newParam ?: ""
+                if (newContent.isBlank()) {
+                    emit(
+                        ToolResult(
+                            toolName = tool.name,
+                            success = false,
+                            result =
+                                FileOperationData(
+                                    operation = "create",
+                                    path = path,
+                                    successful = false,
+                                    details = "Parameter 'new' is required for type=create"
+                                ),
+                            error = "Parameter 'new' is required for type=create"
+                        )
+                    )
+                    return@flow
+                }
+
                 ToolProgressBus.update(tool.name, 0.4f, "Creating file...")
                 AppLogger.d(TAG, "File does not exist. Creating new file '$path'...")
 
-                val writeResult = writeFile(
-                    AITool(
-                        name = "write_file",
-                        parameters = listOf(
-                            ToolParameter("path", path),
-                            ToolParameter("content", aiGeneratedCode),
-                            ToolParameter("environment", environment ?: "")
+                val writeResult =
+                    writeFile(
+                        AITool(
+                            name = "write_file",
+                            parameters =
+                                listOf(
+                                    ToolParameter("path", path),
+                                    ToolParameter("content", newContent),
+                                    ToolParameter("environment", environment ?: "")
+                                )
                         )
                     )
-                )
 
-                val diffContent = FileBindingService(context).generateUnifiedDiff("", aiGeneratedCode)
+                val diffContent = FileBindingService(context).generateUnifiedDiff("", newContent)
 
                 if (writeResult.success) {
                     ToolProgressBus.update(tool.name, 1f, "Completed")
@@ -3594,17 +3678,19 @@ open class StandardFileSystemTools(protected val context: Context) {
                         ToolResult(
                             toolName = tool.name,
                             success = true,
-                            result = FileApplyResultData(
-                                operation = FileOperationData(
-                                    operation = "create",
-                                    path = path,
-                                    successful = true,
-                                    details = "Successfully created new file: $path"
-                                ),
-                                aiDiffInstructions = "",
-                                syntaxCheckResult = null,
-                                diffContent = diffContent
-                            )
+                            result =
+                                FileApplyResultData(
+                                    operation =
+                                        FileOperationData(
+                                            operation = "create",
+                                            path = path,
+                                            successful = true,
+                                            details = "Successfully created new file: $path"
+                                        ),
+                                    aiDiffInstructions = "",
+                                    syntaxCheckResult = null,
+                                    diffContent = diffContent
+                                )
                         )
                     )
                 } else {
@@ -3612,16 +3698,37 @@ open class StandardFileSystemTools(protected val context: Context) {
                         ToolResult(
                             toolName = tool.name,
                             success = false,
-                            result = FileOperationData(
-                                operation = "create",
-                                path = path,
-                                successful = false,
-                                details = "Failed to create new file: ${writeResult.error}"
-                            ),
+                            result =
+                                FileOperationData(
+                                    operation = "create",
+                                    path = path,
+                                    successful = false,
+                                    details = "Failed to create new file: ${writeResult.error}"
+                                ),
                             error = "Failed to create new file: ${writeResult.error}"
                         )
                     )
                 }
+                return@flow
+            }
+
+            if (operationType == "create") {
+                val errorMsg =
+                    "If you need to rewrite a whole existing file: do NOT use apply_file to overwrite it. Instead, call delete_file first, then write_file."
+                emit(
+                    ToolResult(
+                        toolName = tool.name,
+                        success = false,
+                        result =
+                            FileOperationData(
+                                operation = "apply",
+                                path = path,
+                                successful = false,
+                                details = errorMsg
+                            ),
+                        error = errorMsg
+                    )
+                )
                 return@flow
             }
 
@@ -3657,35 +3764,74 @@ open class StandardFileSystemTools(protected val context: Context) {
 
             val originalContent = (readResult.result as? FileContentData)?.content ?: ""
 
-            if (!aiGeneratedCode.contains("[START-")) {
-                val errorMsg =
-                    "如果你想覆盖这个文件，请删除文件后再写入;如果你想修改文件，请严格使用OLD/NEW的格式进行替换或者使用DELETE进行删除部分。" +
-                    "所有补丁内容都必须写在 apply_file 的 content 参数里，并使用 [START-REPLACE]/[START-DELETE] + [OLD]/[NEW] 这样的结构化块，而不是直接输出整个文件的新内容进行覆盖。"
-                AppLogger.w(
-                    TAG,
-                    "apply_file requested full overwrite without structured edit blocks for existing file: $path. $errorMsg"
-                )
-                emit(
-                    ToolResult(
-                        toolName = tool.name,
-                        success = false,
-                        result =
-                        FileOperationData(
-                            operation = "apply",
-                            path = path,
-                            successful = false,
-                            details = errorMsg
-                        ),
-                        error = errorMsg
-                    )
-                )
-                return@flow
-            }
+            val patchCode =
+                when (operationType) {
+                    "replace" -> {
+                        val oldContent = oldParam ?: ""
+                        val newContent = newParam ?: ""
+                        if (oldContent.isBlank() || newContent.isBlank()) {
+                            emit(
+                                ToolResult(
+                                    toolName = tool.name,
+                                    success = false,
+                                    result =
+                                        FileOperationData(
+                                            operation = "apply",
+                                            path = path,
+                                            successful = false,
+                                            details = "Both 'old' and 'new' are required for type=replace"
+                                        ),
+                                    error = "Both 'old' and 'new' are required for type=replace"
+                                )
+                            )
+                            return@flow
+                        }
+                        buildReplacePatch(oldContent, newContent)
+                    }
+                    "delete" -> {
+                        val oldContent = oldParam ?: ""
+                        if (oldContent.isBlank()) {
+                            emit(
+                                ToolResult(
+                                    toolName = tool.name,
+                                    success = false,
+                                    result =
+                                        FileOperationData(
+                                            operation = "apply",
+                                            path = path,
+                                            successful = false,
+                                            details = "Parameter 'old' is required for type=delete"
+                                        ),
+                                    error = "Parameter 'old' is required for type=delete"
+                                )
+                            )
+                            return@flow
+                        }
+                        buildDeletePatch(oldContent)
+                    }
+                    else -> {
+                        emit(
+                            ToolResult(
+                                toolName = tool.name,
+                                success = false,
+                                result =
+                                    FileOperationData(
+                                        operation = "apply",
+                                        path = path,
+                                        successful = false,
+                                        details = "Unsupported type: $operationType (expected replace | delete | create)"
+                                    ),
+                                error = "Unsupported type: $operationType (expected replace | delete | create)"
+                            )
+                        )
+                        return@flow
+                    }
+                }
 
             ToolProgressBus.update(tool.name, 0.2f, "Applying patch...")
             val lastEmitMs = java.util.concurrent.atomic.AtomicLong(0L)
             val bindingResult =
-                EnhancedAIService.applyFileBinding(context, originalContent, aiGeneratedCode) { p, msg ->
+                EnhancedAIService.applyFileBinding(context, originalContent, patchCode) { p, msg ->
                     val now = System.currentTimeMillis()
                     val last = lastEmitMs.get()
                     if (now - last < 200L) return@applyFileBinding
@@ -3804,7 +3950,11 @@ open class StandardFileSystemTools(protected val context: Context) {
 
     /** Download file from URL */
     open suspend fun downloadFile(tool: AITool): ToolResult {
-        val url = tool.parameters.find { it.name == "url" }?.value ?: ""
+        val urlParam = tool.parameters.find { it.name == "url" }?.value ?: ""
+        val visitKey = tool.parameters.find { it.name == "visit_key" }?.value ?: ""
+        val linkNumberStr = tool.parameters.find { it.name == "link_number" }?.value
+        val imageNumberStr = tool.parameters.find { it.name == "image_number" }?.value
+
         val destPath = tool.parameters.find { it.name == "destination" }?.value ?: ""
         val headersParam = tool.parameters.find { it.name == "headers" }?.value
         val environment = tool.parameters.find { it.name == "environment" }?.value
@@ -3828,7 +3978,71 @@ open class StandardFileSystemTools(protected val context: Context) {
             }
         }
 
-        if (url.isBlank() || destPath.isBlank()) {
+        fun parseIndex(raw: String?): Int? {
+            val v = raw?.trim().orEmpty()
+            if (v.isEmpty()) return null
+            return v.toIntOrNull()
+        }
+
+        var resolvedUrl = urlParam
+
+        if (resolvedUrl.isBlank()) {
+            val linkNumber = parseIndex(linkNumberStr)
+            val imageNumber = parseIndex(imageNumberStr)
+            if (visitKey.isBlank() || (linkNumber == null && imageNumber == null)) {
+                return ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result =
+                    FileOperationData(
+                        operation = "download",
+                        path = destPath,
+                        successful = false,
+                        details = "Either url or (visit_key + link_number/image_number) is required"
+                    ),
+                    error = "Either url or (visit_key + link_number/image_number) is required"
+                )
+            }
+
+            val cached = StandardWebVisitTool.getCachedVisitResult(visitKey)
+            if (cached == null) {
+                return ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result =
+                    FileOperationData(
+                        operation = "download",
+                        path = destPath,
+                        successful = false,
+                        details = "Invalid visit key."
+                    ),
+                    error = "Invalid visit key."
+                )
+            }
+
+            resolvedUrl =
+                when {
+                    linkNumber != null -> cached.links.getOrNull(linkNumber - 1)?.url
+                    else -> cached.imageLinks.getOrNull(imageNumber!! - 1)
+                } ?: ""
+
+            if (resolvedUrl.isBlank()) {
+                return ToolResult(
+                    toolName = tool.name,
+                    success = false,
+                    result =
+                    FileOperationData(
+                        operation = "download",
+                        path = destPath,
+                        successful = false,
+                        details = "Index out of bounds."
+                    ),
+                    error = "Index out of bounds."
+                )
+            }
+        }
+
+        if (resolvedUrl.isBlank() || destPath.isBlank()) {
             return ToolResult(
                 toolName = tool.name,
                 success = false,
@@ -3845,7 +4059,7 @@ open class StandardFileSystemTools(protected val context: Context) {
         }
 
         // Validate URL format
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        if (!resolvedUrl.startsWith("http://") && !resolvedUrl.startsWith("https://")) {
             return ToolResult(
                 toolName = tool.name,
                 success = false,
@@ -3880,7 +4094,7 @@ open class StandardFileSystemTools(protected val context: Context) {
 
                 val lastEmitMs = java.util.concurrent.atomic.AtomicLong(0L)
                 val headers = parseHeaders(headersParam)
-                HttpMultiPartDownloader.download(url, destFile, headers = headers, threadCount = 4) { downloaded, total ->
+                HttpMultiPartDownloader.download(resolvedUrl, destFile, headers = headers, threadCount = 4) { downloaded, total ->
                     val now = System.currentTimeMillis()
                     val last = lastEmitMs.get()
                     if (now - last < 200L) return@download
@@ -3910,7 +4124,7 @@ open class StandardFileSystemTools(protected val context: Context) {
                             path = destPath,
                             successful = true,
                             details =
-                            "File downloaded successfully: $url -> $destPath (file size: $formattedSize)"
+                            "File downloaded successfully: $resolvedUrl -> $destPath (file size: $formattedSize)"
                         ),
                         error = ""
                     )

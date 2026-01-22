@@ -141,35 +141,30 @@ object SystemToolPrompts {
             ),
             ToolPrompt(
                 name = "apply_file",
-                description = "Applies edits to a file by finding and replacing content blocks, or directly overwrites the entire file.",
+                description = "Applies edits to a file by finding and replacing/deleting a matched content block.",
                 parametersStructured = listOf(
                     ToolParameterSchema(name = "path", type = "string", description = "file path", required = true),
-                    ToolParameterSchema(name = "content", type = "string", description = "the string containing all your edit blocks, or the full file content for overwrite mode", required = true)
+                    ToolParameterSchema(name = "type", type = "string", description = "operation type: replace | delete | create", required = true),
+                    ToolParameterSchema(name = "old", type = "string", description = "the exact content to be matched and replaced/deleted (required for replace/delete)", required = false),
+                    ToolParameterSchema(name = "new", type = "string", description = "the new content to insert (required for replace/create)", required = false)
                 ),
                 details = """
-  - **How it works**: This tool has two modes:
-    1. **Edit Mode**: Locates code based on the content inside the `[OLD]` block (not by line numbers) and replaces it with the content from the `[NEW]` block.
-    2. **Overwrite Mode**: If no edit blocks (REPLACE/DELETE) are present, the entire content parameter will overwrite the file. This is useful for creating new files or completely rewriting existing ones.
-  - **CRITICAL RULES**:
-    1.  **Use Semantic Blocks**: `REPLACE` requires both `[OLD]` and `[NEW]` blocks. `DELETE` only requires an `[OLD]` block.
-    2.  **Correct Syntax**: All tags (e.g., `[START-REPLACE]`, `[OLD]`) must be on their own lines.
-    3.  **Overwrite**: To overwrite a file, simply provide the content without any edit blocks.
+  - **How it works**:
+    - The tool finds the best fuzzy match of `old` in the current file content (not by line numbers) and applies the requested operation.
+    - You can call this tool multiple times to apply multiple independent edits.
 
-  - **Operations & Examples**:
-    - **Replace**: `[START-REPLACE]`
-      [OLD]
-      ...content to be replaced...
-      [/OLD]
-      [NEW]
-      ...new content...
-      [/NEW]
-      [END-REPLACE]
-    - **Delete**: `[START-DELETE]`
-      [OLD]
-      ...content to be deleted...
-      [/OLD]
-      [END-DELETE]
-    - **Overwrite**: Simply provide the full file content without any blocks (will replace entire file)"""
+  - **Parameters**:
+    - `type`:
+      - `replace`: replace the matched `old` content with `new`
+      - `delete`: delete the matched `old` content
+      - `create`: create the file when it does not exist (write `new` as full file content)
+    - `old`: required for `replace` / `delete`
+    - `new`: required for `replace` / `create`
+
+  - **CRITICAL RULES**:
+    1. **If you need to rewrite a whole existing file**: do **NOT** use apply_file to overwrite it. Instead, call `delete_file` first, then `write_file`.
+    2. **If you need to modify an existing file**: you **MUST** use `type=replace` (or `type=delete`) and provide `old` / `new`. Do **NOT** delete the whole file and rewrite it.
+"""
             ),
             ToolPrompt(
                 name = "delete_file",
@@ -222,9 +217,12 @@ object SystemToolPrompts {
             ),
             ToolPrompt(
                 name = "download_file",
-                description = "Download a file from the internet.",
+                description = "Download a file from the internet. Two modes: (1) Provide `url` + `destination`. (2) Provide `visit_key` + (`link_number` or `image_number`) + `destination` to download an item by index from a previous `visit_web` result.",
                 parametersStructured = listOf(
-                    ToolParameterSchema(name = "url", type = "string", description = "file URL", required = true),
+                    ToolParameterSchema(name = "url", type = "string", description = "optional, file URL. If omitted, use visit_key + link_number/image_number to download from a previous visit_web result", required = false),
+                    ToolParameterSchema(name = "visit_key", type = "string", description = "optional, visitKey from a previous visit_web result", required = false),
+                    ToolParameterSchema(name = "link_number", type = "integer", description = "optional, 1-based link index from Results (use with visit_key)", required = false),
+                    ToolParameterSchema(name = "image_number", type = "integer", description = "optional, 1-based image index from Images (use with visit_key)", required = false),
                     ToolParameterSchema(name = "destination", type = "string", description = "save path", required = true),
                     ToolParameterSchema(name = "headers", type = "string", description = "optional HTTP headers as JSON object string, e.g. {\"Referer\":\"...\"}", required = false)
                 )
@@ -311,35 +309,30 @@ object SystemToolPrompts {
             ),
             ToolPrompt(
                 name = "apply_file",
-                description = "通过查找并替换内容块来编辑文件，或直接覆盖整个文件。",
+                description = "通过查找并替换/删除匹配的内容块来编辑文件。",
                 parametersStructured = listOf(
                     ToolParameterSchema(name = "path", type = "string", description = "文件路径", required = true),
-                    ToolParameterSchema(name = "content", type = "string", description = "包含所有编辑块的字符串，或用于覆盖模式的完整文件内容", required = true)
+                    ToolParameterSchema(name = "type", type = "string", description = "操作类型：replace | delete | create", required = true),
+                    ToolParameterSchema(name = "old", type = "string", description = "用于匹配/替换/删除的原始内容（replace/delete必填）", required = false),
+                    ToolParameterSchema(name = "new", type = "string", description = "要插入的新内容（replace/create必填）", required = false)
                 ),
                 details = """
-  - **工作原理**: 此工具有两种模式：
-    1. **编辑模式**: 根据 `[OLD]` 块中的内容（而不是行号）来定位代码，然后用 `[NEW]` 块中的内容替换它。
-    2. **覆盖模式**: 如果没有编辑块（REPLACE/DELETE），整个 content 参数的内容将覆盖文件。这对于创建新文件或完全重写现有文件很有用。
-  - **关键规则**:
-    1.  **使用语义块**: `REPLACE` 操作需要同时包含 `[OLD]` 和 `[NEW]` 块。`DELETE` 操作只需要 `[OLD]` 块。
-    2.  **正确的语法**: 所有标签（例如 `[START-REPLACE]`, `[OLD]`）都必须独占一行。
-    3.  **覆盖**: 要覆盖文件，只需提供内容而不使用任何编辑块。
+  - **工作原理**:
+    - 工具会在文件当前内容中对 `old` 做最佳的模糊匹配（不依赖行号），然后执行指定操作。
+    - 你可以多次调用本工具，对同一个文件做多处独立修改。
 
-  - **操作示例**:
-    - **替换**: `[START-REPLACE]`
-      [OLD]
-      ...要被替换的内容...
-      [/OLD]
-      [NEW]
-      ...新的内容...
-      [/NEW]
-      [END-REPLACE]
-    - **删除**: `[START-DELETE]`
-      [OLD]
-      ...要被删除的内容...
-      [/OLD]
-      [END-DELETE]
-    - **覆盖**: 直接提供完整的文件内容而不使用任何块（将替换整个文件）"""
+  - **参数**:
+    - `type`:
+      - `replace`: 用 `new` 替换匹配到的 `old`
+      - `delete`: 删除匹配到的 `old`
+      - `create`: 当文件不存在时创建文件（用 `new` 作为完整文件内容）
+    - `old`: `replace` / `delete` 必填
+    - `new`: `replace` / `create` 必填
+
+  - **关键规则**:
+    1. **如果需要重写整个已存在文件**：不要用 apply_file 直接覆盖。请先 `delete_file`，再 `write_file`。
+    2. **如果需要修改已存在文件**：必须用 `type=replace`（或 `type=delete`）并提供 `old/new`（或 `old`）。不要删除整个文件再重写。
+"""
             ),
             ToolPrompt(
                 name = "delete_file",
@@ -392,9 +385,12 @@ object SystemToolPrompts {
             ),
             ToolPrompt(
                 name = "download_file",
-                description = "从互联网下载文件。",
+                description = "从互联网下载文件。有两种用法：1）提供 `url` + `destination` 直接下载。2）提供 `visit_key` +（`link_number` 或 `image_number`）+ `destination`，从上一次 `visit_web` 的 Results/Images 编号中按序号下载。",
                 parametersStructured = listOf(
-                    ToolParameterSchema(name = "url", type = "string", description = "文件URL", required = true),
+                    ToolParameterSchema(name = "url", type = "string", description = "可选, 文件URL。不传时可使用 visit_key + link_number/image_number 从上一次 visit_web 结果按编号下载", required = false),
+                    ToolParameterSchema(name = "visit_key", type = "string", description = "可选, 上一次 visit_web 返回的 visitKey", required = false),
+                    ToolParameterSchema(name = "link_number", type = "integer", description = "可选, 整数, Results 中的链接编号（从1开始，需要配合 visit_key）", required = false),
+                    ToolParameterSchema(name = "image_number", type = "integer", description = "可选, 整数, Images 中的图片编号（从1开始，需要配合 visit_key）", required = false),
                     ToolParameterSchema(name = "destination", type = "string", description = "保存路径", required = true),
                     ToolParameterSchema(name = "headers", type = "string", description = "可选：HTTP请求头，JSON对象字符串，例如{\"Referer\":\"...\"}", required = false)
                 )
@@ -408,11 +404,12 @@ object SystemToolPrompts {
         tools = listOf(
             ToolPrompt(
                 name = "visit_web",
-                description = "Visit a webpage and extract its content. This tool can be used in two ways: 1. Provide a `url` to visit a new page. 2. Provide a `visit_key` from a previous search result and a `link_number` to visit a specific link from that search. This is the preferred way to follow up on a search.",
+                description = "Visit a webpage and extract its content. Two modes: (1) Provide `url` to visit a new page. (2) Follow a link from a previous visit by providing `visit_key` + `link_number`. The returned text often includes a `Results:` section like `[1] ...`, `[2] ...` — those bracketed numbers are 1-based indices. Use that exact number as `link_number` (range: 1..links.length). If you need images, set `include_image_links=true` and the tool will return an `Images:` section with 1-based indices. IMPORTANT: do NOT use `link_number` to download images; instead use `download_file` with `visit_key` + `image_number`.",
                 parametersStructured = listOf(
                     ToolParameterSchema(name = "url", type = "string", description = "optional, webpage URL", required = false),
-                    ToolParameterSchema(name = "visit_key", type = "string", description = "optional, string, the key from a previous search", required = false),
-                    ToolParameterSchema(name = "link_number", type = "integer", description = "optional, int, the number of the link to visit from the search results", required = false),
+                    ToolParameterSchema(name = "visit_key", type = "string", description = "optional, string, the visitKey from a previous visit_web result", required = false),
+                    ToolParameterSchema(name = "link_number", type = "integer", description = "optional, int, 1-based index of the link to follow (matches the `[n]` in Results; range 1..links.length)", required = false),
+                    ToolParameterSchema(name = "include_image_links", type = "boolean", description = "optional, boolean, when true include extracted image links in the result (imageLinks)", required = false),
                     ToolParameterSchema(name = "headers", type = "string", description = "optional HTTP headers as JSON object string, e.g. {\"Referer\":\"...\"}", required = false),
                     ToolParameterSchema(name = "user_agent_preset", type = "string", description = "optional, quick select user agent: desktop/android", required = false),
                     ToolParameterSchema(name = "user_agent", type = "string", description = "optional, full custom user agent override", required = false)
@@ -426,11 +423,12 @@ object SystemToolPrompts {
         tools = listOf(
             ToolPrompt(
                 name = "visit_web",
-                description = "访问网页并提取内容。此工具有两种用法：1. 提供 `url` 访问新页面。2. 提供先前搜索结果中的 `visit_key` 和 `link_number` 来访问该搜索中的特定链接。这是跟进搜索的首选方式。",
+                description = "访问网页并提取内容。有两种用法：1）提供 `url` 访问新页面。2）提供上一次 visit_web 返回的 `visit_key` + `link_number`，用来继续访问结果里的某个链接。返回文本通常会包含 `Results:` 段落，形如 `[1] ...`、`[2] ...` —— 中括号里的数字是从 1 开始的编号，请把该编号原样作为 `link_number`（范围：1..links.length），不要按 0 起始。若需要图片，请设置 `include_image_links=true`，工具会额外返回 `Images:` 段落以及从 1 开始的图片编号。重要：下载图片不要用 `link_number` 乱点页面链接；请使用 `download_file` 的 `visit_key` + `image_number` 按图片编号下载。",
                 parametersStructured = listOf(
                     ToolParameterSchema(name = "url", type = "string", description = "可选, 网页URL", required = false),
-                    ToolParameterSchema(name = "visit_key", type = "string", description = "可选, 字符串, 上一次搜索返回的密钥", required = false),
-                    ToolParameterSchema(name = "link_number", type = "integer", description = "可选, 整数, 要访问的搜索结果链接的编号", required = false),
+                    ToolParameterSchema(name = "visit_key", type = "string", description = "可选, 字符串, 上一次 visit_web 返回的 visitKey", required = false),
+                    ToolParameterSchema(name = "link_number", type = "integer", description = "可选, 整数, 要继续访问的链接编号（从1开始，对应 Results 里的 `[n]`；范围 1..links.length）", required = false),
+                    ToolParameterSchema(name = "include_image_links", type = "boolean", description = "可选, boolean, 为 true 时在结果中额外包含提取到的图片链接列表（imageLinks）", required = false),
                     ToolParameterSchema(name = "headers", type = "string", description = "可选：HTTP请求头，JSON对象字符串，例如{\"Referer\":\"...\"}", required = false),
                     ToolParameterSchema(name = "user_agent_preset", type = "string", description = "可选：UA预设，快速选择：desktop/android", required = false),
                     ToolParameterSchema(name = "user_agent", type = "string", description = "可选：完整自定义UA（优先级高于预设）", required = false)

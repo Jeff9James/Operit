@@ -32,6 +32,10 @@ object OperitBackupDirs {
         return ensureDir(File(backupRootDir(), "model_config"))
     }
 
+    fun characterCardsDir(): File {
+        return ensureDir(File(backupRootDir(), "character_cards"))
+    }
+
     private fun ensureDir(dir: File): File {
         if (!dir.exists()) {
             dir.mkdirs()

@@ -13,6 +13,7 @@ import org.json.JSONObject
 class MCPBridgeClient(context: Context, private val serviceName: String) {
     companion object {
         private const val TAG = "MCPBridgeClient"
+        private const val DEFAULT_SPAWN_TIMEOUT_MS = 180000L
 
         fun buildRegisterLocalCommand(
             name: String,
@@ -254,7 +255,7 @@ class MCPBridgeClient(context: Context, private val serviceName: String) {
                     }
 
                     AppLogger.i(TAG, "Service $serviceName is not ready. Attempting blocking spawn...")
-                    val spawnResp = spawnBlocking(timeoutMs = 12000)
+                    val spawnResp = spawnBlocking()
                     if (spawnResp?.optBoolean("success", false) == true) {
                         val result = spawnResp.optJSONObject("result")
                         val ready = result?.optBoolean("ready", false) ?: false
@@ -316,13 +317,12 @@ class MCPBridgeClient(context: Context, private val serviceName: String) {
     fun pingSync(): Boolean = kotlinx.coroutines.runBlocking { ping() }
 
     /** Spawn the MCP service if it's not already active */
-    suspend fun spawnBlocking(timeoutMs: Long = 12000): JSONObject? =
+    suspend fun spawnBlocking(timeoutMs: Long = DEFAULT_SPAWN_TIMEOUT_MS): JSONObject? =
             withContext(Dispatchers.IO) {
-                val effectiveTimeoutMs = maxOf(timeoutMs, 45000L)
                 try {
                     val response =
                         MCPBridge.sendCommand(
-                            buildSpawnCommand(name = serviceName, timeoutMs = effectiveTimeoutMs)
+                            buildSpawnCommand(name = serviceName, timeoutMs = timeoutMs)
                         )
                     if (response != null && !response.optBoolean("success", false)) {
                         val errorObj = response.optJSONObject("error")
