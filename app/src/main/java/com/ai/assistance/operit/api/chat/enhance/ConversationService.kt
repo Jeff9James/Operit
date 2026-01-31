@@ -228,6 +228,7 @@ class ConversationService(
             chatHistory: List<Pair<String, String>>,
             processedInput: String,
             workspacePath: String?,
+            workspaceEnv: String? = null,
             packageManager: PackageManager,
             promptFunctionType: PromptFunctionType,
             thinkingGuidance: Boolean = false,
@@ -270,12 +271,18 @@ class ConversationService(
                 // 获取工具启用状态
                 val enableTools = apiPreferences.enableToolsFlow.first()
 
+                val safBookmarkNames = runCatching {
+                    apiPreferences.safBookmarksFlow.first().map { it.name }
+                }.getOrElse { emptyList() }
+
                 val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
 
                 // 获取系统提示词，现在传入workspacePath和识图配置状态
                 val systemPrompt = SystemPromptConfig.getSystemPromptWithCustomPrompts(
                     packageManager = packageManager,
                     workspacePath = workspacePath,
+                    workspaceEnv = workspaceEnv,
+                    safBookmarkNames = safBookmarkNames,
                     customIntroPrompt = introPrompt,
                     useEnglish = useEnglish,
                     thinkingGuidance = thinkingGuidance,

@@ -28,6 +28,10 @@ import kotlinx.coroutines.flow.flow
 object ToolExecutionManager {
     private const val TAG = "ToolExecutionManager"
 
+    private fun ensureEndsWithNewline(content: String): String {
+        return if (content.endsWith("\n")) content else "$content\n"
+    }
+
     /**
      * 从 AI 响应中提取工具调用。
      * @param response AI 的响应字符串。
@@ -207,7 +211,7 @@ object ToolExecutionManager {
                     permissionDeniedResults.add(it)
                     val toolResultStatusContent =
                         ConversationMarkupManager.formatToolResultForMessage(it)
-                    collector.emit(toolResultStatusContent)
+                    collector.emit(ensureEndsWithNewline(toolResultStatusContent))
                 }
             }
         }
@@ -267,7 +271,7 @@ object ToolExecutionManager {
                 buildToolNotAvailableErrorMessage(toolName, packageManager, toolHandler)
             val notAvailableContent =
                 ConversationMarkupManager.createToolNotAvailableError(toolName, errorMessage)
-            collector.emit(notAvailableContent)
+            collector.emit(ensureEndsWithNewline(notAvailableContent))
             return ToolResult(
                 toolName = toolName,
                 success = false,
@@ -282,7 +286,7 @@ object ToolExecutionManager {
             // 实时输出每个结果
             val toolResultStatusContent =
                 ConversationMarkupManager.formatToolResultForMessage(result)
-            collector.emit(toolResultStatusContent)
+            collector.emit(ensureEndsWithNewline(toolResultStatusContent))
         }
 
         // 为此调用聚合最终结果

@@ -121,6 +121,7 @@ class ChatHistoryManager private constructor(private val context: Context) {
             group = this.group, // 映射group字段
             displayOrder = this.displayOrder,
             workspace = this.workspace, // 映射workspace字段
+            workspaceEnv = this.workspaceEnv, // 映射workspaceEnv字段
             parentChatId = this.parentChatId, // 映射parentChatId字段
             characterCardName = this.characterCardName, // 映射characterCardName字段
             locked = this.locked
@@ -669,10 +670,10 @@ class ChatHistoryManager private constructor(private val context: Context) {
     }
 
     /** 更新聊天工作区 */
-    suspend fun updateChatWorkspace(chatId: String, workspace: String?) {
+    suspend fun updateChatWorkspace(chatId: String, workspace: String?, workspaceEnv: String?) {
         mutex.withLock {
             try {
-                chatDao.updateChatWorkspace(chatId, workspace)
+                chatDao.updateChatWorkspace(chatId, workspace, workspaceEnv)
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to update chat workspace for chat $chatId", e)
                 throw e

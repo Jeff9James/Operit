@@ -218,6 +218,7 @@ class MessageProcessingDelegate(
             attachments: List<AttachmentInfo> = emptyList(),
             chatId: String,
             workspacePath: String? = null,
+            workspaceEnv: String? = null,
             promptFunctionType: PromptFunctionType = PromptFunctionType.CHAT,
             enableThinking: Boolean = false,
             thinkingGuidance: Boolean = false,
@@ -274,6 +275,7 @@ class MessageProcessingDelegate(
                 enableMemoryQuery,
                 enableWorkspaceAttachment,
                 workspacePath,
+                workspaceEnv,
                 replyToMessage,
                 enableDirectImageProcessing,
                 enableDirectAudioProcessing,
@@ -296,7 +298,7 @@ class MessageProcessingDelegate(
             if (!workspacePath.isNullOrBlank()) {
                 try {
                     AppLogger.d(TAG, "Syncing workspace state for timestamp ${userMessage.timestamp}")
-                    WorkspaceBackupManager.getInstance(context).syncState(workspacePath, userMessage.timestamp)
+                    WorkspaceBackupManager.getInstance(context).syncState(workspacePath, userMessage.timestamp, workspaceEnv)
                 } catch (e: Exception) {
                     AppLogger.e(TAG, "Workspace sync failed", e)
                     // 报告一个非致命错误，不会中断消息流程

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -136,6 +137,8 @@ class ApiPreferences private constructor(private val context: Context) {
         // 自定义请求头存储键
         val CUSTOM_HEADERS = stringPreferencesKey("custom_headers")
 
+        private val SAF_BOOKMARKS_JSON = stringPreferencesKey("saf_bookmarks_json")
+
         // 默认空的自定义参数列表
         const val DEFAULT_CUSTOM_PARAMETERS = "[]"
         const val DEFAULT_CUSTOM_HEADERS = "{}"
@@ -156,6 +159,45 @@ class ApiPreferences private constructor(private val context: Context) {
             }
         }
     }
+
+    @Serializable
+    data class SafBookmark(
+        val uri: String,
+        val name: String
+    )
+
+    val safBookmarksFlow: Flow<List<SafBookmark>> =
+        context.apiDataStore.data.map { preferences ->
+            val json = preferences[SAF_BOOKMARKS_JSON] ?: "[]"
+            runCatching { Json.decodeFromString<List<SafBookmark>>(json) }.getOrElse { emptyList() }
+        }
+
+    suspend fun addSafBookmark(uri: String, name: String) {
+        context.apiDataStore.edit { preferences ->
+            val existing =
+                runCatching {
+                    val json = preferences[SAF_BOOKMARKS_JSON] ?: "[]"
+                    Json.decodeFromString<List<SafBookmark>>(json)
+                }.getOrElse { emptyList() }
+
+            val updated = (existing.filterNot { it.uri == uri } + SafBookmark(uri = uri, name = name))
+                .sortedBy { it.name.lowercase() }
+            preferences[SAF_BOOKMARKS_JSON] = Json.encodeToString(updated)
+        }
+    }
+
+    suspend fun removeSafBookmark(uri: String) {
+        context.apiDataStore.edit { preferences ->
+            val existing =
+                runCatching {
+                    val json = preferences[SAF_BOOKMARKS_JSON] ?: "[]"
+                    Json.decodeFromString<List<SafBookmark>>(json)
+                }.getOrElse { emptyList() }
+            val updated = existing.filterNot { it.uri == uri }
+            preferences[SAF_BOOKMARKS_JSON] = Json.encodeToString(updated)
+        }
+    }
+
     // Get AI Planning setting as Flow
     val enableAiPlanningFlow: Flow<Boolean> =
             context.apiDataStore.data.map { preferences ->

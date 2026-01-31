@@ -34,6 +34,7 @@ fun FileContextMenu(
         isMultiSelectMode: Boolean,
         selectedFiles: List<FileItem>,
         currentPath: String,
+        currentEnvironment: String?,
         onFilesUpdated: () -> Unit,
         toolHandler: AIToolHandler,
         onPaste: () -> Unit,
@@ -69,6 +70,11 @@ fun FileContextMenu(
     var isCutOperation by remember { mutableStateOf(false) }
     var clipboardSourcePath by remember { mutableStateOf<String?>(null) }
 
+    fun withEnvParams(base: List<ToolParameter>): List<ToolParameter> {
+        if (currentEnvironment.isNullOrBlank()) return base
+        return base + ToolParameter("environment", currentEnvironment)
+    }
+
     // 文件操作函数
     fun copyFile(files: List<FileItem>) {
         onCopy(files)
@@ -97,10 +103,11 @@ fun FileContextMenu(
                     val openTool =
                             AITool(
                                     name = "open_file",
-                                    parameters = listOf(ToolParameter("path", fullPath))
+                                    parameters = withEnvParams(listOf(ToolParameter("path", fullPath)))
                             )
-
+                    AppLogger.d("ToolboxFileManager", "execute open_file path=$fullPath env=$currentEnvironment")
                     val result = toolHandler.executeTool(openTool)
+                    AppLogger.d("ToolboxFileManager", "result open_file success=${result.success} error=${result.error}")
 
                     if (result.success) {
                         // 文件已成功打开
@@ -130,10 +137,11 @@ fun FileContextMenu(
                     val shareTool =
                             AITool(
                                     name = "share_file",
-                                    parameters = listOf(ToolParameter("path", fullPath))
+                                    parameters = withEnvParams(listOf(ToolParameter("path", fullPath)))
                             )
-
+                    AppLogger.d("ToolboxFileManager", "execute share_file path=$fullPath env=$currentEnvironment")
                     val result = toolHandler.executeTool(shareTool)
+                    AppLogger.d("ToolboxFileManager", "result share_file success=${result.success} error=${result.error}")
 
                     if (result.success) {
                         // 文件已成功分享
@@ -164,16 +172,17 @@ fun FileContextMenu(
                             AITool(
                                     name = "delete_file",
                                     parameters =
-                                            listOf(
+                                            withEnvParams(listOf(
                                                     ToolParameter("path", fullPath),
                                                     ToolParameter(
                                                             "recursive",
                                                             file.isDirectory.toString()
                                                     )
-                                            )
+                                            ))
                             )
-
+                    AppLogger.d("ToolboxFileManager", "execute delete_file path=$fullPath env=$currentEnvironment")
                     val result = toolHandler.executeTool(deleteTool)
+                    AppLogger.d("ToolboxFileManager", "result delete_file success=${result.success} error=${result.error}")
 
                     if (result.success) {
                         withContext(Dispatchers.Main) { onFilesUpdated() }
@@ -204,13 +213,14 @@ fun FileContextMenu(
                             AITool(
                                     name = "move_file",
                                     parameters =
-                                            listOf(
+                                            withEnvParams(listOf(
                                                     ToolParameter("source", oldPath),
                                                     ToolParameter("destination", newPath)
-                                            )
+                                            ))
                             )
-
+                    AppLogger.d("ToolboxFileManager", "execute move_file src=$oldPath dst=$newPath env=$currentEnvironment")
                     val result = toolHandler.executeTool(moveTool)
+                    AppLogger.d("ToolboxFileManager", "result move_file success=${result.success} error=${result.error}")
 
                     if (result.success) {
                         withContext(Dispatchers.Main) { onFilesUpdated() }
@@ -242,16 +252,17 @@ fun FileContextMenu(
                             AITool(
                                     name = "zip_files",
                                     parameters =
-                                            listOf(
+                                            withEnvParams(listOf(
                                                     ToolParameter(
                                                             "source",
                                                             filePaths.joinToString(",")
                                                     ),
                                                     ToolParameter("destination", outputPath)
-                                            )
+                                            ))
                             )
-
+                    AppLogger.d("ToolboxFileManager", "execute zip_files dst=$outputPath env=$currentEnvironment")
                     val result = toolHandler.executeTool(compressTool)
+                    AppLogger.d("ToolboxFileManager", "result zip_files success=${result.success} error=${result.error}")
 
                     if (result.success) {
                         withContext(Dispatchers.Main) { onFilesUpdated() }
@@ -282,13 +293,14 @@ fun FileContextMenu(
                             AITool(
                                     name = "unzip_files",
                                     parameters =
-                                            listOf(
+                                            withEnvParams(listOf(
                                                     ToolParameter("source", sourcePath),
                                                     ToolParameter("destination", destinationPath)
-                                            )
+                                            ))
                             )
-
+                    AppLogger.d("ToolboxFileManager", "execute unzip_files src=$sourcePath dst=$destinationPath env=$currentEnvironment")
                     val result = toolHandler.executeTool(unzipTool)
+                    AppLogger.d("ToolboxFileManager", "result unzip_files success=${result.success} error=${result.error}")
 
                     if (result.success) {
                         withContext(Dispatchers.Main) { onFilesUpdated() }
@@ -338,12 +350,12 @@ fun FileContextMenu(
                                 AITool(
                                         name = "move_file",
                                         parameters =
-                                                listOf(
+                                                withEnvParams(listOf(
                                                         ToolParameter("source", oldPath),
                                                         ToolParameter("destination", newPath)
-                                                )
+                                                ))
                                 )
-
+                        AppLogger.d("ToolboxFileManager", "execute move_file src=$oldPath dst=$newPath env=$currentEnvironment")
                         toolHandler.executeTool(moveTool)
                     }
 

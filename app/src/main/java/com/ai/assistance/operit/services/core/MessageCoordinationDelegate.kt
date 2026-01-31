@@ -141,6 +141,7 @@ class MessageCoordinationDelegate(
         }
         val currentChat = chatHistoryDelegate.chatHistories.value.find { it.id == chatId }
         val workspacePath = currentChat?.workspace
+        val workspaceEnv = currentChat?.workspaceEnv
 
         // 更新本地Web服务器的聊天ID
         updateWebServerForCurrentChat(chatId)
@@ -192,6 +193,7 @@ class MessageCoordinationDelegate(
             attachments = currentAttachments,
             chatId = chatId,
             workspacePath = workspacePath,
+            workspaceEnv = workspaceEnv,
             promptFunctionType = promptFunctionType,
             // Safety: thinking guidance and thinking mode are mutually exclusive.
             // When guidance is enabled, we avoid enabling provider-level thinking simultaneously.

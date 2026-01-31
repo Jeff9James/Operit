@@ -1032,6 +1032,7 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                 val chatId = currentChatId.value
                 val currentChat = chatHistories.value.find { it.id == chatId }
                 val workspacePath = currentChat?.workspace
+                val workspaceEnv = currentChat?.workspaceEnv
 
                 AppLogger.d(TAG, "[Rewind] Target message timestamp: ${targetMessage.timestamp}")
                 if (index > 0) {
@@ -1046,7 +1047,7 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                     AppLogger.d(TAG, "Rewinding workspace to timestamp: $rewindTimestamp")
                     withContext(Dispatchers.IO) {
                         WorkspaceBackupManager.getInstance(context)
-                            .syncState(workspacePath, rewindTimestamp)
+                            .syncState(workspacePath, rewindTimestamp, workspaceEnv)
                     }
                     AppLogger.d(TAG, "Workspace rewind complete.")
                 }
@@ -1093,26 +1094,13 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                     val chatId = currentChatId.value
                     val currentChat = chatHistories.value.find { it.id == chatId }
                     val workspacePath = currentChat?.workspace
+                    val workspaceEnv = currentChat?.workspaceEnv
 
                     if (workspacePath.isNullOrBlank()) {
                         emptyList()
                     } else {
-                        val workspaceDir = File(workspacePath)
-                        val backupDir = File(workspaceDir, ".backup")
-                        val existingBackups = backupDir.listFiles { file ->
-                            file.isFile && file.name.endsWith(".json")
-                        }?.mapNotNull {
-                            it.nameWithoutExtension.toLongOrNull()
-                        }?.sorted() ?: emptyList()
-
-                        val newerBackups = existingBackups.filter { it > rewindTimestamp }
-                        if (newerBackups.isEmpty()) {
-                            emptyList()
-                        } else {
-                            val restoreTimestamp = newerBackups.first()
-                            WorkspaceBackupManager.getInstance(context)
-                                .previewChanges(workspacePath, restoreTimestamp)
-                        }
+                        WorkspaceBackupManager.getInstance(context)
+                            .previewChangesForRewind(workspacePath, workspaceEnv, rewindTimestamp)
                     }
                 }
             } catch (e: Exception) {
@@ -1149,12 +1137,13 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                 val chatId = currentChatId.value
                 val currentChat = chatHistories.value.find { it.id == chatId }
                 val workspacePath = currentChat?.workspace
+                val workspaceEnv = currentChat?.workspaceEnv
 
                 if (!workspacePath.isNullOrBlank()) {
                     AppLogger.d(TAG, "[Rollback] Rewinding workspace to timestamp: $rewindTimestamp")
                     withContext(Dispatchers.IO) {
                         WorkspaceBackupManager.getInstance(context)
-                            .syncState(workspacePath, rewindTimestamp)
+                            .syncState(workspacePath, rewindTimestamp, workspaceEnv)
                     }
                     AppLogger.d(TAG, "[Rollback] Workspace rewind complete.")
                 }
@@ -1656,6 +1645,7 @@ class ChatViewModel(private val context: Context) : ViewModel() {
             // Find the chat and its workspace
             val chat = chatHistories.value.find { it.id == chatId }
             val workspacePath = chat?.workspace
+            val workspaceEnv = chat?.workspaceEnv
 
             if (workspacePath == null) {
                 AppLogger.w(TAG, "Chat $chatId has no workspace bound. Web server not updated.")
@@ -1668,8 +1658,8 @@ class ChatViewModel(private val context: Context) : ViewModel() {
             if (!webServer.isRunning()) {
                 webServer.start()
             }
-            webServer.updateChatWorkspace(workspacePath)
-            AppLogger.d(TAG, "Web服务器工作空间已更新为: $workspacePath for chat $chatId")
+            webServer.updateChatWorkspace(workspacePath, workspaceEnv)
+            AppLogger.d(TAG, "Web服务器工作空间已更新为: $workspacePath env=$workspaceEnv for chat $chatId")
         } catch (e: Exception) {
             AppLogger.e(TAG, "更新Web服务器工作空间失败", e)
             uiStateDelegate.showErrorMessage(context.getString(R.string.chat_update_workspace_server_failed, e.message ?: ""))
@@ -1814,9 +1804,9 @@ class ChatViewModel(private val context: Context) : ViewModel() {
     }
 
     /** 更新指定聊天的标题 */
-    fun bindChatToWorkspace(chatId: String, workspace: String) {
+    fun bindChatToWorkspace(chatId: String, workspace: String, workspaceEnv: String? = null) {
         // 1. Persist the change
-        chatHistoryDelegate.bindChatToWorkspace(chatId, workspace)
+        chatHistoryDelegate.bindChatToWorkspace(chatId, workspace, workspaceEnv)
 
         // 2. Update the web server with the new path and refresh
         viewModelScope.launch {
@@ -1825,8 +1815,8 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                 if (!webServer.isRunning()) {
                     webServer.start()
                 }
-                webServer.updateChatWorkspace(workspace)
-                AppLogger.d(TAG, "Web server workspace updated to: $workspace for chat $chatId")
+                webServer.updateChatWorkspace(workspace, workspaceEnv)
+                AppLogger.d(TAG, "Web server workspace updated to: $workspace env=$workspaceEnv for chat $chatId")
 
                 // 3. Trigger a refresh of the WebView
                 refreshWebView()

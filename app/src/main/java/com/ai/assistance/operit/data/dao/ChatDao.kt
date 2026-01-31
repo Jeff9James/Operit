@@ -52,8 +52,8 @@ interface ChatDao {
     suspend fun updateChatTitle(chatId: String, title: String, timestamp: Long = System.currentTimeMillis())
 
     /** 更新聊天工作区 */
-    @Query("UPDATE chats SET `workspace` = :workspace, updatedAt = :timestamp WHERE id = :chatId")
-    suspend fun updateChatWorkspace(chatId: String, workspace: String?, timestamp: Long = System.currentTimeMillis())
+    @Query("UPDATE chats SET `workspace` = :workspace, `workspaceEnv` = :workspaceEnv, updatedAt = :timestamp WHERE id = :chatId")
+    suspend fun updateChatWorkspace(chatId: String, workspace: String?, workspaceEnv: String?, timestamp: Long = System.currentTimeMillis())
 
     /** 更新聊天分组 */
     @Query("UPDATE chats SET `group` = :group, updatedAt = :timestamp WHERE id = :chatId")

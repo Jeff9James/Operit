@@ -75,6 +75,7 @@ fun WorkspaceManager(
         actualViewModel: ChatViewModel,
         currentChat: ChatHistory,
         workspacePath: String,
+        workspaceEnv: String? = null,
         isVisible: Boolean,
         onExportClick: (workDir: File) -> Unit
 ) {
@@ -83,15 +84,22 @@ fun WorkspaceManager(
     val coroutineScope = rememberCoroutineScope()
     val toolHandler = remember { AIToolHandler.getInstance(context) }
     
+    val isSafEnv = remember(workspaceEnv) { workspaceEnv?.startsWith("repo:", ignoreCase = true) == true }
+
     // 读取工作区配置：在重新进入预览界面时从磁盘刷新
-    var workspaceConfig by remember(workspacePath) {
-        mutableStateOf(WorkspaceConfigReader.readConfig(workspacePath))
+    var workspaceConfig by remember(workspacePath, workspaceEnv) {
+        mutableStateOf(if (isSafEnv) WorkspaceConfig() else WorkspaceConfigReader.readConfig(workspacePath))
     }
 
-    LaunchedEffect(isVisible, workspacePath) {
-        if (isVisible) {
+    LaunchedEffect(isVisible, workspacePath, workspaceEnv) {
+        if (isVisible && !isSafEnv) {
             workspaceConfig = WorkspaceConfigReader.readConfig(workspacePath)
         }
+    }
+
+    fun withWorkspaceEnvParams(base: List<ToolParameter>): List<ToolParameter> {
+        if (workspaceEnv.isNullOrBlank()) return base
+        return base + ToolParameter("environment", workspaceEnv)
     }
 
     // 将 webViewHandler 和 webView 实例提升到 remember 中，使其在重组中保持稳定
@@ -133,10 +141,11 @@ fun WorkspaceManager(
 
     // 文件管理和标签状态 - 使用 rememberLocal 进行持久化
     var showFileManager by remember { mutableStateOf(false) }
-    var openFiles by rememberLocal<List<OpenFileInfo>>(key = "open_files_$workspacePath", emptyList())
-    var currentFileIndex by rememberLocal(key = "current_file_index_$workspacePath", -1)
+    val workspaceStateKey = remember(workspacePath, workspaceEnv) { "${workspacePath}__${workspaceEnv ?: ""}" }
+    var openFiles by rememberLocal<List<OpenFileInfo>>(key = "open_files_$workspaceStateKey", emptyList())
+    var currentFileIndex by rememberLocal(key = "current_file_index_$workspaceStateKey", -1)
     var filePreviewStates by remember { mutableStateOf(mapOf<String, Boolean>()) }
-    var unsavedFiles by rememberLocal<Set<String>>(key = "unsaved_files_$workspacePath", emptySet())
+    var unsavedFiles by rememberLocal<Set<String>>(key = "unsaved_files_$workspaceStateKey", emptySet())
     
     // 控制可展开FAB的菜单状态
     var isFabMenuExpanded by remember { mutableStateOf(false) }
@@ -163,11 +172,17 @@ fun WorkspaceManager(
     // 当工作区可见时，检查文件更新
     LaunchedEffect(isVisible) {
         if (isVisible) {
+            if (isSafEnv) {
+                return@LaunchedEffect
+            }
             val updatedFiles = openFiles.map { fileInfo ->
                 val currentFile = File(fileInfo.path)
                 if (currentFile.exists() && currentFile.lastModified() > fileInfo.lastModified) {
                     // 文件已在外部被修改，重新加载内容
-                    val tool = AITool("read_file_full", listOf(ToolParameter("path", fileInfo.path)))
+                    val tool = AITool(
+                        "read_file_full",
+                        withWorkspaceEnvParams(listOf(ToolParameter("path", fileInfo.path)))
+                    )
                     val result = toolHandler.executeTool(tool)
                     if (result.success && result.result is com.ai.assistance.operit.core.tools.FileContentData) {
                         val newContent = (result.result as com.ai.assistance.operit.core.tools.FileContentData).content
@@ -196,10 +211,16 @@ fun WorkspaceManager(
     // 保存文件函数
     fun saveFile(fileInfo: OpenFileInfo) {
         coroutineScope.launch {
-            val tool = AITool("write_file", listOf(
-                ToolParameter("path", fileInfo.path),
-                ToolParameter("content", fileInfo.content)
-            ))
+            val tool =
+                AITool(
+                    "write_file",
+                    withWorkspaceEnvParams(
+                        listOf(
+                            ToolParameter("path", fileInfo.path),
+                            ToolParameter("content", fileInfo.content)
+                        )
+                    )
+                )
             
             // 使用toolHandler代替actualViewModel.executeAITool
             toolHandler.executeTool(tool)
@@ -550,6 +571,7 @@ fun WorkspaceManager(
                     // 嵌入文件浏览器组件
                     FileBrowser(
                         initialPath = workspacePath,
+                        environment = workspaceEnv,
                         onCancel = { showFileManager = false },
                         isManageMode = true,
                         onFileOpen = { fileInfo ->
@@ -565,8 +587,12 @@ fun WorkspaceManager(
         ExpandableFabMenu(
             isExpanded = isFabMenuExpanded,
             onToggle = { isFabMenuExpanded = !isFabMenuExpanded },
-            exportEnabled = workspaceConfig.export.enabled,
-            onExportClick = { onExportClick(File(workspacePath)) },
+            exportEnabled = workspaceConfig.export.enabled && !isSafEnv,
+            onExportClick = {
+                if (!isSafEnv) {
+                    onExportClick(File(workspacePath))
+                }
+            },
             onFileManagerClick = { showFileManager = true },
             onUndoClick = { activeEditor?.undo() },
             onRedoClick = { activeEditor?.redo() },

@@ -78,6 +78,7 @@ object AIMessageManager {
      * @param enableMemoryQuery 是否允许AI查询记忆。
      * @param enableWorkspaceAttachment 是否启用工作区附着功能。
      * @param workspacePath 工作区路径。
+     * @param workspaceEnv 工作区环境。
      * @param replyToMessage 回复消息。
      * @param enableDirectImageProcessing 是否将图片附件转换为link标签（用于直接图片处理）。
      * @param enableDirectAudioProcessing 是否将音频附件转换为link标签（用于直接音频处理）。
@@ -90,6 +91,7 @@ object AIMessageManager {
         enableMemoryQuery: Boolean,
         enableWorkspaceAttachment: Boolean = false,
         workspacePath: String? = null,
+        workspaceEnv: String? = null,
         replyToMessage: ChatMessage? = null,
         enableDirectImageProcessing: Boolean = false,
         enableDirectAudioProcessing: Boolean = false,
@@ -112,7 +114,8 @@ object AIMessageManager {
             try {
                 val workspaceContent = WorkspaceAttachmentProcessor.generateWorkspaceAttachment(
                     context = context,
-                    workspacePath = workspacePath
+                    workspacePath = workspacePath,
+                    workspaceEnv = workspaceEnv
                 )
                 "<workspace_attachment>$workspaceContent</workspace_attachment>"
             } catch (e: Exception) {

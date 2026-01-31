@@ -38,6 +38,7 @@
     <string name="chat_starting_export">开始导出...</string>
     <string name="chat_reply_instruction">用户正在回复你之前的这条消息：</string>
     <string name="chat_workspace_status">工作区状态</string>
+    <string name="attach_local_storage_repo">附加本地储存仓库</string>
 
     <!-- Floating Window Module -->
     <string name="floating_screen_content">屏幕内容</string>

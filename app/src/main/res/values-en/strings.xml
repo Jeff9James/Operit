@@ -29,6 +29,7 @@
     <string name="chat_starting_export">Starting export...</string>
     <string name="chat_reply_instruction">User is replying to your previous message:</string>
     <string name="chat_workspace_status">Workspace Status</string>
+    <string name="attach_local_storage_repo">Attach Local Storage Repository</string>
     <string name="chat_style_bubble_show_avatar">Show avatars</string>
     <string name="chat_style_bubble_show_avatar_desc">Show user and AI avatars in bubble chat style</string>
 

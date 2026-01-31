@@ -83,6 +83,9 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
         if (environment == "linux") {
             return super.listFiles(tool)
         }
+        if (isSafEnvironment(environment)) {
+            return super.listFiles(tool)
+        }
 
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
@@ -392,6 +395,9 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
         if (environment == "linux") {
             return super.readFileFull(tool)
         }
+        if (isSafEnvironment(environment)) {
+            return super.readFileFull(tool)
+        }
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
         val textOnly = tool.parameters.find { it.name == "text_only" }?.value?.toBoolean() ?: false
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
@@ -510,6 +516,9 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
         if (environment == "linux") {
             return super.readFile(tool)
         }
+        if (isSafEnvironment(environment)) {
+            return super.readFile(tool)
+        }
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
         
@@ -619,6 +628,9 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
     override suspend fun readFilePart(tool: AITool): ToolResult {
         val environment = tool.parameters.find { it.name == "environment" }?.value
         if (environment == "linux") {
+            return super.readFilePart(tool)
+        }
+        if (isSafEnvironment(environment)) {
             return super.readFilePart(tool)
         }
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
@@ -829,6 +841,9 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
             return super.writeFile(tool)
         }
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
+        if (isSafEnvironment(environment)) {
+            return super.writeFile(tool)
+        }
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
         val content = tool.parameters.find { it.name == "content" }?.value ?: ""
         val append = tool.parameters.find { it.name == "append" }?.value?.toBoolean() ?: false
@@ -1002,7 +1017,13 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
         if (environment == "linux") {
             return super.deleteFile(tool)
         }
+
+        if (isSafEnvironment(environment)) {
+            return super.deleteFile(tool)
+        }
+
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
+
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
         
         // 如果是Operit内部存储路径，使用super的高权限方法
@@ -1081,7 +1102,13 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
         if (environment == "linux") {
             return super.fileExists(tool)
         }
+
+        if (isSafEnvironment(environment)) {
+            return super.fileExists(tool)
+        }
+
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
+
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
         
         // 如果是Operit内部存储路径，使用super的高权限方法
@@ -1167,8 +1194,11 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
             return super.moveFile(tool)
         }
         val sourcePath = tool.parameters.find { it.name == "source" }?.value ?: ""
-        PathValidator.validateAndroidPath(sourcePath, tool.name)?.let { return it }
         val destPath = tool.parameters.find { it.name == "destination" }?.value ?: ""
+        if (isSafEnvironment(environment)) {
+            return super.moveFile(tool)
+        }
+        PathValidator.validateAndroidPath(sourcePath, tool.name)?.let { return it }
         PathValidator.validateAndroidPath(destPath, tool.name)?.let { return it }
         
         // 如果源文件或目标文件在Operit内部存储，使用super的高权限方法
@@ -1259,6 +1289,9 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
         val sourcePath = tool.parameters.find { it.name == "source" }?.value ?: ""
         val destPath = tool.parameters.find { it.name == "destination" }?.value ?: ""
         val recursive = tool.parameters.find { it.name == "recursive" }?.value?.toBoolean() ?: true
+        if (sourcePath.startsWith("content://", ignoreCase = true) || destPath.startsWith("content://", ignoreCase = true)) {
+            return super.copyFile(tool)
+        }
         PathValidator.validateAndroidPath(sourcePath, tool.name, "source")?.let { return it }
         PathValidator.validateAndroidPath(destPath, tool.name, "destination")?.let { return it }
         
@@ -1413,6 +1446,9 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
             return super.makeDirectory(tool)
         }
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
+        if (isSafEnvironment(environment)) {
+            return super.makeDirectory(tool)
+        }
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
         
         // 如果是Operit内部存储路径，使用super的高权限方法
@@ -1535,7 +1571,13 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
         if (environment == "linux") {
             return super.findFiles(tool)
         }
+
+        if (isSafEnvironment(environment)) {
+            return super.findFiles(tool)
+        }
+
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
+
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
         val pattern = tool.parameters.find { it.name == "pattern" }?.value ?: ""
 
@@ -1710,7 +1752,13 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
         if (environment == "linux") {
             return super.fileInfo(tool)
         }
+
+        if (isSafEnvironment(environment)) {
+            return super.fileInfo(tool)
+        }
+
         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
+
         PathValidator.validateAndroidPath(path, tool.name)?.let { return it }
         
         // 如果是Operit内部存储路径，使用super的高权限方法
@@ -2622,9 +2670,6 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
     }
 
     /** Write base64 encoded content to a binary file */
-//     override suspend fun writeFileBinary(tool: AITool): ToolResult {
-//         val path = tool.parameters.find { it.name == "path" }?.value ?: ""
-//         val base64Content = tool.parameters.find { it.name == "base64Content" }?.value ?: ""
 
 //         if (path.isBlank()) {
 //             return ToolResult(

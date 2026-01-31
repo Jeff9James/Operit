@@ -427,6 +427,7 @@ class EnhancedAIService private constructor(private val context: Context) {
         message: String,
         chatHistory: List<Pair<String, String>> = emptyList(),
         workspacePath: String? = null,
+        workspaceEnv: String? = null,
         functionType: FunctionType = FunctionType.CHAT,
         promptFunctionType: PromptFunctionType = PromptFunctionType.CHAT,
         enableThinking: Boolean = false,
@@ -481,6 +482,7 @@ class EnhancedAIService private constructor(private val context: Context) {
                                     execContext.conversationHistory, // 始终使用内部历史记录
                                     processedInput,
                                     workspacePath,
+                                    workspaceEnv,
                                     promptFunctionType,
                                     thinkingGuidance,
                                     customSystemPromptTemplate,
@@ -1298,6 +1300,7 @@ class EnhancedAIService private constructor(private val context: Context) {
             chatHistory: List<Pair<String, String>>,
             processedInput: String,
             workspacePath: String?,
+            workspaceEnv: String?,
             promptFunctionType: PromptFunctionType,
             thinkingGuidance: Boolean,
             customSystemPromptTemplate: String? = null,
@@ -1322,6 +1325,7 @@ class EnhancedAIService private constructor(private val context: Context) {
                 chatHistory,
                 processedInput,
                 workspacePath,
+                workspaceEnv,
                 packageManager,
                 promptFunctionType,
                 thinkingGuidance,
@@ -1412,6 +1416,10 @@ class EnhancedAIService private constructor(private val context: Context) {
             val hasBackendAudioRecognition = multiServiceManager.hasAudioRecognitionConfigured()
             val hasBackendVideoRecognition = multiServiceManager.hasVideoRecognitionConfigured()
 
+            val safBookmarkNames = runCatching {
+                apiPreferences.safBookmarksFlow.first().map { it.name }
+            }.getOrElse { emptyList() }
+
             // 当前功能模型（通常是聊天模型）是否支持直接看图
             val chatModelHasDirectImage = config.enableDirectImageProcessing
 
@@ -1425,7 +1433,8 @@ class EnhancedAIService private constructor(private val context: Context) {
                     hasBackendAudioRecognition = hasBackendAudioRecognition,
                     hasBackendVideoRecognition = hasBackendVideoRecognition,
                     chatModelHasDirectAudio = chatModelHasDirectAudio,
-                    chatModelHasDirectVideo = chatModelHasDirectVideo
+                    chatModelHasDirectVideo = chatModelHasDirectVideo,
+                    safBookmarkNames = safBookmarkNames
                 )
             } else {
                 SystemToolPrompts.getAIAllCategoriesCn(
@@ -1434,7 +1443,8 @@ class EnhancedAIService private constructor(private val context: Context) {
                     hasBackendAudioRecognition = hasBackendAudioRecognition,
                     hasBackendVideoRecognition = hasBackendVideoRecognition,
                     chatModelHasDirectAudio = chatModelHasDirectAudio,
-                    chatModelHasDirectVideo = chatModelHasDirectVideo
+                    chatModelHasDirectVideo = chatModelHasDirectVideo,
+                    safBookmarkNames = safBookmarkNames
                 )
             }
 

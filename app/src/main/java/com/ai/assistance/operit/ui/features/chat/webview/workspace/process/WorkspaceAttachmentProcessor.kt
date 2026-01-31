@@ -5,12 +5,15 @@ import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.core.tools.DirectoryListingData
-import com.ai.assistance.operit.core.tools.StringResultData
 import com.ai.assistance.operit.data.model.AITool
 import com.ai.assistance.operit.data.model.ToolParameter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * 工作区附着处理器
@@ -19,8 +22,11 @@ import java.io.File
 object WorkspaceAttachmentProcessor {
     private const val TAG = "WorkspaceAttachmentProcessor"
 
+    private const val DEFAULT_TIME_PATTERN_WITH_MS = "yyyy-MM-dd HH:mm:ss.SSS"
+    private const val DEFAULT_TIME_PATTERN_NO_MS = "yyyy-MM-dd HH:mm:ss"
+
     // 用于缓存工作区状态
-    private data class FileMetadata(val path: String, val size: Long, val lastModified: Long, val isDirectory: Boolean)
+    private data class FileMetadata(val path: String, val size: Long, val lastModified: String, val isDirectory: Boolean)
     private val workspaceStateCache = mutableMapOf<String, List<FileMetadata>>()
 
     /**
@@ -31,34 +37,54 @@ object WorkspaceAttachmentProcessor {
      */
     suspend fun generateWorkspaceAttachment(
         context: Context,
-        workspacePath: String?
+        workspacePath: String?,
+        workspaceEnv: String? = null
     ): String = withContext(Dispatchers.IO) {
         if (workspacePath.isNullOrBlank()) {
             return@withContext generateEmptyWorkspaceXml(context)
         }
 
         try {
-            val workspaceDir = File(workspacePath)
-            if (!workspaceDir.exists() || !workspaceDir.isDirectory) {
-                AppLogger.w(TAG, context.getString(R.string.workspace_error_invalid_path, workspacePath))
-                // 清除无效路径的缓存
-                workspaceStateCache.remove(workspacePath)
-                return@withContext generateEmptyWorkspaceXml(context)
-            }
-
             val toolHandler = AIToolHandler.getInstance(context)
 
+            if (!workspaceEnv.isNullOrBlank()) {
+                val existsRes =
+                    toolHandler.executeTool(
+                        AITool(
+                            name = "file_exists",
+                            parameters = listOf(
+                                ToolParameter("path", workspacePath),
+                                ToolParameter("environment", workspaceEnv)
+                            )
+                        )
+                    )
+                val existsData = existsRes.result as? com.ai.assistance.operit.core.tools.FileExistsData
+                if (existsData == null || !existsData.exists || !existsData.isDirectory) {
+                    AppLogger.w(TAG, context.getString(R.string.workspace_error_invalid_path, workspacePath))
+                    workspaceStateCache.remove(makeCacheKey(workspacePath, workspaceEnv))
+                    return@withContext generateEmptyWorkspaceXml(context)
+                }
+            } else {
+                val workspaceDir = File(workspacePath)
+                if (!workspaceDir.exists() || !workspaceDir.isDirectory) {
+                    AppLogger.w(TAG, context.getString(R.string.workspace_error_invalid_path, workspacePath))
+                    // 清除无效路径的缓存
+                    workspaceStateCache.remove(makeCacheKey(workspacePath, null))
+                    return@withContext generateEmptyWorkspaceXml(context)
+                }
+            }
+
             // 获取工作区目录结构及其变化
-            val directoryStructure = getWorkspaceStructureAndDiff(context, workspacePath)
+            val directoryStructure = getWorkspaceStructureAndDiff(context, toolHandler, workspacePath, workspaceEnv)
 
             // 获取工作区错误信息
             val workspaceErrors = getWorkspaceErrors(context, toolHandler, workspacePath)
 
             // 获取用户改动记录
-            val userChanges = getUserChanges(context, toolHandler, workspacePath)
+            val userChanges = getUserChanges(context, toolHandler, workspacePath, workspaceEnv)
 
             // 获取工作区建议
-            val workspaceSuggestions = getWorkspaceSuggestions(context, workspaceDir)
+            val workspaceSuggestions = getWorkspaceSuggestions(context, toolHandler, workspacePath, workspaceEnv)
 
             // 生成完整的XML
             buildWorkspaceXml(
@@ -77,21 +103,35 @@ object WorkspaceAttachmentProcessor {
     /**
      * 获取工作区建议
      */
-    private fun getWorkspaceSuggestions(context: Context, workspaceDir: File): String {
+    private suspend fun getWorkspaceSuggestions(
+        context: Context,
+        toolHandler: AIToolHandler,
+        workspacePath: String,
+        workspaceEnv: String?
+    ): String {
         val suggestions = mutableListOf<String>()
         try {
-            // 通用建议：先了解项目再修改
-            suggestions.add(context.getString(R.string.workspace_suggestion_search_first))
+            val ignoreRules = loadGitIgnoreRules(toolHandler, workspacePath, workspaceEnv)
 
-            // 加载 gitignore 规则
-            val ignoreRules = GitIgnoreFilter.loadRules(workspaceDir)
-
-            // 只检查根目录文件，避免深度遍历
-            val hasHtmlFiles = workspaceDir.listFiles()
-                ?.filter { !GitIgnoreFilter.shouldIgnore(it, workspaceDir, ignoreRules) }
-                ?.filter { it.isFile }
-                ?.any { it.extension.lowercase() == "html" || it.extension.lowercase() == "htm" }
-                ?: false
+            val hasHtmlFiles =
+                if (!workspaceEnv.isNullOrBlank()) {
+                    val entries = listRootEntries(toolHandler, workspacePath, workspaceEnv)
+                    entries
+                        .asSequence()
+                        .filter { !it.isDirectory }
+                        .filter { !GitIgnoreFilter.shouldIgnore(it.name, it.name, isDirectory = false, rules = ignoreRules) }
+                        .any {
+                            val ext = it.name.substringAfterLast('.', missingDelimiterValue = "").lowercase()
+                            ext == "html" || ext == "htm"
+                        }
+                } else {
+                    val workspaceDir = File(workspacePath)
+                    workspaceDir.listFiles()
+                        ?.filter { !GitIgnoreFilter.shouldIgnore(it, workspaceDir, ignoreRules) }
+                        ?.filter { it.isFile }
+                        ?.any { it.extension.lowercase() == "html" || it.extension.lowercase() == "htm" }
+                        ?: false
+                }
 
             // 只有在有HTML文件时才显示H5相关建议
             if (hasHtmlFiles) {
@@ -116,18 +156,24 @@ object WorkspaceAttachmentProcessor {
     /**
      * 获取工作区目录结构，并与缓存进行比较以生成差异报告
      */
-    private fun getWorkspaceStructureAndDiff(context: Context, workspacePath: String): String {
-        val newFileMetadatas = getCurrentWorkspaceState(workspacePath)
-        val oldFileMetadatas = workspaceStateCache[workspacePath]
+    private suspend fun getWorkspaceStructureAndDiff(
+        context: Context,
+        toolHandler: AIToolHandler,
+        workspacePath: String,
+        workspaceEnv: String?
+    ): String {
+        val cacheKey = makeCacheKey(workspacePath, workspaceEnv)
+        val newFileMetadatas = getCurrentWorkspaceState(toolHandler, workspacePath, workspaceEnv)
+        val oldFileMetadatas = workspaceStateCache[cacheKey]
 
         // 总是更新缓存
-        workspaceStateCache[workspacePath] = newFileMetadatas
+        workspaceStateCache[cacheKey] = newFileMetadatas
 
         val fullStructure = buildStructureStringFromMetadata(newFileMetadatas, workspacePath)
 
         if (oldFileMetadatas == null) {
             // 首次加载，只显示根目录
-            val rootLevelStructure = buildRootLevelStructure(context, workspacePath)
+            val rootLevelStructure = buildRootLevelStructure(context, toolHandler, workspacePath, workspaceEnv)
             return context.getString(R.string.workspace_first_load, rootLevelStructure)
         }
 
@@ -173,23 +219,40 @@ object WorkspaceAttachmentProcessor {
     /**
      * 获取根目录文件状态（仅扫描根目录，不深度遍历）
      */
-    private fun getCurrentWorkspaceState(workspacePath: String): List<FileMetadata> {
+    private suspend fun getCurrentWorkspaceState(
+        toolHandler: AIToolHandler,
+        workspacePath: String,
+        workspaceEnv: String?
+    ): List<FileMetadata> {
+        val ignoreRules = loadGitIgnoreRules(toolHandler, workspacePath, workspaceEnv)
+        if (!workspaceEnv.isNullOrBlank()) {
+            return listRootEntries(toolHandler, workspacePath, workspaceEnv)
+                .asSequence()
+                .filterNot { GitIgnoreFilter.shouldIgnore(it.name, it.name, isDirectory = it.isDirectory, rules = ignoreRules) }
+                .map { entry ->
+                    FileMetadata(
+                        path = entry.name,
+                        size = if (entry.isDirectory) 0L else entry.size,
+                        lastModified = entry.lastModified,
+                        isDirectory = entry.isDirectory
+                    )
+                }
+                .toList()
+        }
+
         val workspaceDir = File(workspacePath)
         if (!workspaceDir.exists() || !workspaceDir.isDirectory) {
             return emptyList()
         }
 
-        // 加载 gitignore 规则
-        val ignoreRules = GitIgnoreFilter.loadRules(workspaceDir)
-
-        // 只获取根目录下的直接子项，避免深度遍历
+        val formatter = SimpleDateFormat(DEFAULT_TIME_PATTERN_WITH_MS, Locale.US)
         return workspaceDir.listFiles()
             ?.filter { !GitIgnoreFilter.shouldIgnore(it, workspaceDir, ignoreRules) }
             ?.map { file ->
                 FileMetadata(
                     path = file.name,
                     size = if (file.isFile) file.length() else 0,
-                    lastModified = file.lastModified(),
+                    lastModified = formatter.format(Date(file.lastModified())),
                     isDirectory = file.isDirectory
                 )
             }
@@ -199,16 +262,45 @@ object WorkspaceAttachmentProcessor {
     /**
      * 构建根目录级别的结构（仅显示根目录下的直接子项）
      */
-    private fun buildRootLevelStructure(context: Context, workspacePath: String): String {
+    private suspend fun buildRootLevelStructure(
+        context: Context,
+        toolHandler: AIToolHandler,
+        workspacePath: String,
+        workspaceEnv: String?
+    ): String {
+        val ignoreRules = loadGitIgnoreRules(toolHandler, workspacePath, workspaceEnv)
+        if (!workspaceEnv.isNullOrBlank()) {
+            val rootItems = listRootEntries(toolHandler, workspacePath, workspaceEnv)
+                .asSequence()
+                .filterNot { GitIgnoreFilter.shouldIgnore(it.name, it.name, isDirectory = it.isDirectory, rules = ignoreRules) }
+                .sortedWith(compareBy({ !it.isDirectory }, { it.name }))
+                .toList()
+
+            if (rootItems.isEmpty()) {
+                return context.getString(R.string.workspace_is_empty)
+            }
+
+            val builder = StringBuilder()
+            rootItems.forEachIndexed { index, entry ->
+                val isLast = index == rootItems.size - 1
+                val prefix = if (isLast) "└── " else "├── "
+                val icon = if (entry.isDirectory) "📁" else "📄"
+
+                builder.append("$prefix$icon ${entry.name}")
+                if (!entry.isDirectory && entry.size > 0) {
+                    builder.append(" (${formatFileSize(entry.size)})")
+                }
+                builder.append("\n")
+            }
+
+            return builder.toString()
+        }
+
         val workspaceDir = File(workspacePath)
         if (!workspaceDir.exists() || !workspaceDir.isDirectory) {
             return context.getString(R.string.workspace_not_exists_or_not_dir)
         }
 
-        // 加载 gitignore 规则
-        val ignoreRules = GitIgnoreFilter.loadRules(workspaceDir)
-
-        // 只获取根目录下的直接子项
         val rootItems = workspaceDir.listFiles()
             ?.filter { !GitIgnoreFilter.shouldIgnore(it, workspaceDir, ignoreRules) }
             ?.sortedWith(compareBy({ !it.isDirectory }, { it.name }))
@@ -244,7 +336,11 @@ object WorkspaceAttachmentProcessor {
         // 根据路径构建节点树
         metadatas.forEach { metadata ->
             var currentNode = root
-            metadata.path.split(File.separatorChar).forEach { component ->
+            metadata.path
+                .replace('\\', '/')
+                .split('/')
+                .filter { it.isNotBlank() }
+                .forEach { component ->
                 currentNode = currentNode.children.getOrPut(component) { Node(component) }
             }
             currentNode.metadata = metadata
@@ -329,16 +425,40 @@ object WorkspaceAttachmentProcessor {
     private suspend fun getUserChanges(
         context: Context,
         _toolHandler: AIToolHandler,
-        workspacePath: String
+        workspacePath: String,
+        workspaceEnv: String?
     ): String {
         // TODO: 实现用户改动跟踪逻辑
         // 这里可以记录文件的修改时间、内容变化等
         return try {
-            val workspaceDir = File(workspacePath)
             val recentFiles = mutableListOf<String>()
 
-            // 获取最近修改的文件
-            getRecentlyModifiedFiles(context, workspaceDir, recentFiles)
+            if (!workspaceEnv.isNullOrBlank()) {
+                val toolHandler = AIToolHandler.getInstance(context)
+                val ignoreRules = loadGitIgnoreRules(toolHandler, workspacePath, workspaceEnv)
+                val currentTime = System.currentTimeMillis()
+                val oneDayAgo = currentTime - 24 * 60 * 60 * 1000
+                val candidates = listRootEntries(toolHandler, workspacePath, workspaceEnv)
+                    .asSequence()
+                    .filterNot { it.isDirectory }
+                    .filterNot { GitIgnoreFilter.shouldIgnore(it.name, it.name, isDirectory = false, rules = ignoreRules) }
+                    .mapNotNull { entry ->
+                        val lastMs = parseLastModifiedToMillis(entry.lastModified) ?: return@mapNotNull null
+                        if (lastMs <= oneDayAgo) return@mapNotNull null
+                        entry.name to lastMs
+                    }
+                    .sortedByDescending { it.second }
+                    .take(10)
+                    .toList()
+
+                candidates.forEach { (name, lastMs) ->
+                    val timeAgo = formatTimeAgo(context, currentTime - lastMs)
+                    recentFiles.add(context.getString(R.string.workspace_file_time_ago, name, timeAgo))
+                }
+            } else {
+                val workspaceDir = File(workspacePath)
+                getRecentlyModifiedFiles(context, workspaceDir, recentFiles)
+            }
 
             if (recentFiles.isEmpty()) {
                 context.getString(R.string.workspace_no_recent_changes)
@@ -524,5 +644,85 @@ object WorkspaceAttachmentProcessor {
             minutes > 0 -> context.getString(R.string.workspace_minutes_ago, minutes)
             else -> context.getString(R.string.workspace_just_now)
         }
+    }
+
+    private fun makeCacheKey(workspacePath: String, workspaceEnv: String?): String {
+        return if (workspaceEnv.isNullOrBlank()) workspacePath else "$workspaceEnv::$workspacePath"
+    }
+
+    private suspend fun loadGitIgnoreRules(
+        toolHandler: AIToolHandler,
+        workspacePath: String,
+        workspaceEnv: String?
+    ): List<String> {
+        val rules = mutableListOf<String>()
+        rules.addAll(listOf(".backup", ".operit"))
+
+        if (workspaceEnv.isNullOrBlank()) {
+            val workspaceDir = File(workspacePath)
+            rules.addAll(GitIgnoreFilter.loadRules(workspaceDir))
+            return rules.distinct()
+        }
+
+        val gitignorePath = workspacePath.trimEnd('/') + "/.gitignore"
+        val res =
+            toolHandler.executeTool(
+                AITool(
+                    name = "read_file_full",
+                    parameters = listOf(
+                        ToolParameter("path", gitignorePath),
+                        ToolParameter("text_only", "true"),
+                        ToolParameter("environment", workspaceEnv)
+                    )
+                )
+            )
+        val content = (res.result as? com.ai.assistance.operit.core.tools.FileContentData)?.content
+        if (res.success && !content.isNullOrBlank()) {
+            content
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+                .forEach { rules.add(it) }
+        }
+
+        return rules.distinct()
+    }
+
+    private suspend fun listRootEntries(
+        toolHandler: AIToolHandler,
+        workspacePath: String,
+        workspaceEnv: String
+    ): List<com.ai.assistance.operit.core.tools.DirectoryListingData.FileEntry> {
+        val listRes =
+            toolHandler.executeTool(
+                AITool(
+                    name = "list_files",
+                    parameters = listOf(
+                        ToolParameter("path", workspacePath),
+                        ToolParameter("environment", workspaceEnv)
+                    )
+                )
+            )
+        val listing = listRes.result as? DirectoryListingData
+        return listing?.entries.orEmpty()
+    }
+
+    private fun parseLastModifiedToMillis(lastModified: String): Long? {
+        val raw = lastModified.trim()
+        if (raw.isBlank()) return null
+
+        val patterns = listOf(DEFAULT_TIME_PATTERN_WITH_MS, DEFAULT_TIME_PATTERN_NO_MS)
+        for (pattern in patterns) {
+            try {
+                val fmt = SimpleDateFormat(pattern, Locale.US)
+                val date = fmt.parse(raw)
+                if (date != null) return date.time
+            } catch (_: ParseException) {
+                // ignore
+            } catch (_: Exception) {
+                // ignore
+            }
+        }
+        return null
     }
 }
