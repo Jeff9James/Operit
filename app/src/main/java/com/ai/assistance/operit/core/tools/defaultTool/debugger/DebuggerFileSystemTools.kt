@@ -22,6 +22,9 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -1853,9 +1856,16 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
                 // Get last modified time
                 val modifiedResult =
                         AndroidShellExecutor.executeShellCommand(
-                                "stat -c %y '$path' 2>/dev/null || echo ''"
+                                "stat -c %Y '$path' 2>/dev/null || echo ''"
                         )
-                val lastModified = modifiedResult.stdout.trim()
+                val lastModifiedEpochSec = modifiedResult.stdout.trim().toLongOrNull()
+                val lastModified =
+                        if (lastModifiedEpochSec != null && lastModifiedEpochSec > 0) {
+                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+                                .format(Date(lastModifiedEpochSec * 1000L))
+                        } else {
+                            ""
+                        }
 
                 return ToolResult(
                         toolName = tool.name,

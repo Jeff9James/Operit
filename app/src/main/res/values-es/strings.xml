@@ -357,6 +357,7 @@
     <string name="avatar_crop_failed">Error al recortar avatar: %1$s</string>
     <string name="cannot_open_file">No se puede abrir el archivo: %1$s</string>
     <string name="message_copied_to_clipboard">Mensaje copiado al portapapeles</string>
+    <string name="message_workspace_backing_up">Respaldando el espacio de trabajo...</string>
     <string name="selected_content_copied">Contenido seleccionado copiado</string>
     <string name="requesting_root_permission">Solicitando permiso Root...</string>
     <string name="root_permission_granted">Permiso Root concedido</string>

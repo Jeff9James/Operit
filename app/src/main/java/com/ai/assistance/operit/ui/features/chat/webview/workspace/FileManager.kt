@@ -248,7 +248,7 @@ fun FileBrowser(
                 pendingRepoBookmarkUri = null
                 repoBookmarkNameError = null
             },
-            title = { Text("仓库名称") },
+            title = { Text(stringResource(R.string.repo_bookmark_name)) },
             text = {
                 TextField(
                     value = repoBookmarkNameInput,
@@ -256,7 +256,7 @@ fun FileBrowser(
                         repoBookmarkNameInput = it
                         repoBookmarkNameError = null
                     },
-                    label = { Text(stringResource(R.string.file_manager_file_name)) },
+                    label = { Text(stringResource(R.string.repo_bookmark_name_label)) },
                     singleLine = true,
                     isError = repoBookmarkNameError != null,
                     supportingText = {
@@ -277,7 +277,7 @@ fun FileBrowser(
                         }
 
                         if (name.isEmpty()) {
-                            repoBookmarkNameError = "名称不能为空"
+                            repoBookmarkNameError = context.getString(R.string.repo_bookmark_name_empty)
                             return@TextButton
                         }
 
@@ -285,7 +285,7 @@ fun FileBrowser(
                             it.uri != uri.toString() && it.name.equals(name, ignoreCase = true)
                         }
                         if (nameExists) {
-                            repoBookmarkNameError = "名称已存在，请换一个"
+                            repoBookmarkNameError = context.getString(R.string.repo_bookmark_name_exists)
                             return@TextButton
                         }
 
@@ -601,7 +601,7 @@ fun FileBrowser(
                             onDismissRequest = { menuExpanded = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("删除") },
+                                text = { Text(stringResource(R.string.repo_bookmark_delete)) },
                                 onClick = {
                                     menuExpanded = false
                                     val uri = runCatching { Uri.parse(bookmark.uri) }.getOrNull()

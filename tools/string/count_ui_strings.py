@@ -37,6 +37,7 @@ EXCLUDED_PATH_SUBSTRINGS = [
     '\\core\\config\\',
     '\\ui\\features\\settings\\screens\\TagMarketBilingualData.kt',
     '\\data\\preferences\\CharacterCardBilingualData.kt',
+    '\\data\\preferences\\PromptBilingualData.kt',
     '\\core\\tools\\defaultTool\\standard\\StandardUITools.kt'
 ]
 

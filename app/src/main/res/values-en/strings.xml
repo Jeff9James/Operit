@@ -6420,6 +6420,7 @@
 
     <!-- MessageProcessingDelegate -->
     <string name="message_processing">Processing message...</string>
+    <string name="message_workspace_backing_up">Backing up workspace...</string>
     <string name="message_role_user">User</string>
     <string name="message_workspace_sync_failed">Workspace state sync failed: %1$s</string>
     <string name="message_ai_service_not_initialized">AI service not initialized</string>
@@ -6480,5 +6481,12 @@
     <string name="conversation_markup_tools_call">Tools `%1$s` Call</string>
     <string name="conversation_markup_completion_with_tools_warning">Warning: Task completion marker detected while %1$s exists. The system will still execute these tools, but this is a high-risk combination.</string>
     <string name="conversation_markup_completion_with_tools_hint">Please do not call tools while sending task completion status to avoid duplicate or conflicting responses.</string>
+
+    <!-- SAF Bookmark / Repository -->
+    <string name="repo_bookmark_name">Repository Name</string>
+    <string name="repo_bookmark_name_label">Name</string>
+    <string name="repo_bookmark_name_empty">Name cannot be empty</string>
+    <string name="repo_bookmark_name_exists">Name already exists, please choose another</string>
+    <string name="repo_bookmark_delete">Delete</string>
 
 </resources>

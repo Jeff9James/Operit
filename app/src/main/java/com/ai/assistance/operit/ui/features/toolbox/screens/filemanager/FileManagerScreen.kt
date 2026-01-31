@@ -21,9 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.ai.assistance.operit.R
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.data.model.AITool
 import com.ai.assistance.operit.data.model.ToolParameter
@@ -120,7 +122,7 @@ fun FileManagerScreen(navController: NavController) {
                 pendingRepoBookmarkUri = null
                 repoBookmarkNameError = null
             },
-            title = { Text("仓库名称") },
+            title = { Text(stringResource(R.string.repo_bookmark_name)) },
             text = {
                 TextField(
                     value = repoBookmarkNameInput,
@@ -128,7 +130,7 @@ fun FileManagerScreen(navController: NavController) {
                         repoBookmarkNameInput = it
                         repoBookmarkNameError = null
                     },
-                    label = { Text("名称") },
+                    label = { Text(stringResource(R.string.repo_bookmark_name_label)) },
                     singleLine = true,
                     isError = repoBookmarkNameError != null,
                     supportingText = {
@@ -149,7 +151,7 @@ fun FileManagerScreen(navController: NavController) {
                         }
 
                         if (name.isEmpty()) {
-                            repoBookmarkNameError = "名称不能为空"
+                            repoBookmarkNameError = context.getString(R.string.repo_bookmark_name_empty)
                             return@TextButton
                         }
 
@@ -157,7 +159,7 @@ fun FileManagerScreen(navController: NavController) {
                             it.uri != uri.toString() && it.name.equals(name, ignoreCase = true)
                         }
                         if (nameExists) {
-                            repoBookmarkNameError = "名称已存在，请换一个"
+                            repoBookmarkNameError = context.getString(R.string.repo_bookmark_name_exists)
                             return@TextButton
                         }
 
@@ -369,7 +371,7 @@ fun FileManagerScreen(navController: NavController) {
                             onDismissRequest = { menuExpanded = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("删除") },
+                                text = { Text(stringResource(R.string.repo_bookmark_delete)) },
                                 onClick = {
                                     menuExpanded = false
                                     val uri = runCatching { Uri.parse(bookmark.uri) }.getOrNull()

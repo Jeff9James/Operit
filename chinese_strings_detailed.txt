@@ -1,9 +1,9 @@
 [OVERALL]
-Total strings found: 1958
-Excluded logs: 1797
-Excluded long prompts(>100 chars): 64
-Remaining UI strings: 97
-Files with Chinese strings: 148
+Total strings found: 1947
+Excluded logs: 1798
+Excluded long prompts(>100 chars): 61
+Remaining UI strings: 88
+Files with Chinese strings: 147
 
 [BY MODULE]
 
@@ -46,18 +46,6 @@ FILE: app\src\main\java\com\ai\assistance\operit\ui\features\toolbox\screens\aut
   L207:86 (3 chars) "星期六"
   L234:20 (7 chars) "💭 思考过程:"
   L246:20 (7 chars) "🎯 执行动作:"
-
-FILE: app\src\main\java\com\ai\assistance\operit\data\preferences\PromptBilingualData.kt
-  remaining=9 total=12 excluded_logs=0 excluded_long=3
-  L17:14 (54 chars) "你是Operit，一个全能AI助手，旨在解决用户提出的任何任务。你有各种工具可以调用，以高效完成复杂的请求。"
-  L22:14 (45 chars) "保持有帮助的语气，并清楚地传达限制。使用问题库根据用户的风格、偏好和过去的信息个性化响应。"
-  L27:14 (65 chars) "你是Operit语音助手。你的所有回答都将通过语音播出，所以你必须只说那些听起来自然的话。你的核心任务是进行流畅、自然的口语对话。"
-  L42:14 (65 chars) "你是Operit桌宠，一个可爱、活泼、充满活力的桌面伙伴。你的主要任务是陪伴用户，提供温暖和快乐，同时也可以帮助用户完成简单任务。"
-  L53:18 (5 chars) "默认提示词"
-  L57:18 (7 chars) "默认聊天提示词"
-  L61:18 (7 chars) "默认语音提示词"
-  L65:18 (7 chars) "默认桌宠提示词"
-  L76:35 (3 chars) "提示词"
 
 FILE: app\src\main\java\com\ai\assistance\operit\ui\features\token\preferences\UrlConfigManager.kt
   remaining=9 total=9 excluded_logs=0 excluded_long=0

@@ -487,7 +487,7 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                         },
                         // 传递自动朗读状态和方法
                         getIsAutoReadEnabled = { isAutoReadEnabled.value },
-                        speakMessage = ::speakMessage,
+                        speakMessage = { text, interrupt -> speakMessage(text, interrupt) },
                         onTokenLimitExceeded = { chatId ->
                             messageCoordinationDelegate.handleTokenLimitExceeded(chatId)
                         }
@@ -2043,6 +2043,10 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
     /** 朗读消息内容 */
     fun speakMessage(message: String) {
+        speakMessage(message, interrupt = true)
+    }
+
+    fun speakMessage(message: String, interrupt: Boolean) {
         viewModelScope.launch {
             try {
                 // 如果服务未初始化，等待一段时间让监听协程完成初始化
@@ -2063,7 +2067,7 @@ class ChatViewModel(private val context: Context) : ViewModel() {
 
                 val success = voiceService?.speak(
                     text = cleanMessage,
-                    interrupt = true, // 中断当前播放
+                    interrupt = interrupt,
                     rate = null,
                     pitch = null
                 ) ?: false

@@ -979,6 +979,25 @@ class SafFileSystemTools(
         }
     }
 
+    private fun queryLastModifiedMillis(uri: Uri): Long? {
+        return try {
+            contentResolver.query(
+                uri,
+                arrayOf(android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val idx = cursor.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                if (idx < 0 || cursor.isNull(idx)) return@use null
+                cursor.getLong(idx)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun openBufferedReader(uri: Uri): BufferedReader? {
         val input = contentResolver.openInputStream(uri) ?: return null
         return InputStreamReader(input, Charsets.UTF_8).buffered()
@@ -1214,12 +1233,13 @@ class SafFileSystemTools(
                 val displayName = queryDisplayName(uri) ?: ""
                 val size = querySize(uri) ?: 0L
                 val fileType = if (android.provider.DocumentsContract.isTreeUri(uri)) "directory" else "file"
-                val lastModified = ""
+                val lastModified = formatLastModified(queryLastModifiedMillis(uri))
                 val rawInfo = buildString {
                     append("Uri: $path\n")
                     if (displayName.isNotBlank()) append("DisplayName: $displayName\n")
                     append("Type: $fileType\n")
                     append("Size: $size bytes\n")
+                    if (lastModified.isNotBlank()) append("Last Modified: $lastModified\n")
                 }
 
                 ToolResult(

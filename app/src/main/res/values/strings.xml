@@ -6407,6 +6407,7 @@
 
     <!-- MessageProcessingDelegate -->
     <string name="message_processing">正在处理消息...</string>
+    <string name="message_workspace_backing_up">正在备份工作区...</string>
     <string name="message_role_user">用户</string>
     <string name="message_workspace_sync_failed">工作区状态同步失败: %1$s</string>
     <string name="message_ai_service_not_initialized">AI服务未初始化</string>
@@ -6467,5 +6468,12 @@
     <string name="conversation_markup_tools_call">工具 `%1$s` 调用</string>
     <string name="conversation_markup_completion_with_tools_warning">警告：检测到任务完成标记的同时存在%1$s，系统仍会执行这些工具，但这是高风险组合。</string>
     <string name="conversation_markup_completion_with_tools_hint">请勿在发送任务完成状态的同时调用工具，以避免重复或矛盾的响应。</string>
+
+    <!-- SAF Bookmark / Repository -->
+    <string name="repo_bookmark_name">仓库名称</string>
+    <string name="repo_bookmark_name_label">名称</string>
+    <string name="repo_bookmark_name_empty">名称不能为空</string>
+    <string name="repo_bookmark_name_exists">名称已存在，请换一个</string>
+    <string name="repo_bookmark_delete">删除</string>
 
 </resources>

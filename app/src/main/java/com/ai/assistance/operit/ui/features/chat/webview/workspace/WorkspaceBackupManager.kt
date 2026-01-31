@@ -1,11 +1,13 @@
 package com.ai.assistance.operit.ui.features.chat.webview.workspace
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Base64
 import com.ai.assistance.operit.core.tools.BinaryFileContentData
 import com.ai.assistance.operit.core.tools.DirectoryListingData
 import com.ai.assistance.operit.core.tools.FileContentData
 import com.ai.assistance.operit.core.tools.FileExistsData
+import com.ai.assistance.operit.core.tools.FileInfoData
 import com.ai.assistance.operit.core.tools.FindFilesResultData
 import com.ai.assistance.operit.core.tools.AIToolHandler
 import com.ai.assistance.operit.util.AppLogger
@@ -21,6 +23,8 @@ import com.ai.assistance.operit.data.model.ToolParameter
 import com.github.difflib.DiffUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Serializable
 data class FileStat(
@@ -220,6 +224,35 @@ class WorkspaceBackupManager(private val context: Context) {
         return res.result as? FileExistsData
     }
 
+    private suspend fun fileInfoProvider(path: String, workspaceEnv: String?): FileInfoData? {
+        val res =
+            toolHandler.executeTool(
+                AITool(
+                    name = "file_info",
+                    parameters = withWorkspaceEnvParams(listOf(ToolParameter("path", path)), workspaceEnv)
+                )
+            )
+        return res.result as? FileInfoData
+    }
+
+    private fun parseLastModifiedToMillis(lastModified: String): Long? {
+        val raw = lastModified.trim()
+        if (raw.isBlank()) return null
+
+        val patterns = listOf("yyyy-MM-dd HH:mm:ss.SSS", "yyyy-MM-dd HH:mm:ss")
+        for (pattern in patterns) {
+            try {
+                val sdf = SimpleDateFormat(pattern, Locale.getDefault())
+                sdf.isLenient = true
+                val date = sdf.parse(raw) ?: continue
+                return date.time
+            } catch (_: Exception) {
+            }
+        }
+
+        return null
+    }
+
     private suspend fun loadGitignoreRulesProvider(workspacePath: String, workspaceEnv: String?): List<String> {
         val rules = mutableListOf<String>()
         rules.addAll(listOf(".backup", ".operit"))
@@ -327,6 +360,7 @@ class WorkspaceBackupManager(private val context: Context) {
         newTimestamp: Long,
         existingBackups: List<Long>
     ) {
+        val startMs = SystemClock.elapsedRealtime()
         val objectsDir = joinPath(backupDir, OBJECTS_DIR_NAME)
         ensureDirectory(objectsDir, workspaceEnv)
 
@@ -335,28 +369,67 @@ class WorkspaceBackupManager(private val context: Context) {
 
         val previousManifest = existingBackups.lastOrNull()?.let { loadBackupManifestProvider(backupDir, it, workspaceEnv) }
         val previousFiles = previousManifest?.files ?: emptyMap()
+        val previousStats = previousManifest?.fileStats ?: emptyMap()
 
         val gitignoreRules = loadGitignoreRulesProvider(workspacePath, workspaceEnv)
         val workspaceFiles = listWorkspaceTextFilesProvider(workspacePath, workspaceEnv, gitignoreRules)
 
+        var reusedCount = 0
+        var hashedCount = 0
+        var objectsWrittenCount = 0
+        var statMissingCount = 0
+
         for (filePath in workspaceFiles) {
             try {
                 val relativePath = makeRelativePath(workspacePath, filePath) ?: continue
-                val base64 = readBinaryBase64(filePath, workspaceEnv) ?: continue
-                val bytes = Base64.decode(base64, Base64.DEFAULT)
-                val md = MessageDigest.getInstance("SHA-256")
-                val hash = md.digest(bytes).joinToString("") { "%02x".format(it) }
+
+                val info = fileInfoProvider(filePath, workspaceEnv)
+                val infoSize = info?.size
+                val infoLastModifiedMs = info?.lastModified?.let { parseLastModifiedToMillis(it) }
+                val currentStat =
+                    if (infoSize != null && infoLastModifiedMs != null) {
+                        FileStat(size = infoSize, lastModified = infoLastModifiedMs)
+                    } else {
+                        statMissingCount += 1
+                        null
+                    }
+
+                val previousHash = previousFiles[relativePath]
+                val previousStat = previousStats[relativePath]
+
+                val canReuse =
+                    previousHash != null &&
+                        currentStat != null &&
+                        previousStat != null &&
+                        currentStat.size == previousStat.size &&
+                        currentStat.lastModified == previousStat.lastModified
+
+                val hash: String
+                val stat: FileStat
+                if (canReuse) {
+                    hash = requireNotNull(previousHash)
+                    stat = requireNotNull(currentStat)
+                    reusedCount += 1
+                } else {
+                    val base64 = readBinaryBase64(filePath, workspaceEnv) ?: continue
+                    val bytes = Base64.decode(base64, Base64.DEFAULT)
+                    val md = MessageDigest.getInstance("SHA-256")
+                    hash = md.digest(bytes).joinToString("") { "%02x".format(it) }
+                    stat = currentStat ?: FileStat(size = bytes.size.toLong(), lastModified = 0L)
+                    hashedCount += 1
+
+                    val objectPath = buildShardedObjectPath(objectsDir, hash)
+                    val objectExists = fileExistsProvider(objectPath, workspaceEnv)?.exists == true
+                    if (!objectExists) {
+                        val bucketDir = joinPath(objectsDir, objectBucketPrefix(hash))
+                        ensureDirectory(bucketDir, workspaceEnv)
+                        writeBinaryBase64(objectPath, base64, workspaceEnv)
+                        objectsWrittenCount += 1
+                    }
+                }
 
                 newManifestFiles[relativePath] = hash
-                newManifestFileStats[relativePath] = FileStat(size = bytes.size.toLong(), lastModified = 0L)
-
-                val objectPath = buildShardedObjectPath(objectsDir, hash)
-                val objectExists = fileExistsProvider(objectPath, workspaceEnv)?.exists == true
-                if (!objectExists) {
-                    val bucketDir = joinPath(objectsDir, objectBucketPrefix(hash))
-                    ensureDirectory(bucketDir, workspaceEnv)
-                    writeBinaryBase64(objectPath, base64, workspaceEnv)
-                }
+                newManifestFileStats[relativePath] = stat
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to process file for backup: $filePath", e)
             }
@@ -382,6 +455,12 @@ class WorkspaceBackupManager(private val context: Context) {
                 )
             )
         )
+
+        val elapsedMs = SystemClock.elapsedRealtime() - startMs
+        AppLogger.i(
+            TAG,
+            "Workspace backup completed in ${elapsedMs}ms (timestamp=$newTimestamp, files=${workspaceFiles.size}, reused=$reusedCount, hashed=$hashedCount, objectsWritten=$objectsWrittenCount, statMissing=$statMissingCount)"
+        )
     }
 
     private suspend fun restoreToStateProvider(
@@ -392,7 +471,6 @@ class WorkspaceBackupManager(private val context: Context) {
     ) {
         val objectsDir = joinPath(backupDir, OBJECTS_DIR_NAME)
         AppLogger.d(TAG, "Attempting to restore workspace to timestamp: $targetTimestamp")
-
         val targetManifest = if (targetTimestamp != null) {
             loadBackupManifestProvider(backupDir, targetTimestamp, workspaceEnv)
         } else {

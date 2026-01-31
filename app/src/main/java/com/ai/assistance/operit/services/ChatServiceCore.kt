@@ -160,7 +160,7 @@ class ChatServiceCore(
             getIsAutoReadEnabled = {
                 apiConfigDelegate.enableAutoRead.value
             },
-            speakMessage = { text ->
+            speakMessage = { text, _ ->
                 // TTS 功能需要在外部实现
                 AppLogger.d(TAG, "朗读消息: $text")
             },

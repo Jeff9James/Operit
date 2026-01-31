@@ -114,7 +114,7 @@ fun WorkspaceSetup(chatId: String, onBindWorkspace: (String, String?) -> Unit) {
                 pendingRepoBookmarkUri = null
                 repoBookmarkNameError = null
             },
-            title = { Text("仓库名称") },
+            title = { Text(context.getString(R.string.repo_bookmark_name)) },
             text = {
                 TextField(
                     value = repoBookmarkNameInput,
@@ -122,7 +122,7 @@ fun WorkspaceSetup(chatId: String, onBindWorkspace: (String, String?) -> Unit) {
                         repoBookmarkNameInput = it
                         repoBookmarkNameError = null
                     },
-                    label = { Text(context.getString(R.string.file_manager_file_name)) },
+                    label = { Text(context.getString(R.string.repo_bookmark_name_label)) },
                     singleLine = true,
                     isError = repoBookmarkNameError != null,
                     supportingText = {
@@ -143,7 +143,7 @@ fun WorkspaceSetup(chatId: String, onBindWorkspace: (String, String?) -> Unit) {
                         }
 
                         if (name.isEmpty()) {
-                            repoBookmarkNameError = "名称不能为空"
+                            repoBookmarkNameError = context.getString(R.string.repo_bookmark_name_empty)
                             return@TextButton
                         }
 
@@ -151,7 +151,7 @@ fun WorkspaceSetup(chatId: String, onBindWorkspace: (String, String?) -> Unit) {
                             it.uri != uri.toString() && it.name.equals(name, ignoreCase = true)
                         }
                         if (nameExists) {
-                            repoBookmarkNameError = "名称已存在，请换一个"
+                            repoBookmarkNameError = context.getString(R.string.repo_bookmark_name_exists)
                             return@TextButton
                         }
 
