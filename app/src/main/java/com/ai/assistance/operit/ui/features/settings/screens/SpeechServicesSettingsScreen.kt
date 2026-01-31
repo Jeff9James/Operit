@@ -1144,7 +1144,6 @@ fun SpeechServicesSettingsScreen(
                             OutlinedTextField(
                                 value = when(sttServiceTypeInput) {
                                     SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> stringResource(R.string.speech_services_stt_type_sherpa)
-                                    SpeechServiceFactory.SpeechServiceType.SHERPA_MNN -> stringResource(R.string.speech_services_stt_type_sherpa_mnn)
                                     SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> stringResource(R.string.speech_services_stt_type_openai)
                                     SpeechServiceFactory.SpeechServiceType.DEEPGRAM_STT -> stringResource(R.string.speech_services_stt_type_deepgram)
                                 },
@@ -1166,7 +1165,6 @@ fun SpeechServicesSettingsScreen(
                                             Text(
                                                 text = when(type) {
                                                     SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> stringResource(R.string.speech_services_stt_type_sherpa)
-                                                    SpeechServiceFactory.SpeechServiceType.SHERPA_MNN -> stringResource(R.string.speech_services_stt_type_sherpa_mnn)
                                                     SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> stringResource(R.string.speech_services_stt_type_openai)
                                                     SpeechServiceFactory.SpeechServiceType.DEEPGRAM_STT -> stringResource(R.string.speech_services_stt_type_deepgram)
                                                 },
