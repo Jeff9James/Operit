@@ -890,16 +890,63 @@ open class DebuggerFileSystemTools(context: Context) : AccessibilityFileSystemTo
                     )
 
             // 使用两种写入方法中的一种:
-            // 方法1: 使用base64命令解码并写入文件
+            // 方法1: 使用base64命令解码并写入文件（大内容时分块，避免命令行过长）
             val redirectOperator = if (append) ">>" else ">"
+            val maxInlineBase64 = 32768
+            val base64ChunkSize = 16384 // 4的倍数，保证base64解码边界正确
             val writeResult =
-                    AndroidShellExecutor.executeShellCommand(
-                            "echo '$contentBase64' | base64 -d $redirectOperator '$path'"
-                    )
+                    if (contentBase64.length <= maxInlineBase64) {
+                        AndroidShellExecutor.executeShellCommand(
+                                "echo '$contentBase64' | base64 -d $redirectOperator '$path'"
+                        )
+                    } else {
+                        var chunkSuccess = true
+                        var firstChunk = true
+                        var index = 0
+                        while (index < contentBase64.length) {
+                            val end = (index + base64ChunkSize).coerceAtMost(contentBase64.length)
+                            val chunk = contentBase64.substring(index, end)
+                            val chunkRedirect = if (firstChunk) redirectOperator else ">>"
+                            val chunkResult =
+                                    AndroidShellExecutor.executeShellCommand(
+                                            "echo '$chunk' | base64 -d $chunkRedirect '$path'"
+                                    )
+                            if (!chunkResult.success) {
+                                AppLogger.e(
+                                        TAG,
+                                        "Failed to write base64 chunk: ${chunkResult.stderr}"
+                                )
+                                chunkSuccess = false
+                                break
+                            }
+                            firstChunk = false
+                            index = end
+                        }
+                        if (chunkSuccess) {
+                            AndroidShellExecutor.CommandResult(true, "", "", 0)
+                        } else {
+                            AndroidShellExecutor.CommandResult(false, "", "Failed to write base64 chunks")
+                        }
+                    }
 
             if (!writeResult.success) {
                 AppLogger.e(TAG, "Failed to write with base64 method: ${writeResult.stderr}")
-                // 方法2: 尝试直接写入，无需base64
+                if (content.length > maxInlineBase64) {
+                    return ToolResult(
+                            toolName = tool.name,
+                            success = false,
+                            result =
+                                    FileOperationData(
+                                            operation = if (append) "append" else "write",
+                                            path = path,
+                                            successful = false,
+                                            details =
+                                                    "Failed to write to file: ${writeResult.stderr}"
+                                    ),
+                            error = "Failed to write to file: ${writeResult.stderr}"
+                    )
+                }
+                // 方法2: 尝试直接写入，无需base64（仅适用于较小内容）
                 val fallbackResult =
                         AndroidShellExecutor.executeShellCommand(
                                 "printf '%s' '$content' $redirectOperator '$path'"

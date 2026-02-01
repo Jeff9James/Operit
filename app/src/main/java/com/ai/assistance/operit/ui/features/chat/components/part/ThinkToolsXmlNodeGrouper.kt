@@ -191,13 +191,45 @@ class ThinkToolsXmlNodeGrouper(
             it.type == MarkdownProcessorType.XML_BLOCK && !isXmlFullyClosed(it.content)
         }
 
-        var expanded by remember(rendererId, group.stableKey) { mutableStateOf(isInProgress || isLastNode) }
+        fun isConformingTailNode(node: MarkdownNodeStable): Boolean {
+            return when (node.type) {
+                MarkdownProcessorType.PLAIN_TEXT -> node.content.isBlank()
+                MarkdownProcessorType.XML_BLOCK -> {
+                    val tag = extractXmlTagName(node.content)
+                    when (tag) {
+                        "think", "thinking" -> true
+                        "tool", "tool_result" -> {
+                            val toolName = extractToolNameFromToolOrResult(node.content)
+                            if (toolName == null) {
+                                !isXmlFullyClosed(node.content)
+                            } else {
+                                shouldGroupToolByName(toolName)
+                            }
+                        }
+                        null -> !isXmlFullyClosed(node.content)
+                        else -> false
+                    }
+                }
+                else -> false
+            }
+        }
+
+        val tailStartIndex = (group.endIndexInclusive + 1).coerceAtMost(nodes.size)
+        val hasNonConformingAfterGroup =
+            if (tailStartIndex >= nodes.size) {
+                false
+            } else {
+                nodes.subList(tailStartIndex, nodes.size).any { !isConformingTailNode(it) }
+            }
+        val shouldAutoExpand = !hasNonConformingAfterGroup
+
+        var expanded by remember(rendererId, group.stableKey) { mutableStateOf(shouldAutoExpand) }
         var userOverride by remember(rendererId, group.stableKey) { mutableStateOf<Boolean?>(null) }
         val appearedKeys = remember(rendererId, group.stableKey) { mutableStateMapOf<String, Boolean>() }
 
-        LaunchedEffect(isInProgress, isLastNode, userOverride) {
+        LaunchedEffect(shouldAutoExpand, userOverride) {
             if (userOverride != null) return@LaunchedEffect
-            expanded = isInProgress || isLastNode
+            expanded = shouldAutoExpand
         }
 
         Column(

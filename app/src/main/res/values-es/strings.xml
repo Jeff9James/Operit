@@ -16,6 +16,14 @@
     <string name="menu">Menú</string>
     <string name="token_config">Obtener clave</string>
 
+    <!-- Tool Test Names -->
+    <string name="write_small_file_test">Escribir archivo pequeño</string>
+    <string name="write_large_file_test">Escribir archivo grande</string>
+
+    <!-- Tool Test Descriptions -->
+    <string name="write_small_file_test_desc">Escribe un archivo de texto pequeño para validar la escritura básica.</string>
+    <string name="write_large_file_test_desc">Escribe un archivo de texto más grande para validar la escritura por bloques.</string>
+
     <!-- 用于NavItem类的标识符 -->
     <string name="shizuku_commands">Concesión de permisos</string>
     <string name="tool_permissions">Configuración de permisos de herramientas</string>

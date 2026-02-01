@@ -2518,6 +2518,8 @@
     <string name="create_test_dir">Create Test Directory</string>
     <string name="download_test_image">Download Test Image</string>
     <string name="create_text_file">Create Text File</string>
+    <string name="write_small_file_test">Write Small File</string>
+    <string name="write_large_file_test">Write Large File</string>
     <string name="delay_test">Delay</string>
     <string name="device_info_test">Device Info</string>
     <string name="http_get_test">HTTP GET</string>
@@ -2553,6 +2555,8 @@
     <string name="create_test_dir_desc">Create root directory for all test files.</string>
     <string name="download_test_image_desc">Download an image for subsequent tests.</string>
     <string name="create_text_file_desc">Create a text file for testing.</string>
+    <string name="write_small_file_test_desc">Write a small text file to verify basic writes.</string>
+    <string name="write_large_file_test_desc">Write a larger text file to verify chunked writes.</string>
     <string name="delay_test_desc">Test tool call delay</string>
     <string name="device_info_test_desc">Get detailed device information</string>
     <string name="http_get_test_desc">Test GET request</string>

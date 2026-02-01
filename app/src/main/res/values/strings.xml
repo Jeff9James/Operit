@@ -2578,6 +2578,8 @@
     <string name="create_test_dir">创建测试目录</string>
     <string name="download_test_image">下载测试图片</string>
     <string name="create_text_file">创建文本文件</string>
+    <string name="write_small_file_test">写入小文件</string>
+    <string name="write_large_file_test">写入大文件</string>
     <string name="delay_test">延时</string>
     <string name="device_info_test">设备信息</string>
     <string name="http_get_test">HTTP GET</string>
@@ -2613,6 +2615,8 @@
     <string name="create_test_dir_desc">创建所有测试文件的根目录。</string>
     <string name="download_test_image_desc">下载一张图片用于后续测试。</string>
     <string name="create_text_file_desc">创建一个用于测试的文本文件。</string>
+    <string name="write_small_file_test_desc">写入小文本文件，验证基础写入能力。</string>
+    <string name="write_large_file_test_desc">写入较大的文本文件，验证分块写入。</string>
     <string name="delay_test_desc">测试工具调用延时</string>
     <string name="device_info_test_desc">获取设备详细信息</string>
     <string name="http_get_test_desc">测试GET请求</string>
