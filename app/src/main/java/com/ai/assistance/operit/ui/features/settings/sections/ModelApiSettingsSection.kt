@@ -120,6 +120,22 @@ fun ModelApiSettingsSection(
         }
     }
 
+    fun getEndpointOptions(providerType: ApiProviderType): List<Pair<String, String>>? {
+        return when (providerType) {
+            ApiProviderType.MOONSHOT -> listOf(
+                "https://api.moonshot.cn/v1/chat/completions" to "China (moonshot.cn)",
+                "https://api.moonshot.ai/v1/chat/completions" to "International (moonshot.ai)"
+            )
+            ApiProviderType.ZHIPU -> listOf(
+                "https://open.bigmodel.cn/api/paas/v4/chat/completions" to "CN standard",
+                "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions" to "CN coding",
+                "https://api.z.ai/api/paas/v4/chat/completions" to "International standard",
+                "https://api.z.ai/api/coding/paas/v4/chat/completions" to "International coding"
+            )
+            else -> null
+        }
+    }
+
     // 检查当前模型名称是否是某个提供商的默认值
     fun isDefaultModelName(modelName: String): Boolean {
         return ApiProviderType.values().any { getDefaultModelName(it) == modelName }
@@ -451,6 +467,7 @@ fun ModelApiSettingsSection(
 
             val isMnnProvider = selectedApiProvider == ApiProviderType.MNN
             val isLlamaProvider = selectedApiProvider == ApiProviderType.LLAMA_CPP
+            val endpointOptions = getEndpointOptions(selectedApiProvider)
             if (isMnnProvider) {
                 MnnSettingsBlock(
                         mnnForwardTypeInput = mnnForwardTypeInput,
@@ -479,6 +496,64 @@ fun ModelApiSettingsSection(
                     }
                 )
             } else {
+                if (endpointOptions != null) {
+                    var showEndpointDialog by remember { mutableStateOf(false) }
+
+                    SettingsTextField(
+                        title = stringResource(R.string.api_endpoint),
+                        subtitle = stringResource(R.string.api_endpoint_placeholder),
+                        value = apiEndpointInput,
+                        onValueChange = {},
+                        enabled = true,
+                        readOnly = true,
+                        onClick = { showEndpointDialog = true },
+                        trailingContent = {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+
+                    if (showEndpointDialog) {
+                        Dialog(onDismissRequest = { showEndpointDialog = false }) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surface
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.api_endpoint),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    endpointOptions.forEach { (endpoint, label) ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable {
+                                                    apiEndpointInput = endpoint
+                                                    showEndpointDialog = false
+                                                }
+                                                .padding(vertical = 10.dp, horizontal = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = endpoint,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
                 SettingsTextField(
                         title = stringResource(R.string.api_endpoint),
                         subtitle = stringResource(R.string.api_endpoint_placeholder),
@@ -492,6 +567,7 @@ fun ModelApiSettingsSection(
                                 imeAction = ImeAction.Next
                         )
                 )
+                }
 
             val completedEndpoint = EndpointCompleter.completeEndpoint(apiEndpointInput, selectedApiProvider)
             if (completedEndpoint != apiEndpointInput) {
@@ -1125,6 +1201,7 @@ internal fun SettingsTextField(
     onValueChange: (String) -> Unit,
     placeholder: String = "",
     enabled: Boolean = true,
+    readOnly: Boolean = false,
     singleLine: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -1132,14 +1209,24 @@ internal fun SettingsTextField(
     interactionSource: MutableInteractionSource? = null,
     valueFilter: ((String) -> String)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
-    unitText: String? = null
+    unitText: String? = null,
+    onClick: (() -> Unit)? = null
 ) {
     val focusManager = LocalFocusManager.current
     val backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
     val resolvedInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
+    val inputEnabled = enabled && !readOnly
 
     Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onClick != null) {
+                        Modifier.clickable { onClick() }
+                    } else {
+                        Modifier
+                    }
+                ),
             shape = RoundedCornerShape(10.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
     ) {
@@ -1171,12 +1258,12 @@ internal fun SettingsTextField(
                     BasicTextField(
                             value = value,
                             onValueChange = { newValue ->
-                                if (!enabled) return@BasicTextField
+                                if (!inputEnabled) return@BasicTextField
                                 val filtered = valueFilter?.invoke(newValue) ?: newValue
                                 onValueChange(filtered)
                             },
                             singleLine = singleLine,
-                            enabled = enabled,
+                            enabled = inputEnabled,
                             keyboardOptions = keyboardOptions,
                             keyboardActions = keyboardActions,
                             visualTransformation = visualTransformation,

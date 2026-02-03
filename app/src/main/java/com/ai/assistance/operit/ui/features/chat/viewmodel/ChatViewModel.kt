@@ -2065,6 +2065,11 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                 val cleanedText = TtsCleaner.clean(message, cleanerRegexs)
                 val cleanMessage = WaifuMessageProcessor.cleanContentForWaifu(cleanedText)
 
+                if (cleanMessage.isBlank()) {
+                    AppLogger.d(TAG, "朗读内容为空，跳过请求")
+                    return@launch
+                }
+
                 val success = voiceService?.speak(
                     text = cleanMessage,
                     interrupt = interrupt,

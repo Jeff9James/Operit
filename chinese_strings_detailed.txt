@@ -1,6 +1,6 @@
 [OVERALL]
-Total strings found: 1947
-Excluded logs: 1798
+Total strings found: 1948
+Excluded logs: 1799
 Excluded long prompts(>100 chars): 61
 Remaining UI strings: 88
 Files with Chinese strings: 147
@@ -140,5 +140,5 @@ FILE: app\src\main\java\com\ai\assistance\operit\data\converter\ChatFormatDetect
 
 FILE: app\src\main\java\com\ai\assistance\operit\ui\features\workflow\viewmodel\WorkflowViewModel.kt
   remaining=1 total=1 excluded_logs=0 excluded_long=0
-  L903:30 (24 chars) ".*(打开|启动).*(对话|聊天|悬浮窗).*"
+  L915:30 (24 chars) ".*(打开|启动).*(对话|聊天|悬浮窗).*"
 

@@ -220,7 +220,7 @@ object AIServiceFactory {
                     enableToolCall = enableToolCall
                 )
             ApiProviderType.MOONSHOT ->
-                OpenAIProvider(
+                KimiProvider(
                     apiEndpoint = config.apiEndpoint,
                     apiKeyProvider = apiKeyProvider,
                     modelName = config.modelName,

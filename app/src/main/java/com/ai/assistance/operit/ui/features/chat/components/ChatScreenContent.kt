@@ -604,11 +604,7 @@ fun ChatScreenContent(
             ) {
                 SmallFloatingActionButton(
                     onClick = {
-                        if (isAutoReadEnabled) {
-                            actualViewModel.disableAutoRead()
-                        } else {
-                            actualViewModel.stopSpeaking()
-                        }
+                        actualViewModel.stopSpeaking()
                     },
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary

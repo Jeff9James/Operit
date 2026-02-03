@@ -20,6 +20,7 @@ import com.ai.assistance.operit.data.preferences.WaifuPreferences
 import com.ai.assistance.operit.data.preferences.FunctionalConfigManager
 import com.ai.assistance.operit.data.preferences.ModelConfigManager
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
+import com.ai.assistance.operit.ui.floating.ui.fullscreen.XmlTextProcessor
 import com.ai.assistance.operit.ui.features.chat.webview.workspace.WorkspaceBackupManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -513,6 +514,7 @@ class MessageProcessingDelegate(
                         val autoReadBuffer = StringBuilder()
                         var isFirstAutoReadSegment = true
                         val endChars = ".,!?;:，。！？；：\n"
+                        val autoReadStream = XmlTextProcessor.processStreamToText(sharedCharStream)
 
                         fun flushAutoReadSegment(segment: String, interrupt: Boolean) {
                             val trimmed = segment.trim()
@@ -547,15 +549,19 @@ class MessageProcessingDelegate(
                             }
                         }
 
+                        val autoReadJob = launch {
+                            autoReadStream.collect { char ->
+                                autoReadBuffer.append(char)
+                                tryFlushAutoRead()
+                            }
+                        }
+
                         sharedCharStream.collect { chunk ->
                             contentBuilder.append(chunk)
                             val content = contentBuilder.toString()
                             val updatedMessage = aiMessage.copy(content = content)
                             // 防止后续读取不到
                             aiMessage.content = content
-
-                            autoReadBuffer.append(chunk)
-                            tryFlushAutoRead()
                             
                             // 只有在非waifu模式下才显示流式更新
                             if (!isWaifuModeEnabled) {
@@ -565,6 +571,8 @@ class MessageProcessingDelegate(
                                 tryEmitScrollToBottomThrottled(chatId)
                             }
                         }
+
+                        autoReadJob.join()
 
                         if (getIsAutoReadEnabled() && !isWaifuModeEnabled) {
                             val remaining = autoReadBuffer.toString()
