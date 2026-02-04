@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
+import com.ai.assistance.operit.util.AssetCopyUtils
 import kotlin.math.sqrt
 
 /**
@@ -74,7 +74,7 @@ object OnnxEmbeddingService {
             ortEnvironment = OrtEnvironment.getEnvironment()
             
             // 2. Copy model file to cache
-            val modelFile = copyAssetToCache(context, MODEL_PATH)
+            val modelFile = AssetCopyUtils.copyAssetToCache(context, MODEL_PATH)
             
             // 3. Create ONNX session
             val sessionOptions = OrtSession.SessionOptions()
@@ -88,7 +88,7 @@ object OnnxEmbeddingService {
             
             // 4. Initialize tokenizer (this is the heavy part - loads large JSON)
             AppLogger.d(TAG, "Loading tokenizer from JSON...")
-            val tokenizerFile = copyAssetToCache(context, TOKENIZER_PATH)
+            val tokenizerFile = AssetCopyUtils.copyAssetToCache(context, TOKENIZER_PATH)
             tokenizer = BertTokenizer(tokenizerFile.absolutePath)
             
             isInitialized = true
@@ -122,23 +122,6 @@ object OnnxEmbeddingService {
         } finally {
             isInitializing = false
         }
-    }
-    
-    private fun copyAssetToCache(context: Context, assetPath: String): File {
-        val cacheFile = File(context.cacheDir, assetPath)
-        if (!cacheFile.parentFile!!.exists()) {
-            cacheFile.parentFile!!.mkdirs()
-        }
-        
-        if (!cacheFile.exists()) {
-            context.assets.open(assetPath).use { inputStream ->
-                FileOutputStream(cacheFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            }
-        }
-        
-        return cacheFile
     }
     
     fun generateEmbedding(text: String): Embedding? {

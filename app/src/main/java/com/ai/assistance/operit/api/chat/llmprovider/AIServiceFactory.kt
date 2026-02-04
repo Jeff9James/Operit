@@ -245,8 +245,7 @@ object AIServiceFactory {
                     supportsVision = supportsVision,
                     supportsAudio = supportsAudio,
                     supportsVideo = supportsVideo,
-                    enableToolCall = enableToolCall,
-                    enableReasoning = config.enableDeepseekReasoning
+                    enableToolCall = enableToolCall
                 )
             ApiProviderType.MISTRAL ->
                 MistralProvider(

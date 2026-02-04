@@ -345,8 +345,7 @@ class ModelConfigManager(private val context: Context) {
             enableDirectAudioProcessing: Boolean,
             enableDirectVideoProcessing: Boolean,
             enableGoogleSearch: Boolean,
-            enableToolCall: Boolean,
-            enableDeepseekReasoning: Boolean
+            enableToolCall: Boolean
     ): ModelConfigData {
         return updateConfigInternal(configId) {
             val resolvedEnableToolCall =
@@ -368,8 +367,7 @@ class ModelConfigManager(private val context: Context) {
                     enableDirectAudioProcessing = enableDirectAudioProcessing,
                     enableDirectVideoProcessing = enableDirectVideoProcessing,
                     enableGoogleSearch = enableGoogleSearch,
-                    enableToolCall = resolvedEnableToolCall,
-                    enableDeepseekReasoning = enableDeepseekReasoning
+                    enableToolCall = resolvedEnableToolCall
             )
         }
     }
@@ -492,13 +490,6 @@ class ModelConfigManager(private val context: Context) {
                     enableToolCall
                 }
             it.copy(enableToolCall = resolvedEnableToolCall)
-        }
-    }
-
-    // 更新 DeepSeek推理模式 配置
-    suspend fun updateDeepseekReasoning(configId: String, enableDeepseekReasoning: Boolean): ModelConfigData {
-        return updateConfigInternal(configId) {
-            it.copy(enableDeepseekReasoning = enableDeepseekReasoning)
         }
     }
 

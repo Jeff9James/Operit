@@ -167,9 +167,6 @@ fun ModelApiSettingsSection(
     
     // Tool Call配置状态
     var enableToolCallInput by remember(config.id) { mutableStateOf(config.enableToolCall) }
-    
-    // DeepSeek推理模式配置状态 (仅DeepSeek)
-    var enableDeepseekReasoningInput by remember(config.id) { mutableStateOf(config.enableDeepseekReasoning) }
 
     LaunchedEffect(config.id, selectedApiProvider) {
         if (selectedApiProvider == ApiProviderType.MNN || selectedApiProvider == ApiProviderType.LLAMA_CPP) {
@@ -191,7 +188,6 @@ fun ModelApiSettingsSection(
         val enableDirectVideoProcessing: Boolean,
         val enableGoogleSearch: Boolean,
         val enableToolCall: Boolean,
-        val enableDeepseekReasoning: Boolean,
     )
 
     // 保存设置的通用函数
@@ -213,7 +209,6 @@ fun ModelApiSettingsSection(
                     enableDirectVideoProcessing = state.enableDirectVideoProcessing,
                     enableGoogleSearch = state.enableGoogleSearch,
                     enableToolCall = state.enableToolCall,
-                    enableDeepseekReasoning = state.enableDeepseekReasoning,
                 )
 
                 EnhancedAIService.refreshAllServices(
@@ -238,7 +233,6 @@ fun ModelApiSettingsSection(
             enableDirectVideoProcessing = enableDirectVideoProcessingInput,
             enableGoogleSearch = enableGoogleSearchInput,
             enableToolCall = enableToolCallInput,
-            enableDeepseekReasoning = enableDeepseekReasoningInput,
         )
 
         modelApiSettingsSaveScope.launch {
@@ -291,7 +285,6 @@ fun ModelApiSettingsSection(
                 enableDirectVideoProcessing = enableDirectVideoProcessingInput,
                 enableGoogleSearch = enableGoogleSearchInput,
                 enableToolCall = enableToolCallInput,
-                enableDeepseekReasoning = enableDeepseekReasoningInput,
             )
         }
             .drop(1)
@@ -804,15 +797,6 @@ fun ModelApiSettingsSection(
                 enabled = selectedApiProvider != ApiProviderType.MNN && selectedApiProvider != ApiProviderType.LLAMA_CPP
             )
             
-            // DeepSeek推理模式开关 (仅DeepSeek)
-            if (selectedApiProvider == ApiProviderType.DEEPSEEK) {
-                SettingsSwitchRow(
-                        title = stringResource(R.string.enable_deepseek_reasoning),
-                        subtitle = stringResource(R.string.enable_deepseek_reasoning_desc),
-                            checked = enableDeepseekReasoningInput,
-                            onCheckedChange = { enableDeepseekReasoningInput = it }
-                    )
-            }
         }
     }
 

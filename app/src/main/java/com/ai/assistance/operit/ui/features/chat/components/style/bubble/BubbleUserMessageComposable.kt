@@ -51,6 +51,7 @@ import com.ai.assistance.operit.data.preferences.DisplayPreferencesManager
 import com.ai.assistance.operit.data.preferences.UserPreferencesManager
 import com.ai.assistance.operit.ui.features.chat.components.attachments.AttachmentViewerDialog
 import com.ai.assistance.operit.ui.features.chat.components.attachments.ChatAttachment
+import com.ai.assistance.operit.api.chat.llmprovider.MediaLinkParser
 import com.ai.assistance.operit.util.ImageBitmapLimiter
 import com.ai.assistance.operit.util.ImagePoolManager
 import com.ai.assistance.operit.util.ChatMarkupRegex
@@ -455,50 +456,37 @@ private fun parseMessageContent(context: android.content.Context, content: Strin
     }
 
     // Extract image link tags and load from pool
-    val imageLinkRegex = Regex("""<link\s+type="image"\s+id="([^"]+)"\s*>.*?</link>""", RegexOption.DOT_MATCHES_ALL)
     val imageLinks = mutableListOf<ImageLinkData>()
-    imageLinkRegex.findAll(cleanedContent).forEach { match ->
-        val id = match.groupValues[1]
-        if (id != "error") {
-            val imageData = ImagePoolManager.getImage(id)
-            if (imageData != null) {
-                val bitmap = try {
-                    val bytes = Base64.decode(imageData.base64, Base64.DEFAULT)
-                    ImageBitmapLimiter.decodeDownsampledBitmap(bytes)
-                } catch (e: Exception) {
-                    AppLogger.e("BubbleUserMessage", "Failed to decode image: $id", e)
-                    null
-                }
-
-                imageLinks.add(ImageLinkData(id, bitmap))
+    MediaLinkParser.extractImageLinkIds(cleanedContent).forEach { id ->
+        val imageData = ImagePoolManager.getImage(id)
+        val bitmap = imageData?.let {
+            try {
+                val bytes = Base64.decode(it.base64, Base64.DEFAULT)
+                ImageBitmapLimiter.decodeDownsampledBitmap(bytes)
+            } catch (e: Exception) {
+                AppLogger.e("BubbleUserMessage", "Failed to decode image: $id", e)
+                null
             }
         }
+        imageLinks.add(ImageLinkData(id, bitmap))
     }
-    cleanedContent = cleanedContent.replace(imageLinkRegex, "").trim()
-
-    val mediaLinkRegex =
-        Regex(
-            """<link\s+type="(audio|video)"\s+id="([^"]+)"\s*>.*?</link>""",
-            RegexOption.DOT_MATCHES_ALL
-        )
+    cleanedContent = MediaLinkParser.removeImageLinks(cleanedContent).trim()
 
     val mediaLinkAttachments = mutableListOf<AttachmentData>()
-    mediaLinkRegex.findAll(cleanedContent).forEach { match ->
-        val type = match.groupValues[1]
-        val id = match.groupValues[2]
-        if (id != "error") {
-            mediaLinkAttachments.add(
-                AttachmentData(
-                    id = "media_pool:$id",
-                    filename = if (type == "audio") "Audio" else "Video",
-                    type = if (type == "audio") "audio/*" else "video/*",
-                    size = 0L,
-                    content = ""
-                )
+    MediaLinkParser.extractMediaLinkTags(cleanedContent).forEach { tag ->
+        val filename = if (tag.type == "audio") "Audio" else "Video"
+        val mimeType = if (tag.type == "audio") "audio/*" else "video/*"
+        mediaLinkAttachments.add(
+            AttachmentData(
+                id = "media_pool:${tag.id}",
+                filename = filename,
+                type = mimeType,
+                size = 0L,
+                content = ""
             )
-        }
+        )
     }
-    cleanedContent = cleanedContent.replace(mediaLinkRegex, "").trim()
+    cleanedContent = MediaLinkParser.removeMediaLinks(cleanedContent).trim()
 
     // Extract reply information
     val replyRegex = Regex("<reply_to\\s+sender=\"([^\"]+)\"\\s+timestamp=\"([^\"]+)\">([^<]*)</reply_to>")

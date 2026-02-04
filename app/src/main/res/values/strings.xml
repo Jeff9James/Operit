@@ -2521,6 +2521,11 @@
     <string name="test_connection_success">成功</string>
     <string name="test_connection_failed">失败: %1$s</string>
     <string name="test_connection_desc">测试连接</string>
+    <string name="test_item_chat">聊天</string>
+    <string name="test_item_toolcall">Tool Call</string>
+    <string name="test_item_image">图片</string>
+    <string name="test_item_audio">音频</string>
+    <string name="test_item_video">视频</string>
     <string name="test">测试</string>
     <string name="expand_desc">展开</string>
     <string name="selected_desc">已选择</string>

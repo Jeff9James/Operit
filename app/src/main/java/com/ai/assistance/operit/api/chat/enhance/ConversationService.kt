@@ -38,7 +38,7 @@ import com.ai.assistance.operit.core.tools.ComputerDesktopActionResultData
 import com.ai.assistance.operit.util.LocaleUtils
 import com.ai.assistance.operit.api.chat.enhance.MultiServiceManager
 import com.ai.assistance.operit.data.repository.CustomEmojiRepository
-
+import com.ai.assistance.operit.api.chat.llmprovider.MediaLinkBuilder
 
 /** 处理会话相关功能的服务类，包括会话总结、偏好处理和对话切割准备 */
 class ConversationService(
@@ -851,7 +851,7 @@ ${FunctionalPrompts.translationUserPrompt(targetLanguage, text)}
             }
 
             // 构建提示词，包含用户意图和图片链接
-            val imageLink = context.getString(R.string.conversation_media_image_link, imageId)
+            val imageLink = MediaLinkBuilder.image(context, imageId)
             val prompt = if (userIntent.isNullOrBlank()) {
                 "$imageLink\n${context.getString(R.string.conversation_analyze_image_prompt)}"
             } else {
@@ -899,7 +899,7 @@ ${FunctionalPrompts.translationUserPrompt(targetLanguage, text)}
                 return "Failed to load audio: $audioPath"
             }
 
-            val audioLink = context.getString(R.string.conversation_media_audio_link, mediaId)
+            val audioLink = MediaLinkBuilder.audio(context, mediaId)
             val prompt = if (userIntent.isNullOrBlank()) {
                 "$audioLink\n${context.getString(R.string.conversation_analyze_audio_prompt)}"
             } else {
@@ -943,7 +943,7 @@ ${FunctionalPrompts.translationUserPrompt(targetLanguage, text)}
                 return "Failed to load video: $videoPath"
             }
 
-            val videoLink = context.getString(R.string.conversation_media_video_link, mediaId)
+            val videoLink = MediaLinkBuilder.video(context, mediaId)
             val prompt = if (userIntent.isNullOrBlank()) {
                 "$videoLink\n${context.getString(R.string.conversation_analyze_video_prompt)}"
             } else {

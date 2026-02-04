@@ -22,7 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import com.ai.assistance.operit.util.AssetCopyUtils
 import com.ai.assistance.operit.api.chat.llmprovider.AIServiceFactory
+import com.ai.assistance.operit.api.chat.llmprovider.MediaLinkBuilder
 import com.ai.assistance.operit.api.chat.EnhancedAIService
 import com.ai.assistance.operit.data.model.FunctionType
 import com.ai.assistance.operit.data.model.ModelConfigSummary
@@ -34,6 +36,10 @@ import com.ai.assistance.operit.data.preferences.ApiPreferences
 import com.ai.assistance.operit.data.preferences.FunctionalConfigManager
 import com.ai.assistance.operit.data.preferences.FunctionConfigMapping
 import com.ai.assistance.operit.data.preferences.ModelConfigManager
+import com.ai.assistance.operit.core.config.FunctionalPrompts
+import com.ai.assistance.operit.util.ImagePoolManager
+import com.ai.assistance.operit.util.MediaPoolManager
+import com.ai.assistance.operit.util.LocaleUtils
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 
@@ -452,13 +458,14 @@ fun FunctionConfigCard(
                                     scope.launch {
                                         isTestingConnection = true
                                         testResult = null
+                                        val cleanupTasks = mutableListOf<() -> Unit>()
                                         try {
                                             val configId =
                                                     currentConfig?.id
                                                             ?: FunctionalConfigManager.DEFAULT_CONFIG_ID
                                             val fullConfig =
                                                     modelConfigManager.getModelConfigFlow(configId).first()
-                                            
+
                                             // 异步获取自定义请求头
                                             val apiPreferences = ApiPreferences.getInstance(context)
                                             val customHeadersJson = apiPreferences.getCustomHeaders()
@@ -475,9 +482,182 @@ fun FunctionConfigCard(
                                                             modelConfigManager = modelConfigManager,
                                                             context = context
                                                     )
-                                            testResult = service.testConnection(context)
+
+                                            val useEnglish = LocaleUtils.getCurrentLanguage(context).lowercase().startsWith("en")
+                                            val result = when (functionType) {
+                                                FunctionType.SUMMARY -> {
+                                                    val enhancedService = EnhancedAIService.getInstance(context)
+                                                    val sampleMessages =
+                                                        listOf(
+                                                            "user" to "Connection test: summarize this short dialog.",
+                                                            "assistant" to "Sure, I can help with summaries."
+                                                        )
+                                                    enhancedService.generateSummary(sampleMessages)
+                                                }
+                                                FunctionType.TRANSLATION -> {
+                                                    val enhancedService = EnhancedAIService.getInstance(context)
+                                                    enhancedService.translateText("Connection test: translate me.")
+                                                }
+                                                FunctionType.IMAGE_RECOGNITION -> {
+                                                    val imageFile = AssetCopyUtils.copyAssetToCache(context, "test/1.jpg")
+                                                    val imageId = ImagePoolManager.addImage(imageFile.absolutePath)
+                                                    if (imageId == "error") {
+                                                        throw IllegalStateException("Failed to create test image")
+                                                    }
+                                                    cleanupTasks.add {
+                                                        ImagePoolManager.removeImage(imageId)
+                                                        runCatching { imageFile.delete() }
+                                                    }
+                                                    val prompt =
+                                                        buildString {
+                                                            append(MediaLinkBuilder.image(context, imageId))
+                                                            append("\n")
+                                                            append(context.getString(R.string.conversation_analyze_image_prompt))
+                                                        }
+                                                    val parameters =
+                                                        modelConfigManager.getModelParametersForConfig(configWithSelectedModel.id)
+                                                    val buffer = StringBuilder()
+                                                    service.sendMessage(context, prompt, emptyList(), parameters, stream = false)
+                                                        .collect { chunk -> buffer.append(chunk) }
+                                                    buffer.toString()
+                                                }
+                                                FunctionType.AUDIO_RECOGNITION -> {
+                                                    val audioFile = AssetCopyUtils.copyAssetToCache(context, "test/1.mp3")
+                                                    val audioId = MediaPoolManager.addMedia(audioFile.absolutePath, "audio/mpeg")
+                                                    if (audioId == "error") {
+                                                        throw IllegalStateException("Failed to create test audio")
+                                                    }
+                                                    cleanupTasks.add {
+                                                        MediaPoolManager.removeMedia(audioId)
+                                                        runCatching { audioFile.delete() }
+                                                    }
+                                                    val prompt =
+                                                        buildString {
+                                                            append(MediaLinkBuilder.audio(context, audioId))
+                                                            append("\n")
+                                                            append(context.getString(R.string.conversation_analyze_audio_prompt))
+                                                        }
+                                                    val parameters =
+                                                        modelConfigManager.getModelParametersForConfig(configWithSelectedModel.id)
+                                                    val buffer = StringBuilder()
+                                                    service.sendMessage(context, prompt, emptyList(), parameters, stream = false)
+                                                        .collect { chunk -> buffer.append(chunk) }
+                                                    buffer.toString()
+                                                }
+                                                FunctionType.VIDEO_RECOGNITION -> {
+                                                    val videoFile = AssetCopyUtils.copyAssetToCache(context, "test/1.mp4")
+                                                    val videoId = MediaPoolManager.addMedia(videoFile.absolutePath, "video/mp4")
+                                                    if (videoId == "error") {
+                                                        throw IllegalStateException("Failed to create test video")
+                                                    }
+                                                    cleanupTasks.add {
+                                                        MediaPoolManager.removeMedia(videoId)
+                                                        runCatching { videoFile.delete() }
+                                                    }
+                                                    val prompt =
+                                                        buildString {
+                                                            append(MediaLinkBuilder.video(context, videoId))
+                                                            append("\n")
+                                                            append(context.getString(R.string.conversation_analyze_video_prompt))
+                                                        }
+                                                    val parameters =
+                                                        modelConfigManager.getModelParametersForConfig(configWithSelectedModel.id)
+                                                    val buffer = StringBuilder()
+                                                    service.sendMessage(context, prompt, emptyList(), parameters, stream = false)
+                                                        .collect { chunk -> buffer.append(chunk) }
+                                                    buffer.toString()
+                                                }
+                                                FunctionType.GREP -> {
+                                                    val prompt =
+                                                        if (useEnglish) {
+                                                            FunctionalPrompts.grepContextSelectPrompt(
+                                                                intent = "Find the greeting in the snippet.",
+                                                                displayPath = "<test>",
+                                                                candidatesDigest = "#1 [file: example.txt]\nHello world\n#2 [file: main.kt]\nfun main() {}",
+                                                                maxResults = 1,
+                                                                useEnglish = true
+                                                            )
+                                                        } else {
+                                                            FunctionalPrompts.grepContextSelectPrompt(
+                                                                intent = "找到包含问候语的片段。",
+                                                                displayPath = "<测试>",
+                                                                candidatesDigest = "#1 [file: example.txt]\n你好世界\n#2 [file: main.kt]\nfun main() {}",
+                                                                maxResults = 1,
+                                                                useEnglish = false
+                                                            )
+                                                        }
+                                                    val parameters =
+                                                        modelConfigManager.getModelParametersForConfig(configWithSelectedModel.id)
+                                                    val buffer = StringBuilder()
+                                                    service.sendMessage(context, prompt, emptyList(), parameters, stream = false)
+                                                        .collect { chunk -> buffer.append(chunk) }
+                                                    buffer.toString()
+                                                }
+                                                FunctionType.UI_CONTROLLER -> {
+                                                    val systemPrompt = FunctionalPrompts.uiControllerPrompt(useEnglish)
+                                                    val userPrompt =
+                                                        if (useEnglish) {
+                                                            "Current UI State: [Button(label=\"OK\", bounds=\"[0,0][100,50]\")]\nTask Goal: Tap OK.\nExecution History: []"
+                                                        } else {
+                                                            "当前 UI 状态: [Button(label=\"确定\", bounds=\"[0,0][100,50]\")]\n任务目标: 点击确定。\n执行历史: []"
+                                                        }
+                                                    val parameters =
+                                                        modelConfigManager.getModelParametersForConfig(configWithSelectedModel.id)
+                                                    val buffer = StringBuilder()
+                                                    service.sendMessage(
+                                                        context,
+                                                        userPrompt,
+                                                        listOf("system" to systemPrompt),
+                                                        parameters,
+                                                        stream = false
+                                                    ).collect { chunk -> buffer.append(chunk) }
+                                                    buffer.toString()
+                                                }
+                                                FunctionType.PROBLEM_LIBRARY -> {
+                                                    val existingMemoriesPrompt =
+                                                        FunctionalPrompts.knowledgeGraphNoExistingMemoriesMessage(useEnglish)
+                                                    val existingFoldersPrompt =
+                                                        FunctionalPrompts.knowledgeGraphExistingFoldersPrompt(emptyList(), useEnglish)
+                                                    val systemPrompt =
+                                                        FunctionalPrompts.buildKnowledgeGraphExtractionPrompt(
+                                                            duplicatesPromptPart = "",
+                                                            existingMemoriesPrompt = existingMemoriesPrompt,
+                                                            existingFoldersPrompt = existingFoldersPrompt,
+                                                            currentPreferences = "",
+                                                            useEnglish = useEnglish
+                                                        )
+                                                    val userPrompt =
+                                                        if (useEnglish) {
+                                                            "Conversation:\nUser: Connection test question.\nAssistant: Connection test answer."
+                                                        } else {
+                                                            "对话内容:\n用户: 连接测试问题。\n助手: 连接测试回答。"
+                                                        }
+                                                    val parameters =
+                                                        modelConfigManager.getModelParametersForConfig(configWithSelectedModel.id)
+                                                    val buffer = StringBuilder()
+                                                    service.sendMessage(
+                                                        context,
+                                                        userPrompt,
+                                                        listOf("system" to systemPrompt),
+                                                        parameters,
+                                                        stream = false
+                                                    ).collect { chunk -> buffer.append(chunk) }
+                                                    buffer.toString()
+                                                }
+                                                FunctionType.CHAT -> {
+                                                    val parameters =
+                                                        modelConfigManager.getModelParametersForConfig(configWithSelectedModel.id)
+                                                    val buffer = StringBuilder()
+                                                    service.sendMessage(context, "Hi", emptyList(), parameters, stream = false)
+                                                        .collect { chunk -> buffer.append(chunk) }
+                                                    buffer.toString()
+                                                }
+                                            }
+                                            testResult = Result.success(result)
                                         } catch (e: Exception) {
                                             testResult = Result.failure(e)
+                                        } finally {
+                                            cleanupTasks.forEach { task -> runCatching { task() } }
                                         }
                                         isTestingConnection = false
                                     }
@@ -731,3 +911,4 @@ fun getFunctionDescription(functionType: FunctionType): String {
         FunctionType.VIDEO_RECOGNITION -> stringResource(id = R.string.function_desc_video_recognition)
     }
 }
+

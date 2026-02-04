@@ -557,11 +557,11 @@ open class OpenAIProvider(
      * @return 纯文本字符串或包含图片和文本的JSONArray
      */
     fun buildContentField(context: Context, text: String): Any {
-        val hasImages = ImageLinkParser.hasImageLinks(text)
+        val hasImages = MediaLinkParser.hasImageLinks(text)
         val hasMedia = MediaLinkParser.hasMediaLinks(text)
 
         val mediaLinks = if (hasMedia) MediaLinkParser.extractMediaLinks(text) else emptyList()
-        val imageLinks = if (hasImages) ImageLinkParser.extractImageLinks(text) else emptyList()
+        val imageLinks = if (hasImages) MediaLinkParser.extractImageLinks(text) else emptyList()
 
         val audioLinks = mediaLinks.filter { it.type == "audio" }
         val videoLinks = mediaLinks.filter { it.type == "video" }
@@ -574,7 +574,7 @@ open class OpenAIProvider(
             textWithoutLinks = MediaLinkParser.removeMediaLinks(textWithoutLinks)
         }
         if (hasImages) {
-            textWithoutLinks = ImageLinkParser.removeImageLinks(textWithoutLinks)
+            textWithoutLinks = MediaLinkParser.removeImageLinks(textWithoutLinks)
         }
         textWithoutLinks = textWithoutLinks.trim()
 

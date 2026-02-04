@@ -13,7 +13,7 @@ import fi.iki.elonen.NanoHTTPD
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileNotFoundException
-import java.io.FileOutputStream
+import com.ai.assistance.operit.util.AssetCopyUtils
 import java.io.IOException
 import java.net.ServerSocket
 import java.net.Socket
@@ -91,46 +91,9 @@ private constructor(
         }
 
         private fun copyAssetsToDirectory(context: Context, assetDir: String, destDir: File) {
-            // Always overwrite. First, delete existing files if the directory exists.
-            if (destDir.exists()) {
-                destDir.deleteRecursively()
-                AppLogger.d("LocalWebServer", "Cleared existing computer directory for refresh: ${destDir.absolutePath}")
-            }
-
-            if (!destDir.mkdirs()) {
-                AppLogger.e("LocalWebServer", "Failed to create destination directory: ${destDir.absolutePath}")
-                return
-            }
-
-            val assetManager = context.assets
             try {
-                val assets = assetManager.list(assetDir)
-                if (assets == null || assets.isEmpty()) {
-                    AppLogger.w("LocalWebServer", "No assets found in directory: $assetDir")
-                    return
-                }
-                for (asset in assets) {
-                    val sourcePath = "$assetDir/$asset"
-                    val destPath = File(destDir, asset)
-                    // Check if it's a directory by trying to list its contents
-                    val isDir = try {
-                        assetManager.list(sourcePath)?.isNotEmpty() == true
-                    } catch (e: IOException) {
-                        false
-                    }
-
-                    if (isDir) {
-                        // It's a directory, recurse
-                        copyAssetsToDirectory(context, sourcePath, destPath)
-                    } else {
-                        // It's a file, copy it
-                        assetManager.open(sourcePath).use { inputStream ->
-                            FileOutputStream(destPath).use { outputStream ->
-                                inputStream.copyTo(outputStream)
-                            }
-                        }
-                    }
-                }
+                AssetCopyUtils.copyAssetDirRecursive(context, assetDir, destDir, overwrite = true)
+                AppLogger.d("LocalWebServer", "Assets copied: $assetDir -> ${destDir.absolutePath}")
             } catch (e: IOException) {
                 AppLogger.e("LocalWebServer", "Failed to copy assets from '$assetDir'", e)
             }

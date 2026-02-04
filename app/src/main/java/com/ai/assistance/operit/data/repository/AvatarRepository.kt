@@ -11,7 +11,7 @@ import com.ai.assistance.operit.core.avatar.common.model.AvatarType
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
-import java.io.FileOutputStream
+import com.ai.assistance.operit.util.AssetCopyUtils
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -207,7 +207,12 @@ class AvatarRepository(
                     val destDir = File(userAvatarDir, modelFolder)
                     if (!destDir.exists()) {
                         AppLogger.d(TAG, "Populating asset model '$modelFolder' of type '$typeDir'")
-                        copyAssetDirectory("$ASSETS_AVATAR_DIR/$typeDir/$modelFolder", destDir.absolutePath)
+                        AssetCopyUtils.copyAssetDirRecursive(
+                            context,
+                            "$ASSETS_AVATAR_DIR/$typeDir/$modelFolder",
+                            destDir,
+                            overwrite = false
+                        )
                     }
                 }
             }
@@ -380,21 +385,6 @@ class AvatarRepository(
             false
         } finally {
             tempDir.deleteRecursively()
-        }
-    }
-
-    private fun copyAssetDirectory(srcPath: String, dstPath: String) {
-        val assetManager = context.assets
-        val files = assetManager.list(srcPath) ?: return
-        File(dstPath).mkdirs()
-        files.forEach { file ->
-            try {
-                assetManager.open("$srcPath/$file").use { input ->
-                    FileOutputStream("$dstPath/$file").use { output -> input.copyTo(output) }
-                }
-            } catch (e: Exception) {
-                copyAssetDirectory("$srcPath/$file", "$dstPath/$file")
-            }
         }
     }
 

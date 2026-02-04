@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.util.AppLogger
+import com.ai.assistance.operit.util.AssetCopyUtils
 import java.io.File
 import java.io.InputStream
 
@@ -26,7 +27,9 @@ private constructor(
          */
         @JvmStatic
         fun fromAsset(context: Context, assetPath: String): ApkEditor {
-            val apkFile = copyAssetToFile(context, assetPath)
+            val fileName = assetPath.substringAfterLast('/')
+            val outputFile = File(context.cacheDir, "apk_editor_$fileName")
+            val apkFile = AssetCopyUtils.copyAssetToFile(context, assetPath, outputFile, overwrite = true)
             val apkReverseEngineer = ApkReverseEngineer(context)
             return ApkEditor(context, apkFile, apkReverseEngineer)
         }
@@ -61,20 +64,6 @@ private constructor(
          * @param assetPath 资产路径
          * @return 缓存文件
          */
-        private fun copyAssetToFile(context: Context, assetPath: String): File {
-            val fileName = assetPath.substringAfterLast('/')
-            val outputFile = File(context.cacheDir, "apk_editor_$fileName")
-
-            if (outputFile.exists()) {
-                outputFile.delete()
-            }
-
-            context.assets.open(assetPath).use { input ->
-                outputFile.outputStream().use { output -> input.copyTo(output) }
-            }
-
-            return outputFile
-        }
     }
 
     private var extractedDir: File? = null
