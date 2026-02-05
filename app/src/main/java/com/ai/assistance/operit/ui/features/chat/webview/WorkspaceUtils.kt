@@ -137,9 +137,9 @@ private fun generateAndroidProjectConfig(context: Context): String {
     },
     "commands": [
         {
-            "id": "gradle_tasks",
-            "label": "${context.getString(R.string.workspace_cmd_android_gradle_tasks)}",
-            "command": "./gradlew tasks",
+            "id": "android_setup_env",
+            "label": "${context.getString(R.string.workspace_cmd_android_setup_env)}",
+            "command": "bash setup_android_env.sh",
             "workingDir": ".",
             "shell": true
         },

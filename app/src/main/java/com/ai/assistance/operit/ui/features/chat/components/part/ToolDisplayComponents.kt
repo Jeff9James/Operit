@@ -33,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -55,6 +57,9 @@ fun CompactToolDisplay(
     var showDetailDialog by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboardManager.current
     val hasParams = params.isNotBlank()
+    val semanticDescription = remember(toolName, params.length) {
+        buildToolSemanticDescription(context, toolName, params)
+    }
 
     // 显示详细内容的弹窗 - 仅在启用弹窗时显示
     if (showDetailDialog && hasParams && enableDialog) {
@@ -70,6 +75,9 @@ fun CompactToolDisplay(
             modifier =
                     modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(4.dp))
+                            .clearAndSetSemantics {
+                                contentDescription = semanticDescription
+                            }
                             .clickable(enabled = hasParams && enableDialog) {
                                 // 仅在启用弹窗时才允许点击打开详情
                                 if (hasParams && enableDialog) showDetailDialog = true
@@ -100,7 +108,7 @@ fun CompactToolDisplay(
 
         // 参数内容（如果有）
         if (params.isNotBlank()) {
-            val summary = remember(params) {
+            val summary = remember(params.length) {
                 // 尝试从XML中提取第一个参数的值作为摘要
                 val firstParamRegex = "<param.*?>([^<]*)<\\/param>".toRegex()
                 val match = firstParamRegex.find(params)
@@ -133,6 +141,9 @@ fun DetailedToolDisplay(
     var showDetailDialog by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboardManager.current
     val hasParams = params.isNotBlank()
+    val semanticDescription = remember(toolName, params.length) {
+        buildToolSemanticDescription(context, toolName, params)
+    }
 
     // 显示详细内容的弹窗 - 仅在启用弹窗时显示
     if (showDetailDialog && hasParams && enableDialog) {
@@ -146,10 +157,15 @@ fun DetailedToolDisplay(
 
     Card(
             modifier =
-                    modifier.fillMaxWidth().padding(top = 4.dp).clickable(enabled = hasParams && enableDialog) {
-                        // 仅在启用弹窗时才允许点击打开详情
-                        if (hasParams && enableDialog) showDetailDialog = true
-                    },
+                    modifier.fillMaxWidth()
+                            .padding(top = 4.dp)
+                            .clearAndSetSemantics {
+                                contentDescription = semanticDescription
+                            }
+                            .clickable(enabled = hasParams && enableDialog) {
+                                // 仅在启用弹窗时才允许点击打开详情
+                                if (hasParams && enableDialog) showDetailDialog = true
+                            },
             colors =
                     CardDefaults.cardColors(
                             containerColor =
@@ -191,7 +207,7 @@ fun DetailedToolDisplay(
 
                 // 参数行数指示
                 if (hasParams) {
-                    val lineCount = remember(params) { params.lines().size }
+                    val lineCount = remember(params.length) { params.lines().size }
                     Text(
                             text = "$lineCount ${context.getString(R.string.lines_count)}",
                             style = MaterialTheme.typography.labelSmall,
@@ -208,7 +224,7 @@ fun DetailedToolDisplay(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // 按行拆分参数文本，并用remember缓存，仅在params改变时重新计算
-                val lines = remember(params) {
+                val lines = remember(params.length) {
                     params.lines().map { line ->
                         normalizeIndentForDisplay(unescapeXmlForDisplay(line))
                     }
@@ -468,6 +484,25 @@ private fun normalizeIndentForDisplay(line: String): String {
 
     if (levels == 0) return line
     return " ".repeat(levels) + line.substring(i)
+}
+
+private fun buildToolSemanticDescription(context: android.content.Context, toolName: String, params: String): String {
+    val toolLabel = context.getString(R.string.tool_call)
+    if (params.isBlank()) {
+        return "$toolLabel: $toolName"
+    }
+    val paramsLabel = context.getString(R.string.tool_call_parameters)
+    val preview = buildParamsHeadPreview(params)
+    return "$toolLabel: $toolName, $paramsLabel: $preview"
+}
+
+private fun buildParamsHeadPreview(params: String, maxChars: Int = 120): String {
+    val firstParamRegex = "<param.*?>([^<]*)<\\/param>".toRegex()
+    val matched = firstParamRegex.find(params)?.groupValues?.get(1)?.trim()
+    val cleaned = (matched?.takeIf { it.isNotEmpty() } ?: params)
+        .replace("\n", " ")
+        .trim()
+    return if (cleaned.length <= maxChars) cleaned else cleaned.take(maxChars) + "..."
 }
 
 /** 工具参数详情弹窗 美观的弹窗显示完整的工具参数内容 */

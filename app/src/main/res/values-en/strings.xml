@@ -2939,7 +2939,8 @@
     <string name="workspace_cmd_java_gradle_jar">Package JAR</string>
     <string name="workspace_cmd_java_gradle_clean">Clean Build</string>
     <string name="workspace_cmd_java_gradle_tasks">View All Tasks</string>
-    <string name="workspace_cmd_android_gradle_tasks">View Gradle Tasks</string>
+    <string name="workspace_cmd_android_setup_env">Initialize Android Build Environment</string>
+    <string name="workspace_cmd_android_gradle_tasks">Initialize Gradle</string>
     <string name="workspace_cmd_android_assemble_debug">Assemble Debug APK</string>
     <string name="workspace_cmd_android_install_debug">Install Debug APK</string>
     <string name="workspace_cmd_android_lint">Run Lint</string>

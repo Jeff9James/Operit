@@ -2855,7 +2855,8 @@
     <string name="workspace_cmd_java_gradle_jar">打包 JAR</string>
     <string name="workspace_cmd_java_gradle_clean">清理构建</string>
     <string name="workspace_cmd_java_gradle_tasks">查看所有任务</string>
-    <string name="workspace_cmd_android_gradle_tasks">查看 Gradle 任务</string>
+    <string name="workspace_cmd_android_setup_env">初始化 Android 构建环境</string>
+    <string name="workspace_cmd_android_gradle_tasks">初始化 Gradle</string>
     <string name="workspace_cmd_android_assemble_debug">构建 Debug APK</string>
     <string name="workspace_cmd_android_install_debug">安装 Debug APK</string>
     <string name="workspace_cmd_android_lint">运行 Lint</string>
