@@ -219,39 +219,43 @@ object ToolExecutionManager {
             }
         }
 
-        val injectedInvocations = if (callerName.isNullOrBlank() && callerChatId.isNullOrBlank() && callerCardId.isNullOrBlank()) {
-            permittedInvocations
-        } else {
-            permittedInvocations.map { invocation ->
-                val isPackageTool = invocation.tool.name.contains(':')
-                if (!isPackageTool) {
-                    invocation
-                } else {
-                    val updatedParams = invocation.tool.parameters.toMutableList()
-                    if (!callerName.isNullOrBlank()) {
-                        val hasCallerParam = updatedParams.any { it.name == "__operit_package_caller_name" }
-                        if (!hasCallerParam) {
-                            updatedParams.add(ToolParameter("__operit_package_caller_name", callerName))
+        val injectedInvocations =
+            if (callerName.isNullOrBlank() && callerChatId.isNullOrBlank() && callerCardId.isNullOrBlank()) {
+                permittedInvocations
+            } else {
+                val jsPackageNames = packageManager.getAvailablePackages().keys
+                permittedInvocations.map { invocation ->
+                    val toolNameParts = invocation.tool.name.split(':', limit = 2)
+                    val packName = toolNameParts.getOrNull(0)
+                    val isJsPackageTool = toolNameParts.size == 2 && packName != null && jsPackageNames.contains(packName)
+                    if (!isJsPackageTool) {
+                        invocation
+                    } else {
+                        val updatedParams = invocation.tool.parameters.toMutableList()
+                        if (!callerName.isNullOrBlank()) {
+                            val hasCallerParam = updatedParams.any { it.name == "__operit_package_caller_name" }
+                            if (!hasCallerParam) {
+                                updatedParams.add(ToolParameter("__operit_package_caller_name", callerName))
+                            }
                         }
-                    }
-                    if (!callerChatId.isNullOrBlank()) {
-                        val hasChatIdParam = updatedParams.any { it.name == "__operit_package_chat_id" }
-                        if (!hasChatIdParam) {
-                            updatedParams.add(ToolParameter("__operit_package_chat_id", callerChatId))
+                        if (!callerChatId.isNullOrBlank()) {
+                            val hasChatIdParam = updatedParams.any { it.name == "__operit_package_chat_id" }
+                            if (!hasChatIdParam) {
+                                updatedParams.add(ToolParameter("__operit_package_chat_id", callerChatId))
+                            }
                         }
-                    }
-                    if (!callerCardId.isNullOrBlank()) {
-                        val hasCallerCardParam = updatedParams.any { it.name == "__operit_package_caller_card_id" }
-                        if (!hasCallerCardParam) {
-                            updatedParams.add(ToolParameter("__operit_package_caller_card_id", callerCardId))
+                        if (!callerCardId.isNullOrBlank()) {
+                            val hasCallerCardParam = updatedParams.any { it.name == "__operit_package_caller_card_id" }
+                            if (!hasCallerCardParam) {
+                                updatedParams.add(ToolParameter("__operit_package_caller_card_id", callerCardId))
+                            }
                         }
+                        invocation.copy(
+                            tool = invocation.tool.copy(parameters = updatedParams)
+                        )
                     }
-                    invocation.copy(
-                        tool = invocation.tool.copy(parameters = updatedParams)
-                    )
                 }
             }
-        }
 
         // 2. 按并行/串行对工具进行分组
         val parallelizableToolNames = setOf(

@@ -1517,6 +1517,8 @@
     <string name="workspace_project_type_java_description">For Java development, supports Gradle and Maven builds</string>
     <string name="workspace_project_type_go_title">Go Project</string>
     <string name="workspace_project_type_go_description">For Go development, includes go mod and build commands</string>
+    <string name="workspace_project_type_android_title">Android Project</string>
+    <string name="workspace_project_type_android_description">For Android development with quick Gradle task shortcuts</string>
     <string name="please_select_or_create_conversation">Please select or create a conversation first</string>
     <string name="latest">Latest</string>
     <string name="main_highlights">✨ Main Highlights</string>
@@ -1780,9 +1782,25 @@
     <string name="shell_executor_execute_failed">Command execution failed: %s</string>
     <string name="tool_log_viewer">Log Viewer</string>
     <string name="tool_log_viewer_desc">Real-time capture and view system and application logs with filtering and search support</string>
+    <string name="tool_sql_viewer">SQL Viewer</string>
+    <string name="tool_sql_viewer_desc">Browse built-in tables and run SQL commands</string>
+    <string name="screen_title_sql_viewer">SQL Viewer</string>
+    <string name="sql_viewer_title">SQL Viewer</string>
+    <string name="sql_viewer_input_label">SQL Input</string>
+    <string name="sql_viewer_run">Run</string>
+    <string name="sql_viewer_clear">Clear</string>
+    <string name="sql_viewer_page_size">Page size</string>
+    <string name="sql_viewer_paging">Paging</string>
+    <string name="sql_viewer_tables_chip">Tables</string>
+    <string name="sql_viewer_schema_chip">Schema</string>
+    <string name="sql_viewer_row_count">%1$d rows / %2$d columns</string>
+    <string name="sql_viewer_affected_rows">Affected rows: %1$d</string>
+    <string name="sql_viewer_load_more">Load more</string>
+    <string name="sql_viewer_empty_sql">SQL cannot be empty</string>
+    <string name="sql_viewer_controls">Controls</string>
+    <string name="sql_viewer_empty_state">No results yet. Tap the top-right button to run SQL.</string>
     <string name="tool_process_limit_remover">Phantom Process Limit Remover</string>
     <string name="tool_process_limit_remover_desc">Manage Android 12+ phantom process count limits to allow more background child processes</string>
-
     <string name="tool_html_packager">HTML Packager</string>
     <string name="tool_html_packager_desc">Package HTML files and their dependencies into a single file</string>
     
@@ -2466,6 +2484,11 @@
     <string name="test_connection_failed">Failed: %1$s</string>
     <string name="test_connection_desc">Test Connection</string>
     <string name="test">Test</string>
+    <string name="test_item_chat">Chat</string>
+    <string name="test_item_toolcall">Tool Call</string>
+    <string name="test_item_image">Image</string>
+    <string name="test_item_audio">Audio</string>
+    <string name="test_item_video">Video</string>
     <string name="expand_desc">Expand</string>
     <string name="selected_desc">Selected</string>
     <string name="functional_config_warning_image_unsupported">Warning: the selected model is not marked as “supports vision”, so image recognition may not work. Switch to a model that supports vision and enable “Model supports vision”.</string>
@@ -2887,6 +2910,8 @@
     <string name="workspace_project_go_description">High-performance concurrent programming using Go Modules for dependency management</string>
     <string name="workspace_project_office_title">Office Documents</string>
     <string name="workspace_project_office_description">For document editing, file processing, and general office tasks</string>
+    <string name="workspace_project_android_title">Android Project</string>
+    <string name="workspace_project_android_description">For Android development with quick Gradle task shortcuts</string>
 
     <!-- Workspace UI -->
     <string name="workspace_preview">Preview</string>
@@ -2914,6 +2939,11 @@
     <string name="workspace_cmd_java_gradle_jar">Package JAR</string>
     <string name="workspace_cmd_java_gradle_clean">Clean Build</string>
     <string name="workspace_cmd_java_gradle_tasks">View All Tasks</string>
+    <string name="workspace_cmd_android_gradle_tasks">View Gradle Tasks</string>
+    <string name="workspace_cmd_android_assemble_debug">Assemble Debug APK</string>
+    <string name="workspace_cmd_android_install_debug">Install Debug APK</string>
+    <string name="workspace_cmd_android_lint">Run Lint</string>
+    <string name="workspace_cmd_android_test">Run Tests</string>
 
     <string name="chat_added_files_count">Added %1$d file(s)</string>
     <string name="chat_process_shared_files_failed">Failed to process shared files: %1$s</string>

@@ -257,6 +257,18 @@ fun WorkspaceSetup(chatId: String, onBindWorkspace: (String, String?) -> Unit) {
                                     showProjectTypeDialog = false
                                 }
                             )
+
+                            // Android 项目卡片
+                            ProjectTypeCard(
+                                icon = Icons.Default.PhoneAndroid,
+                                title = context.getString(R.string.workspace_project_type_android_title),
+                                description = context.getString(R.string.workspace_project_type_android_description),
+                                onClick = {
+                                    val workspaceDir = createAndGetDefaultWorkspace(context, chatId, "android")
+                                    onBindWorkspace(workspaceDir.absolutePath, null)
+                                    showProjectTypeDialog = false
+                                }
+                            )
                             
                             // Node.js 项目卡片
                             ProjectTypeCard(
