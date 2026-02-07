@@ -134,10 +134,12 @@ class AccessibilityProviderInstaller {
 
         /**
          * 触发内置无障碍服务的安装流程
+         * @deprecated No longer needed - accessibility service is now part of main app
          */
+        @Deprecated("Accessibility provider is no longer a separate app")
         fun launchInstall(context: Context) {
-            UIHierarchyManager.launchProviderInstall(context)
-            clearCache() // 清除缓存以在安装后刷新状态
+            // No-op: Accessibility service is now integrated into main app
+            clearCache()
         }
 
         private fun updateCacheTimestamp() {
