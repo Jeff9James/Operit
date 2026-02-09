@@ -133,9 +133,8 @@ android {
         buildConfig = true
     }
     
-    composeOptions {
-        kotlinCompilerExtensionVersion = "2.0.0"
-    }
+    // Note: kotlinCompilerExtensionVersion is NOT needed when using kotlin.compose plugin
+    // The compose compiler version is automatically managed by the kotlin plugin
     packaging {
         
         jniLibs {
