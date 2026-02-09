@@ -448,6 +448,12 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
 
+    // Runanywhere SDK for on-device AI (LLM, STT, TTS)
+    implementation("com.runanywhere:runanywhere-sdk:1.0.0")
+    
+    // Cactus Compute SDK for on-device AI (LLM, STT, Vision, Embeddings)
+    implementation("com.cactuscompute:cactus:1.2.0-beta")
+
     // Accompanist
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")
 

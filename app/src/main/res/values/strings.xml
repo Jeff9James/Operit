@@ -3338,6 +3338,8 @@
     <string name="provider_lmstudio">LM Studio</string>
     <string name="provider_mnn">MNN 本地推理</string>
     <string name="provider_llama_cpp">llama.cpp 本地推理</string>
+    <string name="provider_cactus">Cactus Compute (本地LLM+STT+Vision)</string>
+    <string name="provider_runanywhere">Runanywhere (本地LLM+STT+TTS)</string>
     <string name="provider_ppinfra">派欧云</string>
     <string name="provider_openai_generic">OpenAI通用</string>
     <string name="provider_other">其他供应商</string>

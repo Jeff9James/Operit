@@ -49,6 +49,8 @@ import com.ai.assistance.operit.R
 import com.ai.assistance.operit.api.chat.llmprovider.EndpointCompleter
 import com.ai.assistance.operit.api.chat.EnhancedAIService
 import com.ai.assistance.operit.api.chat.llmprovider.LlamaProvider
+import com.ai.assistance.operit.api.chat.llmprovider.CactusProvider
+import com.ai.assistance.operit.api.chat.llmprovider.RunanywhereProvider
 import com.ai.assistance.operit.api.chat.llmprovider.ModelListFetcher
 import com.ai.assistance.operit.data.model.ApiProviderType
 import com.ai.assistance.operit.data.model.ModelConfigData
@@ -116,6 +118,8 @@ fun ModelApiSettingsSection(
             ApiProviderType.LMSTUDIO -> "meta-llama-3.1-8b-instruct"
             ApiProviderType.MNN -> ""
             ApiProviderType.LLAMA_CPP -> ""
+            ApiProviderType.CACTUS -> "qwen3-0.6"
+            ApiProviderType.RUNANYWHERE -> "smollm2-360m"
             ApiProviderType.PPINFRA -> "gpt-4o-mini"
             ApiProviderType.OTHER -> ""
         }
@@ -345,6 +349,8 @@ fun ModelApiSettingsSection(
             ApiProviderType.LMSTUDIO -> "http://localhost:1234/v1/chat/completions"
             ApiProviderType.MNN -> "" // MNN本地推理不需要endpoint
             ApiProviderType.LLAMA_CPP -> "" // llama.cpp本地推理不需要endpoint
+            ApiProviderType.CACTUS -> "" // Cactus本地推理不需要endpoint
+            ApiProviderType.RUNANYWHERE -> "" // Runanywhere本地推理不需要endpoint
             ApiProviderType.PPINFRA -> "https://api.ppinfra.com/openai/v1/chat/completions"
             ApiProviderType.OPENAI_GENERIC -> ""
             ApiProviderType.OTHER -> ""
@@ -1113,6 +1119,8 @@ private fun getProviderDisplayName(provider: ApiProviderType, context: android.c
         ApiProviderType.LMSTUDIO -> context.getString(R.string.provider_lmstudio)
         ApiProviderType.MNN -> context.getString(R.string.provider_mnn)
         ApiProviderType.LLAMA_CPP -> context.getString(R.string.provider_llama_cpp)
+        ApiProviderType.CACTUS -> context.getString(R.string.provider_cactus)
+        ApiProviderType.RUNANYWHERE -> context.getString(R.string.provider_runanywhere)
         ApiProviderType.PPINFRA -> context.getString(R.string.provider_ppinfra)
         ApiProviderType.OTHER -> context.getString(R.string.provider_other)
     }
@@ -1702,6 +1710,8 @@ private fun getProviderColor(provider: ApiProviderType): androidx.compose.ui.gra
         ApiProviderType.LMSTUDIO -> MaterialTheme.colorScheme.tertiary
         ApiProviderType.MNN -> MaterialTheme.colorScheme.secondary
         ApiProviderType.LLAMA_CPP -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+        ApiProviderType.CACTUS -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+        ApiProviderType.RUNANYWHERE -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
         ApiProviderType.PPINFRA -> MaterialTheme.colorScheme.primaryContainer
         ApiProviderType.OTHER -> MaterialTheme.colorScheme.surfaceVariant
     }

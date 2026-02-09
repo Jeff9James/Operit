@@ -164,6 +164,26 @@ object AIServiceFactory {
                 providerType = config.apiProviderType
             )
 
+            // Cactus Compute 本地推理引擎 (支持LLM+STT+Vision+Embeddings)
+            ApiProviderType.CACTUS -> CactusProvider(
+                context = context,
+                modelName = config.modelName.ifEmpty { "qwen3-0.6" },
+                threadCount = config.mnnThreadCount, // Reuse MNN thread count setting
+                contextSize = config.cactusContextSize,
+                inferenceMode = config.cactusInferenceMode,
+                cactusToken = config.cactusToken,
+                providerType = config.apiProviderType
+            )
+
+            // Runanywhere 本地推理引擎 (支持LLM+STT+TTS)
+            ApiProviderType.RUNANYWHERE -> RunanywhereProvider(
+                context = context,
+                modelName = config.modelName.ifEmpty { "smollm2-360m" },
+                threadCount = config.runanywhereThreadCount,
+                contextSize = config.runanywhereContextSize,
+                providerType = config.apiProviderType
+            )
+
             // 阿里云（通义千问）使用专用的QwenProvider
             ApiProviderType.ALIYUN ->
                 QwenAIProvider(

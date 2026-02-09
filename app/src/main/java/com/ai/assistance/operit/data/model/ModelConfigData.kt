@@ -29,6 +29,8 @@ enum class ApiProviderType {
         MNN, // MNN本地推理引擎
         LLAMA_CPP, // llama.cpp 本地推理引擎
         PPINFRA, // 派欧云
+        CACTUS, // Cactus Compute (本地LLM+STT+Vision+Embeddings)
+        RUNANYWHERE, // Runanywhere (本地LLM+STT+TTS)
         OTHER // 其他提供商（自定义端点）
 }
 
@@ -103,6 +105,15 @@ data class ModelConfigData(
         // llama.cpp 特定配置
         val llamaThreadCount: Int = 4, // 推理线程数
         val llamaContextSize: Int = 4096, // n_ctx
+
+        // Cactus特定配置
+        val cactusContextSize: Int = 2048, // Cactus上下文大小
+        val cactusInferenceMode: String = "LOCAL_FIRST", // 推理模式: LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
+        val cactusToken: String = "", // Cactus云端API Token (用于REMOTE模式)
+
+        // Runanywhere特定配置
+        val runanywhereThreadCount: Int = 4, // 推理线程数
+        val runanywhereContextSize: Int = 4096, // n_ctx
 
         // 图片处理配置
         val enableDirectImageProcessing: Boolean = false, // 是否启用直接图片处理
