@@ -67,6 +67,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      # Clear stale caches to ensure fresh build with new plugin configuration
+      - name: Clear Gradle Cache
+        run: |
+          rm -rf ~/.gradle/caches/build-cache-* ~/.gradle/caches/journal-* ~/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin*
+          echo "Cleared Kotlin plugin cache"
+
       # Get the app source
       - name: Get the source
         uses: actions/checkout@v4
