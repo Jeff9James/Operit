@@ -1,7 +1,7 @@
- [versions]
+[versions]
 agp = "8.13.1"
-kotlin = "1.9.22"
-kotlin-serialization = "1.9.22"
+kotlin = "2.0.0"
+kotlin-serialization = "2.0.0"
 coreKtx = "1.12.0"
 junit = "4.13.2"
 junitVersion = "1.1.5"
@@ -74,10 +74,13 @@ animationAndroid = "1.6.2"
 uiAndroid = "1.6.2"
 glance = "1.0.0"
 activityKtx = "1.7.1"
- ui = "1.10.1"
- animation = "1.10.1"
+ui = "1.10.1"
+animation = "1.10.1"
+# Runanywhere SDK versions
+runanywhereSdk = "0.16.1"
+cactusSdk = "1.4.1-beta"
 
- [libraries]
+[libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -251,11 +254,20 @@ glance-material3 = { group = "androidx.glance", name = "glance-material3", versi
  androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
  androidx-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
 
- [plugins]
+# Runanywhere SDK
+runanywhere-kotlin = { group = "com.runanywhere.sdk", name = "runanywhere-kotlin", version.ref = "runanywhereSdk" }
+runanywhere-core-llamacpp = { group = "com.runanywhere.sdk", name = "runanywhere-core-llamacpp", version.ref = "runanywhereSdk" }
+runanywhere-core-onnx = { group = "com.runanywhere.sdk", name = "runanywhere-core-onnx", version.ref = "runanywhereSdk" }
+
+# Cactus Compute SDK
+cactus = { group = "com.cactuscompute", name = "cactus", version.ref = "cactusSdk" }
+
+[plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin-serialization" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 objectbox = { id = "io.objectbox", version.ref = "objectbox" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }

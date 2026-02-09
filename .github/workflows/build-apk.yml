@@ -8,8 +8,54 @@ on:
   workflow_dispatch:
 
 jobs:
+  build-cactus:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Cactus
+        uses: actions/checkout@v4
+        with:
+          repository: cactus-compute/cactus
+          path: cactus
+          clean: true
+      
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+      
+      - name: Cache Cactus Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            cactus/android/build
+            cactus/android/libcactus.so
+            cactus/android/libcactus.a
+          key: ${{ runner.os }}-cactus-${{ hashFiles('cactus/android/CMakeLists.txt', 'cactus/cactus/**') }}
+          restore-keys: |
+            ${{ runner.os }}-cactus-
+      
+      - name: Build libcactus.so
+        run: |
+          cd cactus/android
+          chmod +x build.sh
+          ./build.sh
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_ROOT }}
+      
+      - name: Verify libcactus.so
+        run: |
+          ls -la cactus/android/
+          file cactus/android/libcactus.so
+      
+      - name: Upload libcactus.so
+        uses: actions/upload-artifact@v4
+        with:
+          name: libcactus-so
+          path: cactus/android/libcactus.so
+          retention-days: 30
+
   build:
     runs-on: ubuntu-latest
+    needs: build-cactus
     steps:
       - name: Setup Gradle Cache
         uses: actions/cache@v4
@@ -38,6 +84,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # Download libcactus.so from build-cactus job
+      - name: Download libcactus.so
+        uses: actions/download-artifact@v4
+        with:
+          name: libcactus-so
+          path: app/src/main/jniLibs/arm64-v8a/
+
+      - name: Verify libcactus.so
+        run: |
+          ls -la app/src/main/jniLibs/arm64-v8a/
+          file app/src/main/jniLibs/arm64-v8a/libcactus.so
+
       # Make gradlew executable and fix line endings
       - name: Fix gradlew permissions and line endings
         run: |
@@ -55,6 +113,3 @@ jobs:
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-
-
-

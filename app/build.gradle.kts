@@ -20,7 +20,7 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "com.ai.assistance.operit"
-    compileSdk = 34
+    compileSdk = 35
 
     signingConfigs {
         val releaseKeystorePath = localProperties.getProperty("RELEASE_STORE_FILE")
@@ -134,7 +134,7 @@ android {
     }
     
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
+        kotlinCompilerExtensionVersion = "2.0.0"
     }
     packaging {
         
@@ -412,19 +412,33 @@ dependencies {
         exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json")
     }
     
-    // 强制使用兼容的版本
+    // Runanywhere SDK for on-device AI (LLM, STT, TTS)
+    implementation(libs.runanywhere.kotlin)
+    implementation(libs.runanywhere.core.llamacpp)
+    implementation(libs.runanywhere.core.onnx)
+    
+    // Cactus Compute SDK for on-device AI (LLM, STT, Vision, Embeddings)
+    implementation(libs.cactus)
+    
+    // Force compatible versions for SDK dependencies
     configurations.all {
         resolutionStrategy {
-            force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-            force("io.ktor:ktor-client-core:2.3.5") 
+            // Force Kotlin to 2.0.0 for compatibility with Runanywhere SDK
+            force("org.jetbrains.kotlin:kotlin-bom:2.0.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib:2.0.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-common:2.0.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.0")
+            force("org.jetbrains.kotlin:kotlin-reflect:2.0.0")
+            
+            // Force kotlinx-serialization-json to 1.6.0 for Cactus SDK compatibility
+            force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+            
+            // Force compatible ktor version
+            force("io.ktor:ktor-client-core:2.3.5")
             force("io.ktor:ktor-client-cio:2.3.5")
             force("io.ktor:ktor-serialization-kotlinx-json:2.3.5")
-            force("org.jetbrains.kotlin:kotlin-bom:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib-common:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+            
             // Force BouncyCastle to use jdk18on version to avoid duplicate classes
             force("org.bouncycastle:bcprov-jdk18on:1.78")
         }
@@ -447,18 +461,6 @@ dependencies {
     implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
-
-    // NOTE: Runanywhere SDK and Cactus Compute SDK dependencies are commented out
-    // because they are not yet published to Maven Central.
-    // When the SDKs are available, uncomment these lines:
-
-    // Runanywhere SDK for on-device AI (LLM, STT, TTS)
-    // implementation("com.runanywhere.sdk:runanywhere-kotlin:0.1.4")
-    // implementation("com.runanywhere.sdk:runanywhere-core-llamacpp:0.1.4")
-    // implementation("com.runanywhere.sdk:runanywhere-core-onnx:0.1.4")
-    
-    // Cactus Compute SDK for on-device AI (LLM, STT, Vision, Embeddings)
-    // implementation("com.cactuscompute:cactus:1.4.1-beta")
 
     // Accompanist
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")

@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.ai.assistance.mnn"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -100,4 +100,3 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
-

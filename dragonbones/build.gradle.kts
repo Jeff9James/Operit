@@ -1,11 +1,12 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.dragonbones"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -39,9 +40,6 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
-    }
 
     sourceSets["main"].manifest.srcFile("src/main/AndroidManifest.xml")
 
@@ -68,4 +66,4 @@ dependencies {
     
     // 调试工具
     debugImplementation(libs.compose.ui.tooling)
-} 
+}
