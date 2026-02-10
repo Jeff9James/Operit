@@ -421,17 +421,16 @@ dependencies {
     // Force compatible versions for SDK dependencies
     configurations.all {
         resolutionStrategy {
-            // Force Kotlin to 2.0.0 for compatibility (project uses 2.0.0)
-            force("org.jetbrains.kotlin:kotlin-bom:2.0.0")
-            force("org.jetbrains.kotlin:kotlin-stdlib:2.0.0")
-            force("org.jetbrains.kotlin:kotlin-stdlib-common:2.0.0")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.0")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.0")
-            force("org.jetbrains.kotlin:kotlin-reflect:2.0.0")
+            // Force Kotlin to 2.1.21 for SDK compatibility
+            force("org.jetbrains.kotlin:kotlin-bom:2.1.21")
+            force("org.jetbrains.kotlin:kotlin-stdlib:2.1.21")
+            force("org.jetbrains.kotlin:kotlin-stdlib-common:2.1.21")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.21")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.21")
+            force("org.jetbrains.kotlin:kotlin-reflect:2.1.21")
             
-            // Force kotlinx-serialization-json to 1.6.0 for Cactus SDK compatibility
-            // Note: Runanywhere SDK uses 1.8.0 but we're forcing 1.6.0 for Cactus
-            force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+            // Use kotlinx-serialization-json 1.7.1 which is compatible with Kotlin 2.1.21
+            force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
             
             // Force compatible ktor version
             force("io.ktor:ktor-client-core:2.3.5")

@@ -15,7 +15,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.kotlin.kapt) apply false
     alias(libs.plugins.kotlin.parcelize) apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.21" apply false
 }
 
 tasks.register("clean", Delete::class) {
