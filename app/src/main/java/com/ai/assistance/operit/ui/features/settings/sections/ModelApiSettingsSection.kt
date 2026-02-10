@@ -543,6 +543,8 @@ fun ModelApiSettingsSection(
                     }
                 )
             } else {
+                */
+
                 if (endpointOptions != null) {
                     var showEndpointDialog by remember { mutableStateOf(false) }
 
