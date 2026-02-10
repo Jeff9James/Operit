@@ -670,83 +670,30 @@ fun ModelApiSettingsSection(
             }
             SettingsTextField(
                     title = stringResource(R.string.model_name),
-                    subtitle = when {
-                        isMnnProvider -> stringResource(R.string.mnn_select_downloaded_model)
-                        isLlamaProvider -> stringResource(R.string.llama_select_downloaded_model)
-                        else -> stringResource(R.string.model_name_placeholder) + stringResource(R.string.model_name_multiple_hint)
-                    },
+                    subtitle = stringResource(R.string.model_name_placeholder) + stringResource(R.string.model_name_multiple_hint),
                         value = modelNameInput,
                         onValueChange = {
-                        if (!isMnnProvider && !isLlamaProvider && !isUsingDefaultApiKey) {
+                        if (!isUsingDefaultApiKey) {
                                 modelNameInput = it.replace("\n", "").replace("\r", "")
                             }
                         },
-                    enabled = if (isMnnProvider || isLlamaProvider) false else !isUsingDefaultApiKey,
+                    enabled = !isUsingDefaultApiKey,
                     trailingContent = {
                 IconButton(
                         onClick = {
-                                    if (isMnnProvider || isLlamaProvider) {
-                                        AppLogger.d(TAG, "获取本地模型列表")
-                                        val gettingModelsText =
-                                                context.getString(R.string.getting_models_list)
-                                        val modelsListSuccessText =
-                                                context.getString(R.string.models_list_success)
-                                        showNotification(gettingModelsText)
-
-                                        scope.launch {
-                                            isLoadingModels = true
-                                            modelLoadError = null
-
-                                            try {
-                                                val result = if (isMnnProvider) {
-                                                    ModelListFetcher.getMnnLocalModels(context)
-                                                } else {
-                                                    ModelListFetcher.getLlamaLocalModels(context)
-                                                }
-                                                if (result.isSuccess) {
-                                                    val models = result.getOrThrow()
-                                                    AppLogger.d(TAG, "本地模型列表获取成功，共 ${models.size} 个模型")
-                                                    modelsList = models
-                                                    showModelsDialog = true
-                                                    showNotification(modelsListSuccessText.format(models.size))
-                                                } else {
-                                                    val errorMsg =
-                                                            result.exceptionOrNull()?.message
-                                                                    ?: context.getString(R.string.unknown_error)
-                                                    AppLogger.e(TAG, "本地模型列表获取失败: $errorMsg")
-                                                    modelLoadError =
-                                                            context.getString(
-                                                                    R.string.get_models_list_failed,
-                                                                    errorMsg
-                                                            )
-                                                    showNotification(modelLoadError!!)
-                                                }
-                                            } catch (e: Exception) {
-                                                AppLogger.e(TAG, "获取本地模型列表发生异常", e)
-                                                modelLoadError =
-                                                        context.getString(
-                                                                R.string.get_models_list_failed,
-                                                                e.message ?: ""
-                                                        )
-                                                showNotification(modelLoadError!!)
-                                            } finally {
-                                                isLoadingModels = false
-                                            }
-                                        }
-                                    } else {
-                            AppLogger.d(
-                                    TAG,
-                                    "模型列表按钮被点击 - API端点: $apiEndpointInput, API类型: ${selectedApiProvider.name}"
-                            )
-                            val gettingModelsText = context.getString(R.string.getting_models_list)
-                            val unknownErrorText = context.getString(R.string.unknown_error)
-                            val getModelsFailedText = context.getString(R.string.get_models_list_failed)
-                            val defaultConfigNoModelsText = context.getString(R.string.default_config_no_models_list)
-                            val fillEndpointKeyText = context.getString(R.string.fill_endpoint_and_key)
-                            val modelsListSuccessText = context.getString(R.string.models_list_success)
-                            val refreshModelsFailedText = context.getString(R.string.refresh_models_failed)
-                            
-                            showNotification(gettingModelsText)
+                                     AppLogger.d(
+                                             TAG,
+                                             "模型列表按钮被点击 - API端点: $apiEndpointInput, API类型: ${selectedApiProvider.name}"
+                                     )
+                                     val gettingModelsText = context.getString(R.string.getting_models_list)
+                                     val unknownErrorText = context.getString(R.string.unknown_error)
+                                     val getModelsFailedText = context.getString(R.string.get_models_list_failed)
+                                     val defaultConfigNoModelsText = context.getString(R.string.default_config_no_models_list)
+                                     val fillEndpointKeyText = context.getString(R.string.fill_endpoint_and_key)
+                                     val modelsListSuccessText = context.getString(R.string.models_list_success)
+                                     val refreshModelsFailedText = context.getString(R.string.refresh_models_failed)
+                                     
+                                     showNotification(gettingModelsText)
 
                             scope.launch {
                                 if (apiEndpointInput.isNotBlank() &&
@@ -804,7 +751,7 @@ fun ModelApiSettingsSection(
                                 IconButtonDefaults.iconButtonColors(
                                         contentColor = MaterialTheme.colorScheme.primary
                                 ),
-                                enabled = if (isMnnProvider || isLlamaProvider) true else !isUsingDefaultApiKey
+                                enabled = !isUsingDefaultApiKey
                 ) {
                     if (isLoadingModels) {
                         CircularProgressIndicator(
@@ -815,8 +762,7 @@ fun ModelApiSettingsSection(
                         Icon(
                                 imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
                                 contentDescription = stringResource(R.string.get_models_list),
-                                tint =
-                                                if (!isMnnProvider && !isLlamaProvider && isUsingDefaultApiKey)
+                                tint = if (isUsingDefaultApiKey)
                                                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                                 else MaterialTheme.colorScheme.primary
                                 )

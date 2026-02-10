@@ -7,7 +7,8 @@ import com.ai.assistance.operit.data.model.TriggerNode
 import com.ai.assistance.operit.data.model.Workflow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.guava.await
+import com.google.common.util.concurrent.ListenableFuture
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
