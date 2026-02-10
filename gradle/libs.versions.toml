@@ -76,9 +76,9 @@ glance = "1.0.0"
 activityKtx = "1.7.1"
 ui = "1.10.1"
 animation = "1.10.1"
-# Runanywhere SDK versions
+# Runanywhere SDK versions - Using correct Maven coordinates
 runanywhereSdk = "0.16.1"
-cactusSdk = "1.4.1-beta"
+cactusSdk = "1.4.2-beta"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -254,13 +254,13 @@ glance-material3 = { group = "androidx.glance", name = "glance-material3", versi
  androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
  androidx-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
 
-# Runanywhere SDK
-runanywhere-kotlin = { group = "com.runanywhere.sdk", name = "runanywhere-kotlin", version.ref = "runanywhereSdk" }
-runanywhere-core-llamacpp = { group = "com.runanywhere.sdk", name = "runanywhere-core-llamacpp", version.ref = "runanywhereSdk" }
-runanywhere-core-onnx = { group = "com.runanywhere.sdk", name = "runanywhere-core-onnx", version.ref = "runanywhereSdk" }
+# Runanywhere SDK - Single unified package from Maven Central
+runanywhere-kotlin = { group = "io.github.sanchitmonga22", name = "runanywhere-sdk-android", version.ref = "runanywhereSdk" }
+runanywhere-core-llamacpp = { group = "io.github.sanchitmonga22", name = "runanywhere-sdk-android", version.ref = "runanywhereSdk" }
+runanywhere-core-onnx = { group = "io.github.sanchitmonga22", name = "runanywhere-sdk-android", version.ref = "runanywhereSdk" }
 
-# Cactus Compute SDK
-cactus = { group = "com.cactuscompute", name = "cactus", version.ref = "cactusSdk" }
+# Cactus Compute SDK - Using cactus-android artifact
+cactus = { group = "com.cactuscompute", name = "cactus-android", version.ref = "cactusSdk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
