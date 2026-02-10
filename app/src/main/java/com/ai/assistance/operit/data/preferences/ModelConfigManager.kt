@@ -309,24 +309,6 @@ class ModelConfigManager(private val context: Context) {
         }
     }
 
-    // 更新模型配置 - 包含API提供商类型
-    suspend fun updateModelConfig(
-            configId: String,
-            apiKey: String,
-            apiEndpoint: String,
-            modelName: String,
-            apiProviderType: com.ai.assistance.operit.data.model.ApiProviderType
-    ): ModelConfigData {
-        return updateConfigInternal(configId) {
-            it.copy(
-                    apiKey = apiKey,
-                    apiEndpoint = apiEndpoint,
-                    modelName = modelName,
-                    apiProviderType = apiProviderType
-            )
-        }
-    }
-
     suspend fun updateApiSettingsFull(
             configId: String,
             apiKey: String,

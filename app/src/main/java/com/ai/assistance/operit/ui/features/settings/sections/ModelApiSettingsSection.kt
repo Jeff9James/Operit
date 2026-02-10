@@ -514,22 +514,7 @@ fun ModelApiSettingsSection(
                         },
                         navigateToMnnModelDownload = navigateToMnnModelDownload
                 )
-            } else if (isLlamaProvider) {
-                LlamaSettingsBlock(
-                    llamaThreadCountInput = llamaThreadCountInput,
-                    onThreadCountChange = { input ->
-                        if (input.isEmpty() || input.toIntOrNull() != null) {
-                            llamaThreadCountInput = input
-                        }
-                    },
-                    llamaContextSizeInput = llamaContextSizeInput,
-                    onContextSizeChange = { input ->
-                        if (input.isEmpty() || input.toIntOrNull() != null) {
-                            llamaContextSizeInput = input
-                        }
-                    }
-                )
-            } else */ if (isCactusProvider) {
+            } else if (isCactusProvider) {
                 CactusSettingsBlock(
                     cactusContextSizeInput = cactusContextSizeInput,
                     onContextSizeChange = { input ->
@@ -744,32 +729,29 @@ fun ModelApiSettingsSection(
                                     showNotification(fillEndpointKeyText)
                                 }
                                 }
-                            }
-                        },
-                        modifier = Modifier.size(48.dp),
-                        colors =
-                                IconButtonDefaults.iconButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.primary
-                                ),
-                                enabled = !isUsingDefaultApiKey
-                ) {
-                    if (isLoadingModels) {
-                        CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                                imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
-                                contentDescription = stringResource(R.string.get_models_list),
-                                tint = if (isUsingDefaultApiKey)
-                                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                                else MaterialTheme.colorScheme.primary
+                            },
+                            modifier = Modifier.size(48.dp),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ),
+                            enabled = !isUsingDefaultApiKey
+                        ) {
+                            if (isLoadingModels) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
+                                    contentDescription = stringResource(R.string.get_models_list),
+                                    tint = if (isUsingDefaultApiKey)
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    else MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
                     }
-            )
 
 
             SettingsSwitchRow(
@@ -1503,6 +1485,7 @@ private fun MnnSettingsBlock(
     }
 }
 
+/*
 @Composable
 private fun LlamaSettingsBlock(
         llamaThreadCountInput: String,
@@ -1519,7 +1502,7 @@ private fun LlamaSettingsBlock(
                     "\n" +
                     stringResource(
                         R.string.llama_local_model_dir,
-                        LlamaProvider.getModelsDir().absolutePath
+                        CactusProvider.getModelsDir().absolutePath
                     )
         )
 
@@ -1548,6 +1531,7 @@ private fun LlamaSettingsBlock(
         )
     }
 }
+*/
 
 @Composable
 private fun CactusSettingsBlock(
