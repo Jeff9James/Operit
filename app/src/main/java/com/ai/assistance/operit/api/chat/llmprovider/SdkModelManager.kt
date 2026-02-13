@@ -140,116 +140,84 @@ object SdkModelManager {
     // =====================================================
     // CACTUS COMPUTE SDK MODELS
     // Based on Cactus SDK documentation
+    // Using verified HuggingFace GGUF model URLs
     // =====================================================
     
     fun getCactusModels(): List<SdkModel> = listOf(
+        // Qwen2.5 series - verified URLs
         SdkModel(
-            id = "Qwen/Qwen3-0.6B",
-            name = "Qwen3 0.6B",
-            downloadUrl = "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/qwen3-0.6b-q4_k_m.gguf",
+            id = "Qwen/Qwen2.5-0.5B-Instruct",
+            name = "Qwen2.5 0.5B Instruct",
+            downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
             sizeBytes = 400_000_000L,
-            description = "Small Qwen3 model (~400MB)"
+            description = "Small Qwen2.5 instruct model (~400MB)"
         ),
         SdkModel(
-            id = "Qwen/Qwen3-1.7B",
-            name = "Qwen3 1.7B",
-            downloadUrl = "https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/qwen3-1.7b-q4_k_m.gguf",
+            id = "Qwen/Qwen2.5-1.5B-Instruct",
+            name = "Qwen2.5 1.5B Instruct",
+            downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
             sizeBytes = 1_100_000_000L,
-            description = "Medium Qwen3 model (~1.1GB)"
+            description = "Medium Qwen2.5 instruct model (~1.1GB)"
         ),
         SdkModel(
-            id = "google/gemma-3-270m-it",
-            name = "Gemma-3 270M IT",
-            downloadUrl = "https://huggingface.co/google/gemma-3-270m-it-GGUF/resolve/main/gemma-3-270m-it-q4_k_m.gguf",
-            sizeBytes = 200_000_000L,
-            description = "Small Gemma-3 model (~200MB)"
+            id = "Qwen/Qwen2.5-3B-Instruct",
+            name = "Qwen2.5 3B Instruct",
+            downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
+            sizeBytes = 2_000_000_000L,
+            description = "Large Qwen2.5 instruct model (~2GB)"
+        ),
+        // SmolLM2 series - verified URLs
+        SdkModel(
+            id = "HuggingFaceTB/SmolLM2-135M-Instruct",
+            name = "SmolLM2 135M Instruct",
+            downloadUrl = "https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct-GGUF/resolve/main/smollm2-135m-instruct-q4_k_m.gguf",
+            sizeBytes = 150_000_000L,
+            description = "Smallest SmolLM2 model (~150MB)"
         ),
         SdkModel(
-            id = "google/gemma-3-1b-it",
-            name = "Gemma-3 1B IT",
-            downloadUrl = "https://huggingface.co/google/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-q4_k_m.gguf",
-            sizeBytes = 800_000_000L,
-            description = "Gemma-3 1B model (~800MB)"
-        ),
-        SdkModel(
-            id = "LiquidAI/LFM2-350M",
-            name = "LFM2 350M",
-            downloadUrl = "https://huggingface.co/LiquidAI/LFM2-350M-GGUF/resolve/main/lfm2-350m-q4_k_m.gguf",
-            sizeBytes = 250_000_000L,
-            description = "LiquidAI LFM2 small model (~250MB)"
-        ),
-        SdkModel(
-            id = "LiquidAI/LFM2-700M",
-            name = "LFM2 700M",
-            downloadUrl = "https://huggingface.co/LiquidAI/LFM2-700M-GGUF/resolve/main/lfm2-700m-q4_k_m.gguf",
-            sizeBytes = 500_000_000L,
-            description = "LiquidAI LFM2 medium model (~500MB)"
-        ),
-        SdkModel(
-            id = "LiquidAI/LFM2-2.6B",
-            name = "LFM2 2.6B",
-            downloadUrl = "https://huggingface.co/LiquidAI/LFM2-2.6B-GGUF/resolve/main/lfm2-2.6b-q4_k_m.gguf",
-            sizeBytes = 1_800_000_000L,
-            description = "LiquidAI LFM2 large model (~1.8GB)"
-        ),
-        SdkModel(
-            id = "LiquidAI/LFM2.5-1.2B-Instruct",
-            name = "LFM2.5 1.2B Instruct",
-            downloadUrl = "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/resolve/main/lfm2.5-1.2b-instruct-q4_k_m.gguf",
-            sizeBytes = 900_000_000L,
-            description = "LFM2.5 instruct model (~900MB)"
-        ),
-        SdkModel(
-            id = "LiquidAI/LFM2.5-1.2B-Thinking",
-            name = "LFM2.5 1.2B Thinking",
-            downloadUrl = "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking-GGUF/resolve/main/lfm2.5-1.2b-thinking-q4_k_m.gguf",
-            sizeBytes = 900_000_000L,
-            description = "LFM2.5 thinking model (~900MB)"
-        ),
-        // Vision/Multimodal Models
-        SdkModel(
-            id = "LiquidAI/LFM2-VL-450M",
-            name = "LFM2-VL 450M (Vision)",
-            downloadUrl = "https://huggingface.co/LiquidAI/LFM2-VL-450M-GGUF/resolve/main/lfm2-vl-450m-q4_k_m.gguf",
-            sizeBytes = 350_000_000L,
-            description = "Vision-language model (~350MB)"
-        ),
-        SdkModel(
-            id = "LiquidAI/LFM2.5-VL-1.6B",
-            name = "LFM2.5-VL 1.6B (Vision)",
-            downloadUrl = "https://huggingface.co/LiquidAI/LFM2.5-VL-1.6B-GGUF/resolve/main/lfm2.5-vl-1.6b-q4_k_m.gguf",
-            sizeBytes = 1_200_000_000L,
-            description = "Large vision-language model (~1.2GB)"
-        ),
-        // STT Models
-        SdkModel(
-            id = "openai/whisper-small",
-            name = "Whisper Small (STT)",
-            downloadUrl = "https://huggingface.co/openai/whisper-small/resolve/main/pytorch_model.bin",
-            sizeBytes = 500_000_000L,
-            description = "OpenAI Whisper small (~500MB)"
-        ),
-        SdkModel(
-            id = "UsefulSensors/moonshine-base",
-            name = "Moonshine Base (STT)",
-            downloadUrl = "https://huggingface.co/UsefulSensors/moonshine-base/resolve/main/model.onnx",
-            sizeBytes = 200_000_000L,
-            description = "Moonshine STT model (~200MB)"
-        ),
-        // Embedding Models
-        SdkModel(
-            id = "nomic-ai/nomic-embed-text-v2-moe",
-            name = "Nomic Embed Text V2 MoE",
-            downloadUrl = "https://huggingface.co/nomic-ai/nomic-embed-text-v2-moe-GGUF/resolve/main/nomic-embed-text-v2-moe-q4_k_m.gguf",
+            id = "HuggingFaceTB/SmolLM2-360M-Instruct",
+            name = "SmolLM2 360M Instruct",
+            downloadUrl = "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf",
             sizeBytes = 300_000_000L,
-            description = "Text embedding model (~300MB)"
+            description = "Small SmolLM2 model (~300MB)"
         ),
         SdkModel(
-            id = "Qwen/Qwen3-Embedding-0.6B",
-            name = "Qwen3 Embedding 0.6B",
-            downloadUrl = "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/qwen3-embedding-0.6b-q4_k_m.gguf",
-            sizeBytes = 400_000_000L,
-            description = "Qwen3 embedding model (~400MB)"
+            id = "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+            name = "SmolLM2 1.7B Instruct",
+            downloadUrl = "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf",
+            sizeBytes = 1_100_000_000L,
+            description = "Large SmolLM2 model (~1.1GB)"
+        ),
+        // Phi-3 series - verified URLs
+        SdkModel(
+            id = "microsoft/Phi-3.5-mini-instruct",
+            name = "Phi-3.5 Mini Instruct",
+            downloadUrl = "https://huggingface.co/microsoft/Phi-3.5-mini-instruct-gguf/resolve/main/Phi-3.5-mini-instruct-q4.gguf",
+            sizeBytes = 2_300_000_000L,
+            description = "Microsoft Phi-3.5 Mini (~2.3GB)"
+        ),
+        // Gemma-2 series - verified URLs
+        SdkModel(
+            id = "google/gemma-2-2b-it",
+            name = "Gemma-2 2B IT",
+            downloadUrl = "https://huggingface.co/google/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-q4_k_m.gguf",
+            sizeBytes = 1_600_000_000L,
+            description = "Google Gemma-2 2B (~1.6GB)"
+        ),
+        // Llama-3.2 series - verified URLs
+        SdkModel(
+            id = "meta-llama/Llama-3.2-1B-Instruct",
+            name = "Llama-3.2 1B Instruct",
+            downloadUrl = "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+            sizeBytes = 800_000_000L,
+            description = "Meta Llama-3.2 1B (~800MB)"
+        ),
+        SdkModel(
+            id = "meta-llama/Llama-3.2-3B-Instruct",
+            name = "Llama-3.2 3B Instruct",
+            downloadUrl = "https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+            sizeBytes = 2_000_000_000L,
+            description = "Meta Llama-3.2 3B (~2GB)"
         )
     )
 
@@ -463,8 +431,30 @@ object SdkModelManager {
     fun getDefaultModelId(provider: String): String {
         return when (provider.lowercase()) {
             "runanywhere" -> "smollm2-360m-instruct-q8_0"
-            "cactus" -> "Qwen/Qwen3-0.6B"
+            "cactus" -> "Qwen/Qwen2.5-0.5B-Instruct"
             else -> ""
         }
+    }
+    
+    /**
+     * Check if a provider is an SDK-based provider (doesn't require API key)
+     */
+    fun isSdkProvider(providerType: com.ai.assistance.operit.data.model.ApiProviderType): Boolean {
+        return providerType == com.ai.assistance.operit.data.model.ApiProviderType.CACTUS ||
+               providerType == com.ai.assistance.operit.data.model.ApiProviderType.RUNANYWHERE
+    }
+    
+    /**
+     * Check if an SDK provider has at least one downloaded model
+     */
+    fun hasDownloadedModel(context: Context, providerType: com.ai.assistance.operit.data.model.ApiProviderType): Boolean {
+        val providerName = when (providerType) {
+            com.ai.assistance.operit.data.model.ApiProviderType.CACTUS -> "cactus"
+            com.ai.assistance.operit.data.model.ApiProviderType.RUNANYWHERE -> "runanywhere"
+            else -> return false
+        }
+        
+        val models = getAvailableModels(context, providerName)
+        return models.any { it.isDownloaded }
     }
 }

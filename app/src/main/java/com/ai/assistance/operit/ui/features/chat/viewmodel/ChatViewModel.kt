@@ -1685,6 +1685,19 @@ class ChatViewModel(private val context: Context) : ViewModel() {
             // 检查每个配置是否使用默认API key
             for (id in configIds) {
                 val config = modelConfigManager.getModelConfigFlow(id).first()
+                
+                // Check if this is an SDK provider with downloaded models
+                if (com.ai.assistance.operit.api.chat.llmprovider.SdkModelManager.isSdkProvider(config.apiProviderType)) {
+                    // For SDK providers, check if there's at least one downloaded model
+                    if (com.ai.assistance.operit.api.chat.llmprovider.SdkModelManager.hasDownloadedModel(context, config.apiProviderType)) {
+                        // SDK provider with downloaded model is considered configured
+                        continue
+                    }
+                    // SDK provider without downloaded model needs configuration
+                    hasDefaultKey = true
+                    break
+                }
+                
                 if (config.apiKey == ApiPreferences.DEFAULT_API_KEY) {
                     hasDefaultKey = true
                     break

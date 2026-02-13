@@ -286,11 +286,19 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
 
 
     // 确保每次应用启动时正确处理配置界面的显示逻辑
-    LaunchedEffect(apiKey) {
+    LaunchedEffect(apiKey, apiProviderType) {
         // 只有当apiKey有效值时才执行逻辑，防止初始化阶段的不正确判断
         if (apiKey.isNotBlank()) {
             // 如果使用的是自定义配置，标记为已确认，不显示配置界面
             if (apiKey != ApiPreferences.DEFAULT_API_KEY) {
+                ConfigurationStateHolder.hasConfirmedDefaultInSession = true
+            }
+        }
+        
+        // For SDK providers, check if there's a downloaded model
+        if (com.ai.assistance.operit.api.chat.llmprovider.SdkModelManager.isSdkProvider(apiProviderType)) {
+            if (com.ai.assistance.operit.api.chat.llmprovider.SdkModelManager.hasDownloadedModel(context, apiProviderType)) {
+                // SDK provider with downloaded model is considered configured
                 ConfigurationStateHolder.hasConfirmedDefaultInSession = true
             }
         }
