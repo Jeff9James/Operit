@@ -54,12 +54,13 @@ jobs:
           
           # Check current CMakeLists.txt structure
           echo "=== Current CMakeLists.txt sources ==="
-          grep -n "CACTUS_SOURCES\|set(CACTUS" cactus/android/CMakeLists.txt | head -20
+          head -30 cactus/android/CMakeLists.txt
           
-          # Add stub to CMakeLists.txt
+          # Use a different approach - insert after the last .cpp file in the list
+          # Find a good insertion point and add the stub
           if ! grep -q "telemetry_stub.cpp" cactus/android/CMakeLists.txt; then
-            # Find the line with .cpp sources and add our stub
-            sed -i 's|\.cpp"|.cpp" \\\n    ${CACTUS_SOURCE_DIR}/telemetry_stub.cpp|' cactus/android/CMakeLists.txt
+            # Insert the stub file using awk
+            awk '{print} /\.cpp"$/ && !done {print "    ${CACTUS_SOURCE_DIR}/telemetry_stub.cpp"; done=1}' cactus/android/CMakeLists.txt > tmp && mv tmp cactus/android/CMakeLists.txt
             echo "=== Added telemetry_stub.cpp to CMakeLists.txt ==="
           else
             echo "=== telemetry_stub.cpp already in CMakeLists.txt ==="
