@@ -27,19 +27,38 @@ jobs:
       - name: Copy Telemetry Stub
         run: |
           cp -r main/app/src/main/cpp/cactus/* cactus/
+          ls -la cactus/cactus/telemetry_stub.cpp
+          
+      - name: Verify Telemetry Stub Exists
+        run: |
+          echo "=== Verifying telemetry_stub.cpp ==="
+          ls -la cactus/cactus/telemetry_stub.cpp
+          echo "=== Contents of cactus/cactus/ ==="
+          ls -la cactus/cactus/ | head -20
       
       - name: Patch Cactus
         run: |
           cd cactus/android
           chmod +x build.sh
+          # Show the relevant part of CMakeLists.txt first to debug
+          grep -n "cactus_complete\|cactus_index" CMakeLists.txt || echo "Pattern not found, checking full file..."
+          head -100 CMakeLists.txt
           # Add telemetry_stub.cpp to the build if not already present
           if ! grep -q "telemetry_stub.cpp" CMakeLists.txt; then
-            sed -i 's/cactus_complete.cpp cactus_index.cpp/cactus_complete.cpp cactus_index.cpp telemetry_stub.cpp/g' CMakeLists.txt
+            # Try different patterns
+            sed -i 's/cactus_complete\.cpp/cactus_complete.cpp telemetry_stub.cpp/g' CMakeLists.txt || true
+            sed -i 's/cactus_index\.cpp/cactus_index.cpp telemetry_stub.cpp/g' CMakeLists.txt || true
           fi
-          cat CMakeLists.txt | head -50
+          echo "--- After patch ---"
+          grep -n "telemetry_stub" CMakeLists.txt || echo "Stub not added!"
       
       - name: Setup Android NDK
         uses: android-actions/setup-android@v3
+      
+      - name: Clean Old Build
+        run: |
+          rm -rf cactus/android/build cactus/android/libcactus.so cactus/android/libcactus.a || true
+          echo "Cleaned old build artifacts"
       
       - name: Cache Cactus Build
         uses: actions/cache@v4
@@ -48,9 +67,9 @@ jobs:
             cactus/android/build
             cactus/android/libcactus.so
             cactus/android/libcactus.a
-          key: ${{ runner.os }}-cactus-${{ hashFiles('cactus/android/CMakeLists.txt', 'cactus/cactus/**', 'cactus/cactus/telemetry_stub.cpp') }}
+          key: ${{ runner.os }}-cactus-v2-${{ hashFiles('cactus/android/CMakeLists.txt', 'cactus/cactus/**', 'main/app/src/main/cpp/cactus/telemetry_stub.cpp') }}
           restore-keys: |
-            ${{ runner.os }}-cactus-
+            ${{ runner.os }}-cactus-v2-
       
       - name: Build libcactus.so
         run: |
