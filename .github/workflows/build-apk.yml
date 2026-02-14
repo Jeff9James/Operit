@@ -12,12 +12,31 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Checkout Main Repo
+        uses: actions/checkout@v4
+        with:
+          path: main
+      
       - name: Checkout Cactus
         uses: actions/checkout@v4
         with:
           repository: cactus-compute/cactus
           path: cactus
           clean: true
+      
+      - name: Copy Telemetry Stub
+        run: |
+          cp -r main/app/src/main/cpp/cactus/* cactus/
+      
+      - name: Patch Cactus
+        run: |
+          cd cactus/android
+          chmod +x build.sh
+          # Add telemetry_stub.cpp to the build if not already present
+          if ! grep -q "telemetry_stub.cpp" CMakeLists.txt; then
+            sed -i 's/cactus_complete.cpp cactus_index.cpp/cactus_complete.cpp cactus_index.cpp telemetry_stub.cpp/g' CMakeLists.txt
+          fi
+          cat CMakeLists.txt | head -50
       
       - name: Setup Android NDK
         uses: android-actions/setup-android@v3
@@ -29,7 +48,7 @@ jobs:
             cactus/android/build
             cactus/android/libcactus.so
             cactus/android/libcactus.a
-          key: ${{ runner.os }}-cactus-${{ hashFiles('cactus/android/CMakeLists.txt', 'cactus/cactus/**') }}
+          key: ${{ runner.os }}-cactus-${{ hashFiles('cactus/android/CMakeLists.txt', 'cactus/cactus/**', 'cactus/cactus/telemetry_stub.cpp') }}
           restore-keys: |
             ${{ runner.os }}-cactus-
       
