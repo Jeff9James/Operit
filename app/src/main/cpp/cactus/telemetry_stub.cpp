@@ -5,32 +5,13 @@
 #include <cstddef>
 #include <cstring>
 
-// Define CompletionMetrics if not already defined by cactus
-#ifndef CACTUS_COMPLETION_METRICS_DEFINED
-namespace cactus {
-namespace telemetry {
-
-struct CompletionMetrics {
-    double prompt_tokens;
-    double completion_tokens;
-    double total_tokens;
-    int model_id;
-    bool is_cached;
-    double cache_hit_tokens;
-    double time_to_first_token;
-    double time_per_output_token;
-    double event_timestamp;
-};
-
-} // namespace telemetry
-} // namespace cactus
-#define CACTUS_COMPLETION_METRICS_DEFINED
-#endif
+// NOTE: CompletionMetrics struct is defined in cactus/telemetry/telemetry.h
+// We only provide stub implementations for the telemetry functions
 
 namespace cactus {
 namespace telemetry {
 
-// Stub implementations - ALWAYS provide these
+// Stub implementations
 
 void init(const char* api_key, const char* endpoint, const char* model) {
     // No-op stub - telemetry initialization

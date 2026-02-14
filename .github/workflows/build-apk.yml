@@ -91,9 +91,9 @@ jobs:
             cactus/android/build
             cactus/android/libcactus.so
             cactus/android/libcactus.a
-          key: ${{ runner.os }}-cactus-v4-${{ hashFiles('cactus/android/CMakeLists.txt', 'cactus/cactus/**', 'main/app/src/main/cpp/cactus/telemetry_stub.cpp') }}
+          key: ${{ runner.os }}-cactus-v5-${{ hashFiles('cactus/android/CMakeLists.txt', 'cactus/cactus/**', 'main/app/src/main/cpp/cactus/telemetry_stub.cpp') }}
           restore-keys: |
-            ${{ runner.os }}-cactus-v4-
+            ${{ runner.os }}-cactus-v5-
        
       - name: Build libcactus.so
         run: |
