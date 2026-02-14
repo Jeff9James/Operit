@@ -36,25 +36,25 @@ jobs:
           echo "=== Contents of cactus/cactus/ ==="
           ls -la cactus/cactus/ | head -20
       
-      - name: Patch Cactus - Append Stub to Source File
+      - name: Patch Cactus - Apply Telemetry Stub
         run: |
-          cd cactus
+          # The cactus repo is checked out to 'cactus' directory
+          # The cactus source code is in cactus/cactus/
           
-          # The stub was already copied to cactus/cactus/ by previous step
-          # Now let's find a .cpp file in cactus/cactus/ffi to append the stub to
-          echo "=== Files in cactus/cactus/ffi/ ==="
-          ls -la cactus/cactus/ffi/
+          # Run the patch script from main repo
+          echo "=== Running patch script ==="
+          # Pass the cactus repo directory (which contains cactus/cactus/ source)
+          bash main/app/src/main/cpp/cactus/patch_cactus.sh cactus
           
-          # Find a .cpp file to append the stub to - let's try cactus_utils.cpp
-          if [ -f "cactus/cactus/ffi/cactus_utils.cpp" ]; then
-            echo "=== Appending stub to cactus_utils.cpp ==="
-            cat cactus/cactus/telemetry_stub.cpp >> cactus/cactus/ffi/cactus_utils.cpp
-            echo "=== Stub appended successfully ==="
-            tail -5 cactus/cactus/ffi/cactus_utils.cpp
-          else
-            echo "=== cactus_utils.cpp not found, checking other locations ==="
-            find . -name "cactus_utils.cpp" 2>/dev/null
-          fi
+          # Verify the patch was applied
+          echo "=== Verifying telemetry_stub.cpp exists ==="
+          ls -la cactus/cactus/telemetry_stub.cpp
+          
+          echo "=== Verifying CMakeLists.txt includes stub ==="
+          grep -i "telemetry_stub" cactus/android/CMakeLists.txt || echo "WARNING: Stub not found in CMakeLists.txt"
+          
+          echo "=== Full cactus/cactus directory ==="
+          ls -la cactus/cactus/
       
       - name: Setup Android NDK
         uses: android-actions/setup-android@v3
