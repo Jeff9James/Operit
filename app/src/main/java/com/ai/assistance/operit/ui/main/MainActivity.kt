@@ -231,9 +231,6 @@ class MainActivity : ComponentActivity() {
         lastOrientation = resources.configuration.orientation
         AppLogger.d(TAG, "onCreate: Android SDK version: ${Build.VERSION.SDK_INT}")
 
-        // Initialize Cactus SDK for on-device AI
-        initializeCactusSdk()
-
         // Set window background to solid color to prevent system theme leaking through
         window.setBackgroundDrawableResource(android.R.color.black)
 
@@ -243,6 +240,11 @@ class MainActivity : ComponentActivity() {
         // 语言设置已在Application中初始化，这里无需重复
 
         initializeComponents()
+
+        // Initialize Cactus SDK for on-device AI (after DataStore is accessed)
+        // Disable telemetry first to prevent race condition with DataStore
+        initializeCactusSdk()
+
         cleanTemporaryFiles()
         anrMonitor.start()
         setupPreferencesListener()
@@ -583,17 +585,26 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Initialize Cactus SDK for on-device AI (LLM, STT, Vision, Embeddings).
-     * This must be called in Activity.onCreate() before using any Cactus SDK functionality.
+     * This must be called in Activity.onCreate() after DataStore is accessed.
      * 
      * According to Cactus SDK documentation:
      * "Before using any Cactus SDK functionality, you must initialize the context 
      * in your Activity's onCreate() method"
+     * 
+     * IMPORTANT: We disable telemetry before initialization to prevent race condition
+     * with DataStore. The telemetry initialization launches coroutines that can
+     * conflict with DataStore usage, causing crashes.
      */
     private fun initializeCactusSdk() {
         try {
-            // Initialize Cactus SDK context using the proper API
+            // Disable telemetry FIRST to prevent race condition with DataStore
+            // Cactus telemetry initialization launches coroutines that can conflict
+            // with DataStore creation, causing "Unable to rename" crashes
+            com.cactus.services.CactusTelemetry.isTelemetryEnabled = false
+            
+            // Initialize Cactus SDK context
             com.cactus.CactusContextInitializer.initialize(this)
-            AppLogger.d(TAG, "Cactus SDK context initialized successfully")
+            AppLogger.d(TAG, "Cactus SDK context initialized successfully (telemetry disabled)")
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to initialize Cactus SDK context: ${e.message}", e)
         }
