@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.ai.assistance.operit.data.model.CustomEmoji
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -41,11 +42,11 @@ private object DataStoreHolder {
         if (_dataStore == null) {
             synchronized(this) {
                 if (_dataStore == null) {
-                    _dataStore = DataStore(
+                    _dataStore = PreferenceDataStoreFactory.create(
                         corruptionHandler = ReplaceFileCorruptionHandler(
                             produceNewData = { emptyPreferences() }
                         ),
-                        migrations = listOf(),
+                        migrations = emptyList(),
                         scope = kotlinx.coroutines.CoroutineScope(
                             kotlinx.coroutines.Dispatchers.IO +
                             kotlinx.coroutines.SupervisorJob()
