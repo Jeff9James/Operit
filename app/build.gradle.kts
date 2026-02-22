@@ -20,7 +20,7 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "com.ai.assistance.operit"
-    compileSdk = 35
+    compileSdk = 36
 
     signingConfigs {
         val releaseKeystorePath = localProperties.getProperty("RELEASE_STORE_FILE")
@@ -120,12 +120,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
         isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "11"
     }
     
     // Kapt configuration to fix annotation processor discovery
@@ -431,26 +431,35 @@ dependencies {
     // Cactus Compute SDK for on-device AI (LLM, STT, Vision, Embeddings)
     implementation(libs.cactus)
     implementation(libs.ktor.client.resources)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.content.negotiation)
+
+    // Additional dependencies for Cactus SDK 1.4.1-beta
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.okio)
+    implementation(libs.kermit)
 
     // Force compatible versions for SDK dependencies
     configurations.all {
         resolutionStrategy {
-            // Force Kotlin to 2.1.21 for SDK compatibility
-            force("org.jetbrains.kotlin:kotlin-bom:2.1.21")
-            force("org.jetbrains.kotlin:kotlin-stdlib:2.1.21")
-            force("org.jetbrains.kotlin:kotlin-stdlib-common:2.1.21")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.21")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.21")
-            force("org.jetbrains.kotlin:kotlin-reflect:2.1.21")
-            
-            // Use kotlinx-serialization-json 1.7.1 which is compatible with Kotlin 2.1.21
+            // Force Kotlin to 2.2.0 for Cactus SDK 1.4.1-beta compatibility
+            force("org.jetbrains.kotlin:kotlin-bom:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-common:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-reflect:2.2.0")
+
+            // Use kotlinx-serialization-json 1.7.1 which is compatible with Kotlin 2.2.0
             force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-            
-            // Force compatible ktor version
-            force("io.ktor:ktor-client-core:2.3.5")
-            force("io.ktor:ktor-client-cio:2.3.5")
-            force("io.ktor:ktor-serialization-kotlinx-json:2.3.5")
-            
+
+            // Force Ktor 3.1.3 for Cactus SDK 1.4.1-beta compatibility
+            force("io.ktor:ktor-client-core:3.1.3")
+            force("io.ktor:ktor-client-okhttp:3.1.3")
+            force("io.ktor:ktor-serialization-kotlinx-json:3.1.3")
+            force("io.ktor:ktor-client-content-negotiation:3.1.3")
+
             // Force BouncyCastle to use jdk18on version to avoid duplicate classes
             force("org.bouncycastle:bcprov-jdk18on:1.78")
         }
