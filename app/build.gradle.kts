@@ -430,7 +430,8 @@ dependencies {
     
     // Cactus Compute SDK for on-device AI (LLM, STT, Vision, Embeddings)
     implementation(libs.cactus)
-    
+    implementation(libs.ktor.client.resources)
+
     // Force compatible versions for SDK dependencies
     configurations.all {
         resolutionStrategy {
