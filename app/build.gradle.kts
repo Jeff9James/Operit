@@ -454,11 +454,11 @@ dependencies {
             // Use kotlinx-serialization-json 1.7.1 which is compatible with Kotlin 2.2.0
             force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 
-            // Force Ktor 3.1.3 for Cactus SDK 1.4.1-beta compatibility
-            force("io.ktor:ktor-client-core:3.1.3")
-            force("io.ktor:ktor-client-okhttp:3.1.3")
-            force("io.ktor:ktor-serialization-kotlinx-json:3.1.3")
-            force("io.ktor:ktor-client-content-negotiation:3.1.3")
+            // Force Ktor 3.2.3 for MCP SDK 0.7.0 compatibility (backward compatible with Cactus SDK 1.4.1-beta)
+            force("io.ktor:ktor-client-core:3.2.3")
+            force("io.ktor:ktor-client-okhttp:3.2.3")
+            force("io.ktor:ktor-serialization-kotlinx-json:3.2.3")
+            force("io.ktor:ktor-client-content-negotiation:3.2.3")
 
             // Force BouncyCastle to use jdk18on version to avoid duplicate classes
             force("org.bouncycastle:bcprov-jdk18on:1.78")
