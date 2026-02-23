@@ -3417,6 +3417,7 @@
     <string name="provider_other">Other Providers</string>
     <string name="provider_doubao">Doubao</string>
     <string name="provider_llama_cpp">llama.cpp Local Inference</string>
+    <string name="provider_cactus_local">Cactus Local Inference</string>
     <string name="provider_mnn">MNN Local Inference</string>
     <string name="select_api_provider_title">Select API Provider</string>
     <string name="search_providers">Search providers</string>

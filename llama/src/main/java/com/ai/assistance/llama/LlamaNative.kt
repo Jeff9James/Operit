@@ -1,10 +1,15 @@
 package com.ai.assistance.llama
 
+/**
+ * Native JNI interface for llama.cpp.
+ * All external functions will throw UnsatisfiedLinkError at call-time if the
+ * native library is not available. The init block has been removed to prevent
+ * class-load-time crashes.
+ */
 object LlamaNative {
 
-    init {
-        LlamaLibraryLoader.loadLibraries()
-    }
+    // No init block - library loading is deferred to LlamaLibraryLoader.loadLibraries()
+    // which is called lazily and swallows errors gracefully.
 
     @JvmStatic external fun nativeIsAvailable(): Boolean
 
