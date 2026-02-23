@@ -13,34 +13,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-
-        ndk {
-            abiFilters.addAll(listOf("arm64-v8a"))
-        }
-
-        // JNI stub only for now; we'll wire real llama.cpp after you add the submodule.
-        externalNativeBuild {
-            cmake {
-                cppFlags += listOf("-std=c++17", "-fno-emulated-tls")
-                arguments += listOf(
-                    "-DANDROID_STL=c++_static",
-                    "-DANDROID_PLATFORM=android-26",
-                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
-                )
-            }
-        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-        }
-    }
-
-    externalNativeBuild {
-        cmake {
-            path = file("CMakeLists.txt")
-            version = "3.22.1"
         }
     }
 
