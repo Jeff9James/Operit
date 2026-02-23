@@ -58,6 +58,7 @@ import kotlinx.coroutines.launch
 import com.ai.assistance.operit.data.mcp.MCPRepository
 import com.ai.assistance.operit.data.api.GitHubApiService
 import com.ai.assistance.operit.data.preferences.GitHubAuthPreferences
+import com.cactus.CactusContextInitializer
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.remember
@@ -228,6 +229,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CactusContextInitializer.initialize(this)
         lastOrientation = resources.configuration.orientation
         AppLogger.d(TAG, "onCreate: Android SDK version: ${Build.VERSION.SDK_INT}")
 
