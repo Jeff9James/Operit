@@ -43,7 +43,7 @@ class LlamaProvider(
         }
     }
 
-    private val lm = CactusLM(context)
+    private val lm = CactusLM()
 
     @Volatile
     private var isCancelled = false

@@ -566,7 +566,7 @@ object ModelListFetcher {
     suspend fun getCactusModels(context: Context): Result<List<ModelOption>> {
         return withContext(Dispatchers.IO) {
             try {
-                val lm = com.cactus.CactusLM(context)
+                val lm = com.cactus.CactusLM()
                 val models = lm.getModels()
                 val options = models.map { m ->
                     val statusTag = if (m.isDownloaded) "✓" else "↓"
