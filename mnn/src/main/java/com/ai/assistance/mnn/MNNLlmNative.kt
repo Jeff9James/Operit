@@ -6,10 +6,6 @@ package com.ai.assistance.mnn
  */
 object MNNLlmNative {
     
-    init {
-        MNNLibraryLoader.loadLibraries()
-    }
-    
     /**
      * 从配置文件创建 LLM 实例（不加载模型）
      * @param configPath 配置文件路径 (llm_config.json)

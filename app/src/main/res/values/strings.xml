@@ -5970,6 +5970,8 @@
     <string name="mnn_file_status">文件状态:</string>
     <string name="mnn_init_failed">模型初始化失败</string>
     <string name="mnn_connection_success">MNN LLM模型连接成功！\n\n模型: %1$s\n目录: %2$s\n总大小: %3$s\n\n%4$s</string>
+    <string name="mnn_cactus_backend_tip">MNN 提供商现在使用 Cactus SDK 进行本地推理。在"模型名称"中填写模型 slug（如 qwen3-0.6）</string>
+    <string name="mnn_cactus_error_init">Cactus 后端初始化失败: %1$s</string>
 
     <!-- APK Reverse Engineer -->
     <string name="apk_unnamed_function">(未命名功能)</string>

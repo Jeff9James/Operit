@@ -5998,6 +5998,8 @@
     <string name="mnn_file_status">File status:</string>
     <string name="mnn_init_failed">Model initialization failed</string>
     <string name="mnn_connection_success">MNN LLM model connected successfully!\n\nModel: %1$s\nDirectory: %2$s\nTotal size: %3$s\n\n%4$s</string>
+    <string name="mnn_cactus_backend_tip">The MNN provider now uses the Cactus SDK backend. Enter the model slug (e.g. qwen3-0.6) in "Model name".</string>
+    <string name="mnn_cactus_error_init">Cactus backend init failed: %1$s</string>
 
     <!-- APK Reverse Engineer -->
     <string name="apk_unnamed_function">(Unnamed function)</string>

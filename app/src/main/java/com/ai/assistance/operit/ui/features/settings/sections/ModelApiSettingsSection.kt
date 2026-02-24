@@ -634,7 +634,7 @@ fun ModelApiSettingsSection(
 
                                             try {
                                                 val result = if (isMnnProvider) {
-                                                    ModelListFetcher.getMnnLocalModels(context)
+                                                    ModelListFetcher.getCactusModels(context)
                                                 } else {
                                                     ModelListFetcher.getCactusModels(context)
                                                 }
@@ -1401,7 +1401,7 @@ private fun MnnSettingsBlock(
         navigateToMnnModelDownload: (() -> Unit)?
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SettingsInfoBanner(text = stringResource(R.string.mnn_local_model_tip))
+        SettingsInfoBanner(text = stringResource(R.string.mnn_cactus_backend_tip))
 
         navigateToMnnModelDownload?.let { navigate ->
             Button(
