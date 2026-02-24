@@ -4040,7 +4040,9 @@
     <string name="go_clear">去清空</string>
     
     <!-- MNN 本地推理 -->
-    <string name="mnn_local_model_tip">本地运行模型理解能力较差，建议关闭记忆链接、开启禁用工具进行对话</string>
+    <string name="mnn_local_model_tip">MNN 提供商现在使用 Cactus SDK 进行本地推理。在"模型名称"中填写模型 slug（如 qwen3-0.6）</string>
+    <string name="mnn_cactus_backend_tip">MNN 提供商现在使用 Cactus SDK 进行本地推理。在"模型名称"中填写模型 slug（如 qwen3-0.6）</string>
+    <string name="mnn_cactus_error_init">Cactus 后端初始化失败: %1$s</string>
     <string name="mnn_model_path">模型文件路径</string>
     <string name="mnn_model_path_placeholder">输入MNN模型文件的完整路径</string>
     <string name="mnn_forward_type">计算类型</string>

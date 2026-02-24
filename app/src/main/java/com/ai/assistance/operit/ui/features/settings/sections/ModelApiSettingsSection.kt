@@ -634,7 +634,7 @@ fun ModelApiSettingsSection(
 
                                             try {
                                                 val result = if (isMnnProvider) {
-                                                    ModelListFetcher.getMnnLocalModels(context)
+                                                    ModelListFetcher.getCactusModels(context)
                                                 } else {
                                                     ModelListFetcher.getCactusModels(context)
                                                 }
