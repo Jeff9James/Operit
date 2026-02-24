@@ -6,10 +6,6 @@ package com.ai.assistance.mnn
  */
 object MNNModuleNative {
     
-    init {
-        MNNLibraryLoader.loadLibraries()
-    }
-    
     /**
      * 从文件创建 Module
      * @param filePath 模型文件路径
