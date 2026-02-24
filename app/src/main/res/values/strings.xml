@@ -6525,4 +6525,11 @@
     <string name="cactus_local_model_tip">Cactus 本地模型通过 Cactus SDK 运行，支持自动下载和管理模型</string>
     <string name="cactus_model_name_hint">输入模型 slug (例如: qwen3-0.6)</string>
     <string name="fetch_models_list">获取模型列表</string>
+    <!-- Cactus local inference unified branding -->
+    <string name="cactus_local_inference_title">Cactus 本地推理</string>
+    <string name="cactus_context_size">上下文长度</string>
+    <string name="cactus_browse_download_models">浏览并下载模型</string>
+    
+    <!-- LLAMA_CPP deprecation notice -->
+    <string name="llama_cpp_deprecation_notice">llama.cpp（旧版）— 此提供商现在使用 Cactus SDK 后端。您现有的模型配置将继续有效。</string>
 </resources>
