@@ -209,9 +209,16 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     
     // libsu - root access library
-    implementation("com.github.topjohnwu.libsu:core:6.0.0")
-    implementation("com.github.topjohnwu.libsu:service:6.0.0")
-    implementation("com.github.topjohnwu.libsu:nio:6.0.0")
+    // Exclude JNA to avoid duplicate classes with ONNX Runtime
+    implementation("com.github.topjohnwu.libsu:core:6.0.0") {
+        exclude(group = "net.java.dev.jna")
+    }
+    implementation("com.github.topjohnwu.libsu:service:6.0.0") {
+        exclude(group = "net.java.dev.jna")
+    }
+    implementation("com.github.topjohnwu.libsu:nio:6.0.0") {
+        exclude(group = "net.java.dev.jna")
+    }
     
     // Add missing SVG support
     implementation(libs.androidsvg)
@@ -275,8 +282,12 @@ dependencies {
     implementation(libs.tensorflow.lite)
     implementation(libs.mediapipe.tasks.text)
     
-    // ONNX Runtime for Android - 支持更强大的多语言Embedding模型
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
+    // ONNX Runtime for Android - Support more powerful multilingual embedding models
+    // Exclude JNA to avoid duplicate classes (AAR vs JAR conflict)
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1") {
+        exclude(group = "net.java.dev.jna", module = "jna")
+        exclude(group = "net.java.dev.jna", module = "jna-platform")
+    }
 
     // Room 数据库
     implementation(libs.room.runtime)
@@ -422,6 +433,9 @@ dependencies {
             force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0")
             force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.0")
             force("org.jetbrains.kotlin:kotlin-reflect:2.2.0")
+            // Force JNA to use only the platform JAR to avoid AAR/JAR duplicate classes
+            force("net.java.dev.jna:jna:5.13.0")
+            force("net.java.dev.jna:jna-platform:5.13.0")
             // Force BouncyCastle to use jdk18on version to avoid duplicate classes
             force("org.bouncycastle:bcprov-jdk18on:1.78")
         }
@@ -430,6 +444,12 @@ dependencies {
     // Exclude bcprov-jdk15to18 from all configurations to avoid duplicate classes
     configurations.all {
         exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18")
+    }
+
+    // Exclude JNA runtime AAR to avoid duplicate classes with JAR version
+    configurations.all {
+        exclude(group = "net.java.dev.jna", module = "jna-runtime")
+        exclude(group = "net.java.dev.jna", module = "jna-platform")
     }
 
     // Security
