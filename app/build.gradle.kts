@@ -209,7 +209,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     
     // libsu - root access library
-    // Exclude JNA to avoid duplicate classes with ONNX Runtime
+    // Exclude JNA to avoid duplicate classes with ONNX Runtime and Cactus
     implementation("com.github.topjohnwu.libsu:core:6.0.0") {
         exclude(group = "net.java.dev.jna")
     }
@@ -403,60 +403,75 @@ dependencies {
     implementation(libs.objectbox.kotlin)
     kapt(libs.objectbox.processor)
     
-    // MCP Kotlin SDK - Temporarily disabled due to R8/D8 Kotlin metadata issues
+    // MCP Kotlin SDK
     // Using umbrella artifact for R8/D8 compatibility
-    // implementation("io.modelcontextprotocol:kotlin-sdk:0.8.4") {
-    //     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-serialization-json")
-    //     exclude(group = "io.ktor", module = "ktor-client-core")
-    //     exclude(group = "io.ktor", module = "ktor-client-cio")
-    //     exclude(group = "io.ktor", module = "ktor-client-okhttp")
-    //     exclude(group = "io.ktor", module = "ktor-client-content-negotiation")
-    //     exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json")
-    //     // Exclude mcp-core to avoid Kotlin metadata issues
-    //     exclude(group = "io.modelcontextprotocol.sdk", module = "mcp-core")
-    // }
+     implementation("io.modelcontextprotocol:kotlin-sdk:0.8.4") {
+        exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-serialization-json")
+        exclude(group = "io.ktor", module = "ktor-client-core")
+        exclude(group = "io.ktor", module = "ktor-client-cio")
+        exclude(group = "io.ktor", module = "ktor-client-okhttp")
+        exclude(group = "io.ktor", module = "ktor-client-content-negotiation")
+        exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json")
+        // Exclude mcp-core to avoid Kotlin metadata issues
+        exclude(group = "io.modelcontextprotocol.sdk", module = "mcp-core")
+    }
 
     // Cactus SDK and related dependencies
-    // Exclude JNA from all to avoid duplicate classes (AAR vs JAR conflict)
-    implementation(libs.cactus.sdk) {
-        exclude(group = "net.java.dev.jna")
-    }
-    implementation(libs.ktor.client.core) {
-        exclude(group = "net.java.dev.jna")
-    }
-    implementation(libs.ktor.client.okhttp) {
-        exclude(group = "net.java.dev.jna")
-    }
-    implementation(libs.ktor.client.content.negotiation) {
-        exclude(group = "net.java.dev.jna")
-    }
-    implementation(libs.ktor.serialization.kotlinx.json) {
-        exclude(group = "net.java.dev.jna")
-    }
-    implementation(libs.okio) {
-        exclude(group = "net.java.dev.jna")
-    }
+    // Cactus brings its own JNA (5.13.0), so we should NOT exclude it
+    implementation(libs.cactus.sdk)
+    
+    // Kermit logging (required by Cactus)
+    implementation(libs.kermit)
+    
+    // Ktor dependencies for Cactus
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    
+    // Okio (required by Ktor)
+    implementation(libs.okio)
+    
+    // DateTime (required by Cactus)
     implementation(libs.kotlinx.datetime)
-    // Add JNA explicitly - use platform to avoid AAR duplicate classes
-    implementation("net.java.dev.jna:jna-platform:5.15.0")
+    
+    // JNA - use version matching cactus requirements (5.13.0)
+    // Use jna (not jna-platform) to avoid AAR/JAR conflicts
+    implementation("net.java.dev.jna:jna:5.13.0")
 
-    // 强制使用兼容的版本
+    // Force compatible versions for Cactus and its dependencies
     configurations.all {
         resolutionStrategy {
+            // Kotlinx serialization - required by Cactus
             force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+            
+            // Ktor versions - required by Cactus
             force("io.ktor:ktor-client-core:3.1.3")
             force("io.ktor:ktor-client-okhttp:3.1.3")
             force("io.ktor:ktor-client-content-negotiation:3.1.3")
             force("io.ktor:ktor-serialization-kotlinx-json:3.1.3")
+            
+            // Kotlin BOM for version consistency
             force("org.jetbrains.kotlin:kotlin-bom:2.2.0")
             force("org.jetbrains.kotlin:kotlin-stdlib:2.2.0")
             force("org.jetbrains.kotlin:kotlin-stdlib-common:2.2.0")
             force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0")
             force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.0")
             force("org.jetbrains.kotlin:kotlin-reflect:2.2.0")
-            // Force JNA to use only the platform JAR to avoid AAR/JAR duplicate classes
-            force("net.java.dev.jna:jna-platform:5.15.0")
-            // Force BouncyCastle to use jdk18on version to avoid duplicate classes
+            
+            // JNA - must match cactus requirement (5.13.0)
+            force("net.java.dev.jna:jna:5.13.0")
+            
+            // Kermit - required by Cactus (2.0.8)
+            force("com.cashapp.kermit:kermit:2.0.8")
+            
+            // Okio - required by Ktor
+            force("com.squareup.okio:okio:3.9.0")
+            
+            // Kotlinx datetime - required by Cactus
+            force("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+            
+            // BouncyCastle - use jdk18on version to avoid duplicate classes
             force("org.bouncycastle:bcprov-jdk18on:1.78")
         }
     }
@@ -464,11 +479,6 @@ dependencies {
     // Exclude bcprov-jdk15to18 from all configurations to avoid duplicate classes
     configurations.all {
         exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18")
-    }
-
-    // Exclude JNA runtime AAR from all configurations to avoid duplicate classes
-    configurations.all {
-        exclude(group = "net.java.dev.jna", module = "jna-runtime")
     }
 
     // Exclude mcp-core from all configurations to avoid Kotlin metadata issues with R8/D8
