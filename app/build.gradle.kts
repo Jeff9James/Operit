@@ -287,6 +287,7 @@ dependencies {
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1") {
         exclude(group = "net.java.dev.jna", module = "jna")
         exclude(group = "net.java.dev.jna", module = "jna-platform")
+        exclude(group = "net.java.dev.jna", module = "jna-runtime")
     }
 
     // Room 数据库
@@ -417,7 +418,8 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.okio)
     implementation(libs.kotlinx.datetime)
-    implementation(libs.jna)
+    // Add JNA explicitly - use jna without Android-specific packaging
+    implementation("net.java.dev.jna:jna:5.15.0")
 
     // 强制使用兼容的版本
     configurations.all {
@@ -434,8 +436,8 @@ dependencies {
             force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.0")
             force("org.jetbrains.kotlin:kotlin-reflect:2.2.0")
             // Force JNA to use only the platform JAR to avoid AAR/JAR duplicate classes
-            force("net.java.dev.jna:jna:5.13.0")
-            force("net.java.dev.jna:jna-platform:5.13.0")
+            force("net.java.dev.jna:jna:5.15.0")
+            force("net.java.dev.jna:jna-platform:5.15.0")
             // Force BouncyCastle to use jdk18on version to avoid duplicate classes
             force("org.bouncycastle:bcprov-jdk18on:1.78")
         }
@@ -446,11 +448,8 @@ dependencies {
         exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18")
     }
 
-    // Exclude JNA runtime AAR to avoid duplicate classes with JAR version
-    configurations.all {
-        exclude(group = "net.java.dev.jna", module = "jna-runtime")
-        exclude(group = "net.java.dev.jna", module = "jna-platform")
-    }
+    // Exclude JNA runtime AAR from specific dependencies that bring it in
+    // Don't use configurations.all as it affects our explicit JNA dependency
 
     // Security
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
