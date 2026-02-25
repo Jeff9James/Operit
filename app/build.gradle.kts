@@ -475,6 +475,11 @@ dependencies {
         exclude(group = "io.modelcontextprotocol.sdk", module = "mcp-core")
     }
 
+    // Exclude kotlin-logging-debug to avoid duplicate classes
+    configurations.all {
+        exclude(group = "io.github.oshai", module = "kotlin-logging-android-debug")
+    }
+
     // Security
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     
