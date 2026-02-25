@@ -4055,16 +4055,6 @@
     <string name="llama_context_size">上下文长度</string>
     <string name="llama_cpp_deprecation_notice">llama.cpp（旧版）— 此提供商现在使用 Cactus SDK 后端。您现有的模型配置将继续有效。</string>
 
-    <!-- Cactus 本地推理 -->
-    <string name="cactus_download_model">下载 Cactus 模型</string>
-    <string name="cactus_downloading">正在下载: %1$s (%2$d%%)</string>
-    <string name="cactus_download_complete">下载完成: %1$s</string>
-    <string name="cactus_download_failed">下载失败: %1$s</string>
-    <string name="cactus_model_already_downloaded">已下载</string>
-    <string name="cactus_local_model_tip">Cactus 本地模型通过 Cactus SDK 运行，支持自动下载和管理模型</string>
-    <string name="cactus_model_name_hint">输入模型 slug (例如: qwen3-0.6)</string>
-    <string name="fetch_models_list">获取模型列表</string>
-    
     <!-- 工作流执行状态 -->
     <string name="workflow_execution_running">执行中…</string>
     <string name="workflow_execution_success">执行成功</string>
@@ -6528,12 +6518,4 @@
     <string name="repo_bookmark_name_exists">名称已存在，请换一个</string>
     <string name="repo_bookmark_delete">删除</string>
 
-<string name="cactus_download_model">下载 Cactus 模型</string>
-    <string name="cactus_downloading">正在下载: %1$s (%2$d%%)</string>
-    <string name="cactus_download_complete">下载完成: %1$s</string>
-    <string name="cactus_download_failed">下载失败: %1$s</string>
-    <string name="cactus_model_already_downloaded">已下载</string>
-    <string name="cactus_local_model_tip">Cactus 本地模型通过 Cactus SDK 运行，支持自动下载和管理模型</string>
-    <string name="cactus_model_name_hint">输入模型 slug (例如: qwen3-0.6)</string>
-    <string name="fetch_models_list">获取模型列表</string>
 </resources>
