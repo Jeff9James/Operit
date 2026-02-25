@@ -403,17 +403,18 @@ dependencies {
     implementation(libs.objectbox.kotlin)
     kapt(libs.objectbox.processor)
     
-    // MCP Kotlin SDK - Using umbrella artifact for R8/D8 compatibility
-    implementation("io.modelcontextprotocol:kotlin-sdk:0.8.4") {
-        exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-serialization-json")
-        exclude(group = "io.ktor", module = "ktor-client-core")
-        exclude(group = "io.ktor", module = "ktor-client-cio")
-        exclude(group = "io.ktor", module = "ktor-client-okhttp")
-        exclude(group = "io.ktor", module = "ktor-client-content-negotiation")
-        exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json")
-        // Exclude mcp-core to avoid Kotlin metadata issues
-        exclude(group = "io.modelcontextprotocol.sdk", module = "mcp-core")
-    }
+    // MCP Kotlin SDK - Temporarily disabled due to R8/D8 Kotlin metadata issues
+    // Using umbrella artifact for R8/D8 compatibility
+    // implementation("io.modelcontextprotocol:kotlin-sdk:0.8.4") {
+    //     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-serialization-json")
+    //     exclude(group = "io.ktor", module = "ktor-client-core")
+    //     exclude(group = "io.ktor", module = "ktor-client-cio")
+    //     exclude(group = "io.ktor", module = "ktor-client-okhttp")
+    //     exclude(group = "io.ktor", module = "ktor-client-content-negotiation")
+    //     exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json")
+    //     // Exclude mcp-core to avoid Kotlin metadata issues
+    //     exclude(group = "io.modelcontextprotocol.sdk", module = "mcp-core")
+    // }
 
     // Cactus SDK and related dependencies
     // Exclude JNA from all to avoid duplicate classes (AAR vs JAR conflict)
