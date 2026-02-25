@@ -420,9 +420,6 @@ dependencies {
     // Cactus brings its own JNA (5.13.0), so we should NOT exclude it
     implementation(libs.cactus.sdk)
     
-    // Kermit logging (required by Cactus)
-    implementation(libs.kermit)
-    
     // Ktor dependencies for Cactus
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
@@ -461,9 +458,6 @@ dependencies {
             
             // JNA - must match cactus requirement (5.13.0)
             force("net.java.dev.jna:jna:5.13.0")
-            
-            // Kermit - required by Cactus (2.0.8)
-            force("com.squareup.kermit:kermit:2.0.8")
             
             // Okio - required by Ktor
             force("com.squareup.okio:okio:3.9.0")

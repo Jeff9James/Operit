@@ -83,7 +83,6 @@ okio = "3.9.0"
 kotlinx-datetime = "0.6.0"
 jna = "5.13.0"
 cactus = "1.4.1-beta"
-kermit = "2.0.8"
 
  [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -222,9 +221,6 @@ jna-platform = { group = "net.java.dev.jna", name = "jna-platform", version.ref 
 
 # Cactus SDK
 cactus-sdk = { group = "com.cactuscompute", name = "cactus", version.ref = "cactus" }
-
-# Kermit logging (required by Cactus)
-kermit = { group = "com.squareup.kermit", name = "kermit", version.ref = "kermit" }
 
 # DataStore
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
