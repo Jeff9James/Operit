@@ -7,6 +7,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -16,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Api
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
@@ -464,38 +467,32 @@ fun ModelApiSettingsSection(
                 selectedApiProvider == ApiProviderType.ANTHROPIC_GENERIC
 
             val isMnnProvider = selectedApiProvider == ApiProviderType.MNN
-            val isLlamaProvider = selectedApiProvider == ApiProviderType.LLAMA_CPP || selectedApiProvider == ApiProviderType.CACTUS_LOCAL
-            val endpointOptions = getEndpointOptions(selectedApiProvider)
-            if (isMnnProvider) {
-                MnnSettingsBlock(
-                        mnnForwardTypeInput = mnnForwardTypeInput,
-                        onForwardTypeSelected = { mnnForwardTypeInput = it },
-                        mnnThreadCountInput = mnnThreadCountInput,
-                        onThreadCountChange = { input ->
-                            if (input.isEmpty() || input.toIntOrNull() != null) {
-                                mnnThreadCountInput = input
-                            }
-                        },
-                        navigateToMnnModelDownload = navigateToMnnModelDownload
+            val isCactusLocalProvider = selectedApiProvider == ApiProviderType.CACTUS_LOCAL
+            val isLlamaCppLegacy = selectedApiProvider == ApiProviderType.LLAMA_CPP
+            val isLocalProvider = isMnnProvider || isCactusLocalProvider || isLlamaCppLegacy
+            
+            // Show deprecation notice for LLAMA_CPP (legacy)
+            if (isLlamaCppLegacy) {
+                SettingsInfoBanner(
+                    text = stringResource(R.string.llama_cpp_deprecation_notice),
+                    isWarning = true
                 )
-            } else if (isLlamaProvider) {
-                val isCactusLocal = selectedApiProvider == ApiProviderType.CACTUS_LOCAL
-                LlamaSettingsBlock(
-                    llamaThreadCountInput = llamaThreadCountInput,
-                    onThreadCountChange = { input ->
-                        if (input.isEmpty() || input.toIntOrNull() != null) {
-                            llamaThreadCountInput = input
-                        }
-                    },
-                    llamaContextSizeInput = llamaContextSizeInput,
-                    onContextSizeChange = { input ->
-                        if (input.isEmpty() || input.toIntOrNull() != null) {
-                            llamaContextSizeInput = input
-                        }
-                    },
+            }
+            
+            val endpointOptions = getEndpointOptions(selectedApiProvider)
+            if (isMnnProvider || isCactusLocalProvider) {
+                // Unified Cactus Local Inference settings for MNN and CACTUS_LOCAL
+                CactusLocalSettingsBlock(
                     modelNameInput = modelNameInput,
                     onModelNameChange = { modelNameInput = it },
-                    isCactusProvider = isCactusLocal,
+                    isMnnProvider = isMnnProvider,
+                    showNotification = showNotification
+                )
+            } else if (isLlamaCppLegacy) {
+                // Legacy llama.cpp settings - show basic info but hide advanced settings
+                LlamaCppLegacySettingsBlock(
+                    modelNameInput = modelNameInput,
+                    onModelNameChange = { modelNameInput = it },
                     showNotification = showNotification
                 )
             } else {
@@ -612,21 +609,20 @@ fun ModelApiSettingsSection(
             SettingsTextField(
                     title = stringResource(R.string.model_name),
                     subtitle = when {
-                        isMnnProvider -> stringResource(R.string.mnn_select_downloaded_model)
-                        isLlamaProvider -> stringResource(R.string.llama_select_downloaded_model)
+                        isLocalProvider -> stringResource(R.string.cactus_model_name_hint)
                         else -> stringResource(R.string.model_name_placeholder) + stringResource(R.string.model_name_multiple_hint)
                     },
                         value = modelNameInput,
                         onValueChange = {
-                        if (!isMnnProvider && !isLlamaProvider && !isUsingDefaultApiKey) {
+                        if (!isLocalProvider && !isUsingDefaultApiKey) {
                                 modelNameInput = it.replace("\n", "").replace("\r", "")
                             }
                         },
-                    enabled = if (isMnnProvider || isLlamaProvider) false else !isUsingDefaultApiKey,
+                    enabled = if (isLocalProvider) false else !isUsingDefaultApiKey,
                     trailingContent = {
                 IconButton(
                         onClick = {
-                                    if (isMnnProvider || isLlamaProvider) {
+                                    if (isLocalProvider) {
                                         AppLogger.d(TAG, "获取本地模型列表")
                                         val gettingModelsText =
                                                 context.getString(R.string.getting_models_list)
@@ -639,11 +635,7 @@ fun ModelApiSettingsSection(
                                             modelLoadError = null
 
                                             try {
-                                                val result = if (isMnnProvider) {
-                                                    ModelListFetcher.getCactusModels(context)
-                                                } else {
-                                                    ModelListFetcher.getCactusModels(context)
-                                                }
+                                                val result = ModelListFetcher.getCactusModels(context)
                                                 if (result.isSuccess) {
                                                     val models = result.getOrThrow()
                                                     AppLogger.d(TAG, "本地模型列表获取成功，共 ${models.size} 个模型")
@@ -651,24 +643,21 @@ fun ModelApiSettingsSection(
                                                     showModelsDialog = true
                                                     showNotification(modelsListSuccessText.format(models.size))
                                                 } else {
-                                                    val errorMsg =
-                                                            result.exceptionOrNull()?.message
-                                                                    ?: context.getString(R.string.unknown_error)
+                                                    val errorMsg = result.exceptionOrNull()?.message
+                                                            ?: context.getString(R.string.unknown_error)
                                                     AppLogger.e(TAG, "本地模型列表获取失败: $errorMsg")
-                                                    modelLoadError =
-                                                            context.getString(
-                                                                    R.string.get_models_list_failed,
-                                                                    errorMsg
-                                                            )
+                                                    modelLoadError = context.getString(
+                                                            R.string.get_models_list_failed,
+                                                            errorMsg
+                                                    )
                                                     showNotification(modelLoadError!!)
                                                 }
                                             } catch (e: Exception) {
                                                 AppLogger.e(TAG, "获取本地模型列表发生异常", e)
-                                                modelLoadError =
-                                                        context.getString(
-                                                                R.string.get_models_list_failed,
-                                                                e.message ?: ""
-                                                        )
+                                                modelLoadError = context.getString(
+                                                        R.string.get_models_list_failed,
+                                                        e.message ?: ""
+                                                )
                                                 showNotification(modelLoadError!!)
                                             } finally {
                                                 isLoadingModels = false
@@ -745,7 +734,7 @@ fun ModelApiSettingsSection(
                                 IconButtonDefaults.iconButtonColors(
                                         contentColor = MaterialTheme.colorScheme.primary
                                 ),
-                                enabled = if (isMnnProvider || isLlamaProvider) true else !isUsingDefaultApiKey
+                                enabled = if (isLocalProvider) true else !isUsingDefaultApiKey
                 ) {
                     if (isLoadingModels) {
                         CircularProgressIndicator(
@@ -757,7 +746,7 @@ fun ModelApiSettingsSection(
                                 imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
                                 contentDescription = stringResource(R.string.get_models_list),
                                 tint =
-                                                if (!isMnnProvider && !isLlamaProvider && isUsingDefaultApiKey)
+                                                if (!isLocalProvider && isUsingDefaultApiKey)
                                                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                                 else MaterialTheme.colorScheme.primary
                                 )
@@ -1164,11 +1153,26 @@ internal fun SettingsSectionHeader(
 }
 
 @Composable
-internal fun SettingsInfoBanner(text: String) {
+internal fun SettingsInfoBanner(text: String, isWarning: Boolean = false) {
+    val containerColor = if (isWarning) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.tertiaryContainer
+    }
+    val contentColor = if (isWarning) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onTertiaryContainer
+    }
+    val iconTint = if (isWarning) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.tertiary
+    }
     Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.tertiaryContainer
+            color = containerColor
     ) {
         Row(
                 modifier = Modifier.padding(12.dp),
@@ -1177,14 +1181,65 @@ internal fun SettingsInfoBanner(text: String) {
             Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary
+                    tint = iconTint
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                     text = text,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                    color = contentColor
             )
+        }
+    }
+}
+
+/**
+ * Model list item for displaying Cactus models in the download dialog.
+ */
+@Composable
+private fun ModelListItem(
+    model: ModelOption,
+    onSelect: (ModelOption) -> Unit
+) {
+    val isDownloaded = model.name.contains("✓")
+    
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable { onSelect(model) },
+        shape = RoundedCornerShape(8.dp),
+        color = if (isDownloaded) 
+            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+        else 
+            MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (isDownloaded) Icons.Default.Check else Icons.Default.Download,
+                contentDescription = null,
+                tint = if (isDownloaded) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = model.id,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = model.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -1499,7 +1554,340 @@ private fun MnnSettingsBlock(
     }
 }
 
+/**
+ * Unified Cactus Local Inference settings block for both MNN and CACTUS_LOCAL providers.
+ * Both now use the Cactus SDK backend.
+ */
 @Composable
+private fun CactusLocalSettingsBlock(
+    modelNameInput: String,
+    onModelNameChange: (String) -> Unit,
+    isMnnProvider: Boolean = false,
+    showNotification: (String) -> Unit = {}
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    // Download state
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadStatus by remember { mutableStateOf<String?>(null) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
+    var availableModels by remember { mutableStateOf<List<ModelOption>>(emptyList()) }
+    var isLoadingModels by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Show unified Cactus branding for both MNN and CACTUS_LOCAL
+        SettingsInfoBanner(text = stringResource(R.string.cactus_local_model_tip))
+
+        // Download Model Button
+        val currentModelSlug = modelNameInput.trim()
+        val isDownloaded = remember(currentModelSlug) {
+            if (currentModelSlug.isNotEmpty()) {
+                CactusModelManager.isModelDownloaded(context, currentModelSlug)
+            } else {
+                false
+            }
+        }
+        
+        Button(
+            onClick = { showDownloadDialog = true },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isDownloading,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isDownloaded) 
+                    MaterialTheme.colorScheme.secondaryContainer 
+                else 
+                    MaterialTheme.colorScheme.primaryContainer,
+                contentColor = if (isDownloaded) 
+                    MaterialTheme.colorScheme.onSecondaryContainer 
+                else 
+                    MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        ) {
+            if (isDownloading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = downloadStatus ?: stringResource(R.string.cactus_downloading, currentModelSlug, 0))
+            } else {
+                Icon(
+                    imageVector = if (isDownloaded) Icons.Default.Check else Icons.Default.Download,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isDownloaded && currentModelSlug.isNotEmpty())
+                        stringResource(R.string.cactus_model_already_downloaded)
+                    else
+                        stringResource(R.string.cactus_download_model)
+                )
+            }
+        }
+        
+        // Show current model status
+        if (currentModelSlug.isNotEmpty()) {
+            Text(
+                text = if (isDownloaded)
+                    stringResource(R.string.cactus_model_already_downloaded) + ": $currentModelSlug"
+                else
+                    stringResource(R.string.cactus_download_model) + ": $currentModelSlug",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isDownloaded) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+        }
+
+        // Model Name Field - unified for both MNN and CACTUS_LOCAL
+        SettingsTextField(
+            title = stringResource(R.string.model_name),
+            subtitle = stringResource(R.string.cactus_model_name_hint),
+            value = modelNameInput,
+            onValueChange = { onModelNameChange(it.replace("\n", "").replace("\r", "")) },
+            placeholder = "qwen3-0.6"
+        )
+        
+        // Note: Thread count and context size are handled automatically by Cactus SDK
+        // No need to expose these settings to users
+    }
+    
+    // Download Dialog
+    if (showDownloadDialog) {
+        Dialog(onDismissRequest = { if (!isDownloading) showDownloadDialog = false }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Title
+                    Text(
+                        stringResource(R.string.cactus_download_model),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    // Loading state
+                    if (isLoadingModels) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (availableModels.isEmpty()) {
+                        // Fetch models button
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    isLoadingModels = true
+                                    try {
+                                        val result = ModelListFetcher.getCactusModels(context)
+                                        if (result.isSuccess) {
+                                            availableModels = result.getOrThrow()
+                                        } else {
+                                            showNotification(
+                                                result.exceptionOrNull()?.message 
+                                                    ?: context.getString(R.string.unknown_error)
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        showNotification(e.message ?: context.getString(R.string.unknown_error))
+                                    } finally {
+                                        isLoadingModels = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.fetch_models_list))
+                        }
+                    } else {
+                        // Show model list
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)
+                        ) {
+                            items(availableModels) { model ->
+                                ModelListItem(
+                                    model = model,
+                                    onSelect = { selectedModel ->
+                                        onModelNameChange(selectedModel.slug)
+                                        showDownloadDialog = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    TextButton(
+                        onClick = { showDownloadDialog = false },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text(text = stringResource(R.string.cancel))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Legacy llama.cpp settings block - shows deprecation notice and basic model selection.
+ * Advanced settings are hidden as llama.cpp now uses Cactus SDK backend.
+ */
+@Composable
+private fun LlamaCppLegacySettingsBlock(
+    modelNameInput: String,
+    onModelNameChange: (String) -> Unit,
+    showNotification: (String) -> Unit = {}
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    // Download state
+    var showDownloadDialog by remember { mutableStateOf(false) }
+    var availableModels by remember { mutableStateOf<List<ModelOption>>(emptyList()) }
+    var isLoadingModels by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Show model directory info
+        SettingsInfoBanner(
+            text = stringResource(R.string.llama_local_model_dir, LlamaProvider.getModelsDir().absolutePath),
+            isWarning = true
+        )
+
+        // Download Model Button - uses Cactus model picker
+        Button(
+            onClick = { showDownloadDialog = true },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = stringResource(R.string.cactus_download_model))
+        }
+
+        // Model Name Field
+        SettingsTextField(
+            title = stringResource(R.string.model_name),
+            subtitle = stringResource(R.string.cactus_model_name_hint),
+            value = modelNameInput,
+            onValueChange = { onModelNameChange(it.replace("\n", "").replace("\r", "")) },
+            placeholder = "qwen3-0.6"
+        )
+        
+        // Note: Thread count and context size are hidden - Cactus SDK handles this automatically
+    }
+    
+    // Download Dialog
+    if (showDownloadDialog) {
+        Dialog(onDismissRequest = { showDownloadDialog = false }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        stringResource(R.string.cactus_download_model),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    if (isLoadingModels) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (availableModels.isEmpty()) {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    isLoadingModels = true
+                                    try {
+                                        val result = ModelListFetcher.getCactusModels(context)
+                                        if (result.isSuccess) {
+                                            availableModels = result.getOrThrow()
+                                        } else {
+                                            showNotification(
+                                                result.exceptionOrNull()?.message 
+                                                    ?: context.getString(R.string.unknown_error)
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        showNotification(e.message ?: context.getString(R.string.unknown_error))
+                                    } finally {
+                                        isLoadingModels = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.fetch_models_list))
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)
+                        ) {
+                            items(availableModels) { model ->
+                                ModelListItem(
+                                    model = model,
+                                    onSelect = { selectedModel ->
+                                        onModelNameChange(selectedModel.slug)
+                                        showDownloadDialog = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    TextButton(
+                        onClick = { showDownloadDialog = false },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text(text = stringResource(R.string.cancel))
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun LlamaSettingsBlock(
         llamaThreadCountInput: String,

@@ -3429,6 +3429,7 @@
     <string name="llama_select_downloaded_model">Select downloaded model</string>
     <string name="llama_thread_count">Thread count</string>
     <string name="llama_context_size">Context size</string>
+    <string name="llama_cpp_deprecation_notice">llama.cpp (legacy) — This provider now uses the Cactus SDK backend. Your existing model configuration will continue to work.</string>
 
     <!-- ModelParametersSection strings -->
     <string name="max_tokens_name">Max Tokens</string>
@@ -6528,5 +6529,15 @@
     <string name="repo_bookmark_name_empty">Name cannot be empty</string>
     <string name="repo_bookmark_name_exists">Name already exists, please choose another</string>
     <string name="repo_bookmark_delete">Delete</string>
+
+    <!-- Cactus Local Inference -->
+    <string name="cactus_download_model">Download Cactus Model</string>
+    <string name="cactus_downloading">Downloading: %1$s (%2$d%%)</string>
+    <string name="cactus_download_complete">Download complete: %1$s</string>
+    <string name="cactus_download_failed">Download failed: %1$s</string>
+    <string name="cactus_model_already_downloaded">Downloaded</string>
+    <string name="cactus_local_model_tip">Cactus local models run via Cactus SDK with automatic model download and management</string>
+    <string name="cactus_model_name_hint">Enter model slug (e.g. qwen3-0.6)</string>
+    <string name="fetch_models_list">Fetch Model List</string>
 
 </resources>
