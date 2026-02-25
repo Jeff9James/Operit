@@ -403,14 +403,16 @@ dependencies {
     implementation(libs.objectbox.kotlin)
     kapt(libs.objectbox.processor)
     
-    // MCP Kotlin SDK - Updated to 0.18.1 for R8/D8 compatibility
-    implementation("io.modelcontextprotocol.sdk:mcp:0.18.1") {
+    // MCP Kotlin SDK - Using umbrella artifact for R8/D8 compatibility
+    implementation("io.modelcontextprotocol:kotlin-sdk:0.8.4") {
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-serialization-json")
         exclude(group = "io.ktor", module = "ktor-client-core")
         exclude(group = "io.ktor", module = "ktor-client-cio")
         exclude(group = "io.ktor", module = "ktor-client-okhttp")
         exclude(group = "io.ktor", module = "ktor-client-content-negotiation")
         exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json")
+        // Exclude mcp-core to avoid Kotlin metadata issues
+        exclude(group = "io.modelcontextprotocol.sdk", module = "mcp-core")
     }
 
     // Cactus SDK and related dependencies
@@ -466,6 +468,11 @@ dependencies {
     // Exclude JNA runtime AAR from all configurations to avoid duplicate classes
     configurations.all {
         exclude(group = "net.java.dev.jna", module = "jna-runtime")
+    }
+
+    // Exclude mcp-core from all configurations to avoid Kotlin metadata issues with R8/D8
+    configurations.all {
+        exclude(group = "io.modelcontextprotocol.sdk", module = "mcp-core")
     }
 
     // Security
