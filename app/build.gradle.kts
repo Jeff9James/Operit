@@ -417,8 +417,12 @@ dependencies {
     }
 
     // Cactus SDK and related dependencies
-    // Cactus brings its own JNA (5.13.0), so we should NOT exclude it
-    implementation(libs.cactus.sdk)
+    // Cactus brings its own JNA (5.13.0), so we exclude the AAR version to avoid duplicates with the JAR
+    implementation(libs.cactus.sdk) {
+        exclude(group = "net.java.dev.jna", module = "jna")
+        exclude(group = "net.java.dev.jna", module = "jna-platform")
+        exclude(group = "net.java.dev.jna", module = "jna-runtime")
+    }
     
     // Ktor dependencies for Cactus
     implementation(libs.ktor.client.core)
@@ -433,8 +437,10 @@ dependencies {
     implementation(libs.kotlinx.datetime)
     
     // JNA - use version matching cactus requirements (5.13.0)
-    // Use jna (not jna-platform) to avoid AAR/JAR conflicts
-    implementation("net.java.dev.jna:jna:5.13.0")
+    // Only include the JAR version, not the AAR to avoid duplicate classes
+    implementation("net.java.dev.jna:jna:5.13.0") {
+        because("Use JAR only to avoid AAR/JAR conflict with Cactus SDK")
+    }
 
     // Force compatible versions for Cactus and its dependencies
     configurations.all {
@@ -473,6 +479,11 @@ dependencies {
     // Exclude bcprov-jdk15to18 from all configurations to avoid duplicate classes
     configurations.all {
         exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18")
+    }
+
+    // Exclude jna-runtime (AAR) from all configurations to avoid duplicate classes with JAR
+    configurations.all {
+        exclude(group = "net.java.dev.jna", module = "jna-runtime")
     }
 
     // Exclude mcp-core from all configurations to avoid Kotlin metadata issues with R8/D8
