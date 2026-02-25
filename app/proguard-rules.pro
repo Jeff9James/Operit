@@ -86,3 +86,7 @@
 # Reactor BlockHound integration with Netty
 -dontwarn reactor.blockhound.integration.BlockHoundIntegration
 -dontwarn io.netty.util.internal.Hidden$NettyBlockHoundIntegration
+
+# Cactus SDK - Keep all Cactus classes for proper operation
+-keep class com.cactus.** { *; }
+-dontwarn com.cactus.**

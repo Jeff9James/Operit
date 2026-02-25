@@ -21,8 +21,12 @@ import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
- * MNN本地推理引擎的AI服务实现
- * 现在使用 Cactus SDK 进行实际推理
+ * Cactus SDK local inference provider (MNN compatibility wrapper).
+ * Replaces the previous MNN native JNI backend.
+ *
+ * The MNN provider type is preserved for backward compatibility with existing configs.
+ * Internally uses CactusLM from Cactus SDK 1.4.1-beta for inference.
+ * Models are identified by slug (e.g. "qwen3-0.6") rather than MNN model directory paths.
  */
 class MNNProvider(
     private val context: Context,

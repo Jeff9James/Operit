@@ -20,6 +20,14 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
+/**
+ * Cactus SDK local inference provider.
+ * Replaces the previous llama.cpp JNI backend.
+ * LLAMA_CPP provider type is a legacy alias — both LLAMA_CPP and CACTUS_LOCAL route here.
+ *
+ * Uses CactusLM from Cactus SDK 1.4.1-beta for model initialization and inference.
+ * Models are identified by slug (e.g. "qwen3-0.6") rather than file paths.
+ */
 class LlamaProvider(
     private val context: Context,
     private val modelName: String,
