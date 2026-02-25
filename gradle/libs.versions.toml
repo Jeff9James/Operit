@@ -224,7 +224,7 @@ jna-platform = { group = "net.java.dev.jna", name = "jna-platform", version.ref 
 cactus-sdk = { group = "com.cactuscompute", name = "cactus", version.ref = "cactus" }
 
 # Kermit logging (required by Cactus)
-kermit = { group = "com.cashapp.kermit", name = "kermit", version.ref = "kermit" }
+kermit = { group = "com.squareup.kermit", name = "kermit", version.ref = "kermit" }
 
 # DataStore
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }

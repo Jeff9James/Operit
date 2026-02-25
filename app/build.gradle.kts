@@ -463,7 +463,7 @@ dependencies {
             force("net.java.dev.jna:jna:5.13.0")
             
             // Kermit - required by Cactus (2.0.8)
-            force("com.cashapp.kermit:kermit:2.0.8")
+            force("com.squareup.kermit:kermit:2.0.8")
             
             // Okio - required by Ktor
             force("com.squareup.okio:okio:3.9.0")
