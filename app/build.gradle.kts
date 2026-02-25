@@ -403,8 +403,8 @@ dependencies {
     implementation(libs.objectbox.kotlin)
     kapt(libs.objectbox.processor)
     
-    // MCP Kotlin SDK with version compatibility fix
-    implementation("io.modelcontextprotocol.sdk:mcp:0.7.0") {
+    // MCP Kotlin SDK - Updated to 0.18.1 for R8/D8 compatibility
+    implementation("io.modelcontextprotocol.sdk:mcp:0.18.1") {
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-serialization-json")
         exclude(group = "io.ktor", module = "ktor-client-core")
         exclude(group = "io.ktor", module = "ktor-client-cio")
