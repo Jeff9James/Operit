@@ -52,7 +52,7 @@ android {
 
     defaultConfig {
         applicationId = "com.ai.assistance.operit"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 39
         versionName = "1.8.1+1"
@@ -279,7 +279,10 @@ dependencies {
     implementation(libs.hnswlib.utils)
     
     // 用于向量嵌入的TF Lite (如果需要自定义嵌入)
-    implementation(libs.tensorflow.lite)
+    // Exclude tensorflow-lite-api to avoid namespace conflict with tensorflow-lite
+    implementation(libs.tensorflow.lite) {
+        exclude(group = "org.tensorflow", module = "tensorflow-lite-api")
+    }
     implementation(libs.mediapipe.tasks.text)
     
     // ONNX Runtime for Android - Support more powerful multilingual embedding models
