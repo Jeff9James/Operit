@@ -1,8 +1,13 @@
 package com.ai.assistance.llama
 
+import android.util.Log
+
 internal object LlamaLibraryLoader {
+    private const val TAG = "LlamaLibraryLoader"
+    
     @Volatile
-    private var loaded = false
+    var loaded = false
+        private set
 
     private val lock = Any()
 
@@ -10,8 +15,15 @@ internal object LlamaLibraryLoader {
         if (loaded) return
         synchronized(lock) {
             if (loaded) return
-            System.loadLibrary("LlamaWrapper")
-            loaded = true
+            try {
+                System.loadLibrary("LlamaWrapper")
+                loaded = true
+                Log.i(TAG, "LlamaWrapper library loaded successfully")
+            } catch (e: Throwable) {
+                // .so not available — all JNI calls will fail gracefully via isAvailable()
+                Log.w(TAG, "LlamaWrapper library not available: ${e.message}")
+                // Don't set loaded = true since it failed
+            }
         }
     }
 }

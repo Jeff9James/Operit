@@ -8,10 +8,6 @@ import android.graphics.Bitmap
  */
 object MNNNetNative {
 
-    init {
-        MNNLibraryLoader.loadLibraries()
-    }
-
     // Net
     @JvmStatic
     external fun nativeCreateNetFromFile(modelName: String): Long

@@ -560,6 +560,31 @@ object ModelListFetcher {
     }
 
     /**
+     * 获取Cactus SDK可用模型列表
+     * Returns both downloaded and cloud-available models; isDownloaded is surfaced in the name.
+     */
+    suspend fun getCactusModels(context: Context): Result<List<ModelOption>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val lm = com.cactus.CactusLM(context)
+                val models = lm.getModels()
+                val options = models.map { m ->
+                    val statusTag = if (m.isDownloaded) "✓" else "↓"
+                    ModelOption(
+                        id = m.slug,
+                        name = "${m.name} $statusTag (${m.size_mb} MB)"
+                    )
+                }
+                AppLogger.d(TAG, "Cactus SDK returned ${options.size} models")
+                Result.success(options)
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "getCactusModels failed", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    /**
      * 格式化文件大小
      */
     private fun formatFileSize(sizeBytes: Long): String {

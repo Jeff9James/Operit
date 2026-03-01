@@ -3417,6 +3417,7 @@
     <string name="provider_other">Other Providers</string>
     <string name="provider_doubao">Doubao</string>
     <string name="provider_llama_cpp">llama.cpp Local Inference</string>
+    <string name="provider_cactus_local">Cactus Local Inference</string>
     <string name="provider_mnn">MNN Local Inference</string>
     <string name="select_api_provider_title">Select API Provider</string>
     <string name="search_providers">Search providers</string>
@@ -4108,7 +4109,9 @@
     <string name="mnn_go_download">Go to Download</string>
     <string name="mnn_search_models">Search models...</string>
     <string name="mnn_no_search_results">No matching models found</string>
-    <string name="mnn_local_model_tip">Local models have limited understanding. It\'s recommended to disable memory links and enable tool restrictions for conversations</string>
+    <string name="mnn_local_model_tip">The MNN provider now uses the Cactus SDK backend. Enter the model slug (e.g. qwen3-0.6) in "Model name".</string>
+    <string name="mnn_cactus_backend_tip">The MNN provider now uses the Cactus SDK backend. Enter the model slug (e.g. qwen3-0.6) in "Model name".</string>
+    <string name="mnn_cactus_error_init">Cactus backend init failed: %1$s</string>
     <string name="mnn_model_path">Model File Path</string>
     <string name="mnn_model_path_placeholder">Enter the full path to MNN model file</string>
     <string name="mnn_forward_type">Forward Type</string>

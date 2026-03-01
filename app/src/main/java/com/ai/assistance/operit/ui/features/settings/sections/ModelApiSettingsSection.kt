@@ -116,6 +116,7 @@ fun ModelApiSettingsSection(
             ApiProviderType.LMSTUDIO -> "meta-llama-3.1-8b-instruct"
             ApiProviderType.MNN -> ""
             ApiProviderType.LLAMA_CPP -> ""
+            ApiProviderType.CACTUS_LOCAL -> "qwen3-0.6"
             ApiProviderType.PPINFRA -> "gpt-4o-mini"
             ApiProviderType.OTHER -> ""
         }
@@ -170,7 +171,7 @@ fun ModelApiSettingsSection(
     var enableToolCallInput by remember(config.id) { mutableStateOf(config.enableToolCall) }
 
     LaunchedEffect(config.id, selectedApiProvider) {
-        if (selectedApiProvider == ApiProviderType.MNN || selectedApiProvider == ApiProviderType.LLAMA_CPP) {
+        if (selectedApiProvider == ApiProviderType.MNN || selectedApiProvider == ApiProviderType.LLAMA_CPP || selectedApiProvider == ApiProviderType.CACTUS_LOCAL) {
             enableToolCallInput = false
         }
     }
@@ -345,6 +346,7 @@ fun ModelApiSettingsSection(
             ApiProviderType.LMSTUDIO -> "http://localhost:1234/v1/chat/completions"
             ApiProviderType.MNN -> "" // MNN本地推理不需要endpoint
             ApiProviderType.LLAMA_CPP -> "" // llama.cpp本地推理不需要endpoint
+            ApiProviderType.CACTUS_LOCAL -> "" // Cactus本地推理不需要endpoint
             ApiProviderType.PPINFRA -> "https://api.ppinfra.com/openai/v1/chat/completions"
             ApiProviderType.OPENAI_GENERIC -> ""
             ApiProviderType.OTHER -> ""
@@ -461,7 +463,7 @@ fun ModelApiSettingsSection(
                 selectedApiProvider == ApiProviderType.ANTHROPIC_GENERIC
 
             val isMnnProvider = selectedApiProvider == ApiProviderType.MNN
-            val isLlamaProvider = selectedApiProvider == ApiProviderType.LLAMA_CPP
+            val isLlamaProvider = selectedApiProvider == ApiProviderType.LLAMA_CPP || selectedApiProvider == ApiProviderType.CACTUS_LOCAL
             val endpointOptions = getEndpointOptions(selectedApiProvider)
             if (isMnnProvider) {
                 MnnSettingsBlock(
@@ -632,9 +634,9 @@ fun ModelApiSettingsSection(
 
                                             try {
                                                 val result = if (isMnnProvider) {
-                                                    ModelListFetcher.getMnnLocalModels(context)
+                                                    ModelListFetcher.getCactusModels(context)
                                                 } else {
-                                                    ModelListFetcher.getLlamaLocalModels(context)
+                                                    ModelListFetcher.getCactusModels(context)
                                                 }
                                                 if (result.isSuccess) {
                                                     val models = result.getOrThrow()
@@ -1113,6 +1115,7 @@ private fun getProviderDisplayName(provider: ApiProviderType, context: android.c
         ApiProviderType.LMSTUDIO -> context.getString(R.string.provider_lmstudio)
         ApiProviderType.MNN -> context.getString(R.string.provider_mnn)
         ApiProviderType.LLAMA_CPP -> context.getString(R.string.provider_llama_cpp)
+        ApiProviderType.CACTUS_LOCAL -> context.getString(R.string.provider_cactus_local)
         ApiProviderType.PPINFRA -> context.getString(R.string.provider_ppinfra)
         ApiProviderType.OTHER -> context.getString(R.string.provider_other)
     }
@@ -1702,6 +1705,7 @@ private fun getProviderColor(provider: ApiProviderType): androidx.compose.ui.gra
         ApiProviderType.LMSTUDIO -> MaterialTheme.colorScheme.tertiary
         ApiProviderType.MNN -> MaterialTheme.colorScheme.secondary
         ApiProviderType.LLAMA_CPP -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+        ApiProviderType.CACTUS_LOCAL -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f)
         ApiProviderType.PPINFRA -> MaterialTheme.colorScheme.primaryContainer
         ApiProviderType.OTHER -> MaterialTheme.colorScheme.surfaceVariant
     }
