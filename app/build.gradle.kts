@@ -60,19 +60,6 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        
-        ndk {
-            // Explicitly specify the ABIs to support. This ensures that native libraries
-            // for both 32-bit and 64-bit ARM devices are included in the APK,
-            // resolving conflicts between dependencies with different native library sets.
-            abiFilters.addAll(listOf("arm64-v8a"))
-        }
-
-        externalNativeBuild {
-            cmake {
-                cppFlags("-std=c++17")
-            }
-        }
 
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"${localProperties.getProperty("GITHUB_CLIENT_ID")}\"")
         buildConfigField("String", "GITHUB_CLIENT_SECRET", "\"${localProperties.getProperty("GITHUB_CLIENT_SECRET")}\"")
