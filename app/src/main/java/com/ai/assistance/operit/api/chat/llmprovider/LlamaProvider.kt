@@ -2,7 +2,6 @@ package com.ai.assistance.operit.api.chat.llmprovider
 
 import android.content.Context
 import android.os.Environment
-import com.ai.assistance.llama.LlamaSession
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.data.model.ApiProviderType
 import com.ai.assistance.operit.data.model.ModelOption
@@ -11,6 +10,11 @@ import com.ai.assistance.operit.data.model.ToolPrompt
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.util.stream.Stream
 import com.ai.assistance.operit.util.stream.stream
+import com.cactus.CactusLM
+import com.cactus.CactusInitParams
+import com.cactus.CactusCompletionParams
+import com.cactus.ChatMessage
+import com.cactus.InferenceMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.runBlocking
@@ -21,7 +25,7 @@ class LlamaProvider(
     private val modelName: String,
     private val threadCount: Int,
     private val contextSize: Int,
-    private val providerType: ApiProviderType = ApiProviderType.LLAMA_CPP
+    private val providerType: ApiProviderType = ApiProviderType.CACTUS_LOCAL
 ) : AIService {
 
     companion object {
@@ -39,15 +43,17 @@ class LlamaProvider(
         }
     }
 
-    private var _inputTokenCount: Int = 0
-    private var _outputTokenCount: Int = 0
-    private var _cachedInputTokenCount: Int = 0
+    private val lm = CactusLM()
 
     @Volatile
     private var isCancelled = false
 
-    private val sessionLock = Any()
-    private var session: LlamaSession? = null
+    @Volatile
+    private var isInitialized = false
+
+    private var _inputTokenCount: Int = 0
+    private var _outputTokenCount: Int = 0
+    private var _cachedInputTokenCount: Int = 0
 
     override val inputTokenCount: Int
         get() = _inputTokenCount
@@ -69,68 +75,52 @@ class LlamaProvider(
 
     override fun cancelStreaming() {
         isCancelled = true
-        synchronized(sessionLock) {
-            session?.cancel()
-        }
     }
 
     override fun release() {
-        synchronized(sessionLock) {
-            session?.release()
-            session = null
+        try {
+            lm.unload()
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "release failed", e)
+        }
+        isInitialized = false
+    }
+
+    private suspend fun ensureInitialized(): Result<Unit> = withContext(Dispatchers.IO) {
+        if (isInitialized && lm.isLoaded()) return@withContext Result.success(Unit)
+        try {
+            lm.initializeModel(
+                CactusInitParams(
+                    model = modelName.ifBlank { null },
+                    contextSize = contextSize.takeIf { it > 0 }
+                )
+            )
+            isInitialized = true
+            Result.success(Unit)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "CactusLM initializeModel failed", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun testConnection(context: Context): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val models = lm.getModels()
+            Result.success("Cactus SDK available. ${models.size} model(s) known.")
+        } catch (e: Exception) {
+            Result.failure(Exception("Cactus SDK unavailable: ${e.message}", e))
         }
     }
 
     override suspend fun getModelsList(context: Context): Result<List<ModelOption>> {
-        return ModelListFetcher.getLlamaLocalModels(context)
-    }
-
-    override suspend fun testConnection(context: Context): Result<String> = withContext(Dispatchers.IO) {
-        if (!LlamaSession.isAvailable()) {
-            return@withContext Result.failure(Exception(LlamaSession.getUnavailableReason()))
-        }
-
-        val modelFile = getModelFile(context, modelName)
-        if (!modelFile.exists()) {
-            return@withContext Result.failure(Exception(context.getString(R.string.llama_error_model_file_not_exist, modelFile.absolutePath)))
-        }
-
-        val testSession = LlamaSession.create(
-            pathModel = modelFile.absolutePath,
-            nThreads = threadCount,
-            nCtx = contextSize
-        ) ?: return@withContext Result.failure(Exception(context.getString(R.string.llama_error_create_session_failed)))
-
-        testSession.release()
-        Result.success("llama.cpp backend is available (native ready).")
+        return ModelListFetcher.getCactusModels(context)
     }
 
     override suspend fun calculateInputTokens(
         message: String,
         chatHistory: List<Pair<String, String>>,
         availableTools: List<ToolPrompt>?
-    ): Int {
-        return withContext(Dispatchers.IO) {
-            kotlin.runCatching {
-                val s = ensureSessionLocked()
-                if (s == null) return@runCatching null
-
-                val roles = ArrayList<String>(chatHistory.size + 1)
-                val contents = ArrayList<String>(chatHistory.size + 1)
-                for ((role, content) in chatHistory) {
-                    roles.add(role)
-                    contents.add(content)
-                }
-                roles.add("user")
-                contents.add(message)
-
-                val prompt = s.applyChatTemplate(roles, contents, true)
-                    ?: return@runCatching null
-
-                s.countTokens(prompt)
-            }.getOrNull() ?: 0
-        }
-    }
+    ): Int = 0  // Cactus SDK has no separate tokenizer count API
 
     override suspend fun sendMessage(
         context: Context,
@@ -146,136 +136,78 @@ class LlamaProvider(
     ): Stream<String> = stream {
         isCancelled = false
 
-        if (!LlamaSession.isAvailable()) {
-            emit("${context.getString(R.string.llama_error_prefix)}: ${LlamaSession.getUnavailableReason()}")
+        val initResult = withContext(Dispatchers.IO) { ensureInitialized() }
+        if (initResult.isFailure) {
+            val errorMsg = initResult.exceptionOrNull()?.message ?: "Cactus init failed"
+            emit("${context.getString(R.string.llama_error_prefix)}: $errorMsg")
             return@stream
         }
 
-        val modelFile = getModelFile(context, modelName)
-        if (!modelFile.exists()) {
-            emit("${context.getString(R.string.llama_error_prefix)}: ${context.getString(R.string.llama_error_model_file_not_exist, modelFile.absolutePath)}")
-            return@stream
+        // Build ChatMessage list from history + current message
+        val messages = buildList {
+            for ((role, content) in chatHistory) {
+                add(ChatMessage(content = content, role = role))
+            }
+            add(ChatMessage(content = message, role = "user"))
         }
 
-        val s = withContext(Dispatchers.IO) {
-            ensureSessionLocked()
-        }
-        if (s == null) {
-            emit(context.getString(R.string.llama_error_session_create_failed))
-            return@stream
-        }
-
-        val roles = ArrayList<String>(chatHistory.size + 1)
-        val contents = ArrayList<String>(chatHistory.size + 1)
-        for ((role, content) in chatHistory) {
-            roles.add(role)
-            contents.add(content)
-        }
-        roles.add("user")
-        contents.add(message)
-
-        val prompt = withContext(Dispatchers.IO) {
-            s.applyChatTemplate(roles, contents, true)
-        }
-        if (prompt.isNullOrBlank()) {
-            emit(context.getString(R.string.llama_error_chat_template_failed))
-            return@stream
-        }
-
+        // Extract sampling params from modelParameters
         val temperature = modelParameters
             .firstOrNull { it.id == "temperature" && it.isEnabled }
-            ?.let { (it.currentValue as? Number)?.toFloat() }
-            ?: 1.0f
+            ?.let { (it.currentValue as? Number)?.toDouble() }
         val topP = modelParameters
             .firstOrNull { it.id == "top_p" && it.isEnabled }
-            ?.let { (it.currentValue as? Number)?.toFloat() }
-            ?: 1.0f
+            ?.let { (it.currentValue as? Number)?.toDouble() }
         val topK = modelParameters
             .firstOrNull { it.id == "top_k" && it.isEnabled }
             ?.let { (it.currentValue as? Number)?.toInt() }
-            ?: 0
-        val repetitionPenalty = modelParameters
-            .firstOrNull { it.id == "repetition_penalty" && it.isEnabled }
-            ?.let { (it.currentValue as? Number)?.toFloat() }
-            ?: 1.0f
-        val frequencyPenalty = modelParameters
-            .firstOrNull { it.id == "frequency_penalty" && it.isEnabled }
-            ?.let { (it.currentValue as? Number)?.toFloat() }
-            ?: 0.0f
-        val presencePenalty = modelParameters
-            .firstOrNull { it.id == "presence_penalty" && it.isEnabled }
-            ?.let { (it.currentValue as? Number)?.toFloat() }
-            ?: 0.0f
+        val maxTokens = modelParameters
+            .firstOrNull { it.id == "max_tokens" && it.isEnabled }
+            ?.let { (it.currentValue as? Number)?.toInt() } ?: 200
 
-        withContext(Dispatchers.IO) {
-            kotlin.runCatching {
-                s.setSamplingParams(
-                    temperature = temperature,
-                    topP = topP,
-                    topK = topK,
-                    repetitionPenalty = repetitionPenalty,
-                    frequencyPenalty = frequencyPenalty,
-                    presencePenalty = presencePenalty,
-                    penaltyLastN = 64
-                )
-            }
-        }
+        val params = CactusCompletionParams(
+            temperature = temperature,
+            topP = topP,
+            topK = topK,
+            maxTokens = maxTokens,
+            stopSequences = emptyList(),
+            mode = InferenceMode.LOCAL
+        )
 
-        _inputTokenCount = kotlin.runCatching { s.countTokens(prompt) }.getOrElse { 0 }
+        _inputTokenCount = 0
         _outputTokenCount = 0
-        onTokensUpdated(_inputTokenCount, 0, 0)
+        onTokensUpdated(0, 0, 0)
 
-        val requestedMaxNewTokens = modelParameters
-            .find { it.name == "max_tokens" }
-            ?.let { (it.currentValue as? Number)?.toInt() }
-            ?: -1
-
-        AppLogger.d(TAG, "开始llama.cpp推理，history=${chatHistory.size}, threads=$threadCount, n_ctx=$contextSize")
-
-        var outputTokenCount = 0
-        val success = withContext(Dispatchers.IO) {
-            s.generateStream(prompt, requestedMaxNewTokens) { token ->
-                if (isCancelled) {
-                    false
-                } else {
-                    outputTokenCount += 1
-                    _outputTokenCount = outputTokenCount
-
-                    runBlocking { emit(token) }
-
-                    kotlin.runCatching {
-                        kotlinx.coroutines.runBlocking {
-                            onTokensUpdated(_inputTokenCount, 0, _outputTokenCount)
+        var outputCount = 0
+        val result = withContext(Dispatchers.IO) {
+            try {
+                lm.generateCompletion(messages, params) { token ->
+                    if (!isCancelled) {
+                        outputCount++
+                        _outputTokenCount = outputCount
+                        runBlocking {
+                            emit(token)
+                            kotlin.runCatching { onTokensUpdated(_inputTokenCount, 0, _outputTokenCount) }
                         }
                     }
-
-                    true
                 }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "generateCompletion failed", e)
+                null
             }
         }
 
-        if (!success && !isCancelled) {
-            kotlin.runCatching {
-                onNonFatalError(context.getString(R.string.llama_error_inference_failed))
+        // Update final token counts from result if available
+        result?.let {
+            if (it.prefillTokens != null) _inputTokenCount = it.prefillTokens
+            if (it.decodeTokens != null) _outputTokenCount = it.decodeTokens
+            onTokensUpdated(_inputTokenCount, 0, _outputTokenCount)
+
+            if (!it.success && !isCancelled) {
+                onNonFatalError("Cactus completion returned success=false")
             }
-            emit("\n\n${context.getString(R.string.llama_error_inference_tag)}")
         }
 
-        AppLogger.i(TAG, "llama.cpp推理完成，输出token数: $_outputTokenCount")
+        AppLogger.i(TAG, "Cactus inference complete. output_tokens=$_outputTokenCount")
     }
-
-    private fun ensureSessionLocked(): LlamaSession? {
-        synchronized(sessionLock) {
-            session?.let { return it }
-            val modelFile = getModelFile(context, modelName)
-            val created = LlamaSession.create(
-                pathModel = modelFile.absolutePath,
-                nThreads = threadCount,
-                nCtx = contextSize
-            )
-            session = created
-            return created
-        }
-    }
-
 }

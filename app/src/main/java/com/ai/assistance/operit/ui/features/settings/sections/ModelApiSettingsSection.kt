@@ -46,6 +46,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.ai.assistance.operit.R
+import com.ai.assistance.operit.api.chat.llmprovider.CactusModelManager
 import com.ai.assistance.operit.api.chat.llmprovider.EndpointCompleter
 import com.ai.assistance.operit.api.chat.EnhancedAIService
 import com.ai.assistance.operit.api.chat.llmprovider.LlamaProvider
@@ -116,6 +117,7 @@ fun ModelApiSettingsSection(
             ApiProviderType.LMSTUDIO -> "meta-llama-3.1-8b-instruct"
             ApiProviderType.MNN -> ""
             ApiProviderType.LLAMA_CPP -> ""
+            ApiProviderType.CACTUS_LOCAL -> "qwen3-0.6"
             ApiProviderType.PPINFRA -> "gpt-4o-mini"
             ApiProviderType.OTHER -> ""
         }
@@ -170,7 +172,7 @@ fun ModelApiSettingsSection(
     var enableToolCallInput by remember(config.id) { mutableStateOf(config.enableToolCall) }
 
     LaunchedEffect(config.id, selectedApiProvider) {
-        if (selectedApiProvider == ApiProviderType.MNN || selectedApiProvider == ApiProviderType.LLAMA_CPP) {
+        if (selectedApiProvider == ApiProviderType.MNN || selectedApiProvider == ApiProviderType.LLAMA_CPP || selectedApiProvider == ApiProviderType.CACTUS_LOCAL) {
             enableToolCallInput = false
         }
     }
@@ -345,6 +347,7 @@ fun ModelApiSettingsSection(
             ApiProviderType.LMSTUDIO -> "http://localhost:1234/v1/chat/completions"
             ApiProviderType.MNN -> "" // MNN本地推理不需要endpoint
             ApiProviderType.LLAMA_CPP -> "" // llama.cpp本地推理不需要endpoint
+            ApiProviderType.CACTUS_LOCAL -> "" // Cactus本地推理不需要endpoint
             ApiProviderType.PPINFRA -> "https://api.ppinfra.com/openai/v1/chat/completions"
             ApiProviderType.OPENAI_GENERIC -> ""
             ApiProviderType.OTHER -> ""
@@ -461,7 +464,7 @@ fun ModelApiSettingsSection(
                 selectedApiProvider == ApiProviderType.ANTHROPIC_GENERIC
 
             val isMnnProvider = selectedApiProvider == ApiProviderType.MNN
-            val isLlamaProvider = selectedApiProvider == ApiProviderType.LLAMA_CPP
+            val isLlamaProvider = selectedApiProvider == ApiProviderType.LLAMA_CPP || selectedApiProvider == ApiProviderType.CACTUS_LOCAL
             val endpointOptions = getEndpointOptions(selectedApiProvider)
             if (isMnnProvider) {
                 MnnSettingsBlock(
@@ -476,6 +479,7 @@ fun ModelApiSettingsSection(
                         navigateToMnnModelDownload = navigateToMnnModelDownload
                 )
             } else if (isLlamaProvider) {
+                val isCactusLocal = selectedApiProvider == ApiProviderType.CACTUS_LOCAL
                 LlamaSettingsBlock(
                     llamaThreadCountInput = llamaThreadCountInput,
                     onThreadCountChange = { input ->
@@ -488,7 +492,11 @@ fun ModelApiSettingsSection(
                         if (input.isEmpty() || input.toIntOrNull() != null) {
                             llamaContextSizeInput = input
                         }
-                    }
+                    },
+                    modelNameInput = modelNameInput,
+                    onModelNameChange = { modelNameInput = it },
+                    isCactusProvider = isCactusLocal,
+                    showNotification = showNotification
                 )
             } else {
                 if (endpointOptions != null) {
@@ -632,9 +640,9 @@ fun ModelApiSettingsSection(
 
                                             try {
                                                 val result = if (isMnnProvider) {
-                                                    ModelListFetcher.getMnnLocalModels(context)
+                                                    ModelListFetcher.getCactusModels(context)
                                                 } else {
-                                                    ModelListFetcher.getLlamaLocalModels(context)
+                                                    ModelListFetcher.getCactusModels(context)
                                                 }
                                                 if (result.isSuccess) {
                                                     val models = result.getOrThrow()
@@ -1113,6 +1121,7 @@ private fun getProviderDisplayName(provider: ApiProviderType, context: android.c
         ApiProviderType.LMSTUDIO -> context.getString(R.string.provider_lmstudio)
         ApiProviderType.MNN -> context.getString(R.string.provider_mnn)
         ApiProviderType.LLAMA_CPP -> context.getString(R.string.provider_llama_cpp)
+        ApiProviderType.CACTUS_LOCAL -> context.getString(R.string.provider_cactus_local)
         ApiProviderType.PPINFRA -> context.getString(R.string.provider_ppinfra)
         ApiProviderType.OTHER -> context.getString(R.string.provider_other)
     }
@@ -1491,23 +1500,121 @@ private fun MnnSettingsBlock(
 }
 
 @Composable
+@Composable
 private fun LlamaSettingsBlock(
         llamaThreadCountInput: String,
         onThreadCountChange: (String) -> Unit,
         llamaContextSizeInput: String,
-        onContextSizeChange: (String) -> Unit
+        onContextSizeChange: (String) -> Unit,
+        modelNameInput: String,
+        onModelNameChange: (String) -> Unit,
+        isCactusProvider: Boolean = true,
+        showNotification: (String) -> Unit = {}
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SettingsInfoBanner(text = stringResource(R.string.llama_local_model_tip))
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    // Download state
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadStatus by remember { mutableStateOf<String?>(null) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
+    var availableModels by remember { mutableStateOf<List<ModelOption>>(emptyList()) }
+    var isLoadingModels by remember { mutableStateOf(false) }
 
-        SettingsInfoBanner(
-            text =
-                stringResource(R.string.llama_local_model_download_tip) +
-                    "\n" +
-                    stringResource(
-                        R.string.llama_local_model_dir,
-                        LlamaProvider.getModelsDir().absolutePath
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (isCactusProvider) {
+            SettingsInfoBanner(text = stringResource(R.string.cactus_local_model_tip))
+        } else {
+            SettingsInfoBanner(text = stringResource(R.string.llama_local_model_tip))
+        }
+
+        // Download Model Button (only for Cactus provider)
+        if (isCactusProvider) {
+            val currentModelSlug = modelNameInput.trim()
+            val isDownloaded = remember(currentModelSlug) {
+                if (currentModelSlug.isNotEmpty()) {
+                    CactusModelManager.isModelDownloaded(context, currentModelSlug)
+                } else {
+                    false
+                }
+            }
+            
+            Button(
+                onClick = { showDownloadDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isDownloading,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDownloaded) 
+                        MaterialTheme.colorScheme.secondaryContainer 
+                    else 
+                        MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = if (isDownloaded) 
+                        MaterialTheme.colorScheme.onSecondaryContainer 
+                    else 
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            ) {
+                if (isDownloading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = downloadStatus ?: stringResource(R.string.cactus_downloading, currentModelSlug, 0))
+                } else {
+                    Icon(
+                        imageVector = if (isDownloaded) Icons.Default.Check else Icons.Default.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isDownloaded && currentModelSlug.isNotEmpty())
+                            stringResource(R.string.cactus_model_already_downloaded)
+                        else
+                            stringResource(R.string.cactus_download_model)
+                    )
+                }
+            }
+            
+            // Show current model status
+            if (currentModelSlug.isNotEmpty()) {
+                Text(
+                    text = if (isDownloaded)
+                        stringResource(R.string.cactus_model_already_downloaded) + ": $currentModelSlug"
+                    else
+                        stringResource(R.string.cactus_download_model) + ": $currentModelSlug",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isDownloaded) 
+                        MaterialTheme.colorScheme.primary 
+                    else 
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            }
+        } else {
+            SettingsInfoBanner(
+                text =
+                    stringResource(R.string.llama_local_model_download_tip) +
+                        "\n" +
+                        stringResource(
+                            R.string.llama_local_model_dir,
+                            LlamaProvider.getModelsDir().absolutePath
+                        )
+            )
+        }
+
+        // Model Name Field
+        SettingsTextField(
+            title = stringResource(R.string.model_name),
+            subtitle = if (isCactusProvider) 
+                stringResource(R.string.cactus_model_name_hint) 
+            else 
+                stringResource(R.string.llama_select_downloaded_model),
+            value = modelNameInput,
+            onValueChange = { onModelNameChange(it.replace("\n", "").replace("\r", "")) },
+            placeholder = if (isCactusProvider) "qwen3-0.6" else "model.gguf"
         )
 
         SettingsTextField(
@@ -1534,8 +1641,185 @@ private fun LlamaSettingsBlock(
                 valueFilter = { input -> input.filter { it.isDigit() } }
         )
     }
+    
+    // Download Dialog
+    if (showDownloadDialog) {
+        Dialog(onDismissRequest = { if (!isDownloading) showDownloadDialog = false }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Title
+                    Text(
+                        stringResource(R.string.cactus_download_model),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    
+                    // Loading state
+                    if (isLoadingModels) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (availableModels.isEmpty()) {
+                        // Fetch models button
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    isLoadingModels = true
+                                    try {
+                                        val result = ModelListFetcher.getCactusModels(context)
+                                        if (result.isSuccess) {
+                                            availableModels = result.getOrThrow()
+                                        } else {
+                                            showNotification(
+                                                result.exceptionOrNull()?.message 
+                                                    ?: context.getString(R.string.unknown_error)
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        showNotification(e.message ?: context.getString(R.string.unknown_error))
+                                    } finally {
+                                        isLoadingModels = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.fetch_models_list))
+                        }
+                    } else {
+                        // Model list
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                        ) {
+                            items(availableModels.size) { index ->
+                                val model = availableModels[index]
+                                val isDownloaded = model.name.contains("✓")
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (!isDownloading) {
+                                                val slug = model.id
+                                                onModelNameChange(slug)
+                                                
+                                                if (!isDownloaded) {
+                                                    // Start download
+                                                    isDownloading = true
+                                                    downloadStatus = context.getString(
+                                                        R.string.cactus_downloading, 
+                                                        slug, 
+                                                        0
+                                                    )
+                                                    
+                                                    scope.launch {
+                                                        try {
+                                                            val result = CactusModelManager.downloadModel(
+                                                                context, 
+                                                                slug
+                                                            )
+                                                            if (result.isSuccess) {
+                                                                showNotification(
+                                                                    context.getString(
+                                                                        R.string.cactus_download_complete,
+                                                                        slug
+                                                                    )
+                                                                )
+                                                                // Refresh model list to update status
+                                                                val refreshResult = ModelListFetcher.getCactusModels(context)
+                                                                if (refreshResult.isSuccess) {
+                                                                    availableModels = refreshResult.getOrThrow()
+                                                                }
+                                                            } else {
+                                                                val error = result.exceptionOrNull()?.message 
+                                                                    ?: context.getString(R.string.unknown_error)
+                                                                showNotification(
+                                                                    context.getString(
+                                                                        R.string.cactus_download_failed,
+                                                                        error
+                                                                    )
+                                                                )
+                                                            }
+                                                        } catch (e: Exception) {
+                                                            showNotification(
+                                                                context.getString(
+                                                                    R.string.cactus_download_failed,
+                                                                    e.message ?: context.getString(R.string.unknown_error)
+                                                                )
+                                                            )
+                                                        } finally {
+                                                            isDownloading = false
+                                                            downloadStatus = null
+                                                        }
+                                                    }
+                                                } else {
+                                                    showNotification(
+                                                        context.getString(R.string.cactus_model_already_downloaded)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = model.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (isDownloaded) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = stringResource(R.string.cactus_model_already_downloaded),
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                
+                                if (index < availableModels.size - 1) {
+                                    HorizontalDivider(
+                                        thickness = 0.5.dp,
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.padding(horizontal = 12.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Close button
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(
+                            onClick = { showDownloadDialog = false },
+                            enabled = !isDownloading
+                        ) {
+                            Text(stringResource(R.string.close))
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
-
 private fun forwardTypeName(type: Int): String {
     return when (type) {
         0 -> "CPU"
@@ -1702,6 +1986,7 @@ private fun getProviderColor(provider: ApiProviderType): androidx.compose.ui.gra
         ApiProviderType.LMSTUDIO -> MaterialTheme.colorScheme.tertiary
         ApiProviderType.MNN -> MaterialTheme.colorScheme.secondary
         ApiProviderType.LLAMA_CPP -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+        ApiProviderType.CACTUS_LOCAL -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f)
         ApiProviderType.PPINFRA -> MaterialTheme.colorScheme.primaryContainer
         ApiProviderType.OTHER -> MaterialTheme.colorScheme.surfaceVariant
     }

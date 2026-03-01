@@ -3338,6 +3338,7 @@
     <string name="provider_lmstudio">LM Studio</string>
     <string name="provider_mnn">MNN 本地推理</string>
     <string name="provider_llama_cpp">llama.cpp 本地推理</string>
+    <string name="provider_cactus_local">Cactus 本地推理</string>
     <string name="provider_ppinfra">派欧云</string>
     <string name="provider_openai_generic">OpenAI通用</string>
     <string name="provider_other">其他供应商</string>
@@ -5969,6 +5970,8 @@
     <string name="mnn_file_status">文件状态:</string>
     <string name="mnn_init_failed">模型初始化失败</string>
     <string name="mnn_connection_success">MNN LLM模型连接成功！\n\n模型: %1$s\n目录: %2$s\n总大小: %3$s\n\n%4$s</string>
+    <string name="mnn_cactus_backend_tip">MNN 提供商现在使用 Cactus SDK 进行本地推理。在"模型名称"中填写模型 slug（如 qwen3-0.6）</string>
+    <string name="mnn_cactus_error_init">Cactus 后端初始化失败: %1$s</string>
 
     <!-- APK Reverse Engineer -->
     <string name="apk_unnamed_function">(未命名功能)</string>
@@ -6514,4 +6517,19 @@
     <string name="repo_bookmark_name_exists">名称已存在，请换一个</string>
     <string name="repo_bookmark_delete">删除</string>
 
+<string name="cactus_download_model">下载 Cactus 模型</string>
+    <string name="cactus_downloading">正在下载: %1$s (%2$d%%)</string>
+    <string name="cactus_download_complete">下载完成: %1$s</string>
+    <string name="cactus_download_failed">下载失败: %1$s</string>
+    <string name="cactus_model_already_downloaded">已下载</string>
+    <string name="cactus_local_model_tip">Cactus 本地模型通过 Cactus SDK 运行，支持自动下载和管理模型</string>
+    <string name="cactus_model_name_hint">输入模型 slug (例如: qwen3-0.6)</string>
+    <string name="fetch_models_list">获取模型列表</string>
+    <!-- Cactus local inference unified branding -->
+    <string name="cactus_local_inference_title">Cactus 本地推理</string>
+    <string name="cactus_context_size">上下文长度</string>
+    <string name="cactus_browse_download_models">浏览并下载模型</string>
+    
+    <!-- LLAMA_CPP deprecation notice -->
+    <string name="llama_cpp_deprecation_notice">llama.cpp（旧版）— 此提供商现在使用 Cactus SDK 后端。您现有的模型配置将继续有效。</string>
 </resources>

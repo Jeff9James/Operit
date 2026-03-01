@@ -3417,6 +3417,7 @@
     <string name="provider_other">Other Providers</string>
     <string name="provider_doubao">Doubao</string>
     <string name="provider_llama_cpp">llama.cpp Local Inference</string>
+    <string name="provider_cactus_local">Cactus Local Inference</string>
     <string name="provider_mnn">MNN Local Inference</string>
     <string name="select_api_provider_title">Select API Provider</string>
     <string name="search_providers">Search providers</string>
@@ -5997,6 +5998,8 @@
     <string name="mnn_file_status">File status:</string>
     <string name="mnn_init_failed">Model initialization failed</string>
     <string name="mnn_connection_success">MNN LLM model connected successfully!\n\nModel: %1$s\nDirectory: %2$s\nTotal size: %3$s\n\n%4$s</string>
+    <string name="mnn_cactus_backend_tip">The MNN provider now uses the Cactus SDK backend. Enter the model slug (e.g. qwen3-0.6) in "Model name".</string>
+    <string name="mnn_cactus_error_init">Cactus backend init failed: %1$s</string>
 
     <!-- APK Reverse Engineer -->
     <string name="apk_unnamed_function">(Unnamed function)</string>
@@ -6526,4 +6529,19 @@
     <string name="repo_bookmark_name_exists">Name already exists, please choose another</string>
     <string name="repo_bookmark_delete">Delete</string>
 
+    <string name="cactus_download_model">Download Cactus Model</string>
+    <string name="cactus_download_model">Download Cactus Model</string>
+    <string name="cactus_downloading">Downloading: %1$s (%2$d%%)</string>
+    <string name="cactus_download_complete">Download complete: %1$s</string>
+    <string name="cactus_download_failed">Download failed: %1$s</string>
+    <string name="cactus_model_already_downloaded">Downloaded</string>
+    <string name="cactus_local_model_tip">Cactus local models run via Cactus SDK with automatic model download and management</string>
+    <string name="cactus_model_name_hint">Enter model slug (e.g., qwen3-0.6)</string>
+    <string name="fetch_models_list">Fetch Models List</string>
+    <!-- Cactus local inference unified branding -->
+    <string name="cactus_local_inference_title">Cactus Local Inference</string>
+    <string name="cactus_context_size">Context Size</string>
+    <string name="cactus_browse_download_models">Browse &amp; Download Models</string>
+    <!-- LLAMA_CPP deprecation notice -->
+    <string name="llama_cpp_deprecation_notice">llama.cpp (legacy) — This provider now uses the Cactus SDK backend. Your existing model configuration will continue to work.</string>
 </resources>

@@ -155,8 +155,9 @@ object AIServiceFactory {
                 supportsVideo = supportsVideo
             )
 
-            // llama.cpp 本地推理引擎
-            ApiProviderType.LLAMA_CPP -> LlamaProvider(
+            // llama.cpp / Cactus SDK 本地推理引擎 (LLAMA_CPP is a legacy alias for CACTUS_LOCAL)
+            ApiProviderType.LLAMA_CPP,
+            ApiProviderType.CACTUS_LOCAL -> LlamaProvider(
                 context = context,
                 modelName = config.modelName,
                 threadCount = config.llamaThreadCount,
