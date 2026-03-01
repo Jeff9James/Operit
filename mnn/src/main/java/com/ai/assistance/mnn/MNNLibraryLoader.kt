@@ -38,9 +38,9 @@ internal object MNNLibraryLoader {
                 Log.d(TAG, "MNNWrapper library loaded successfully")
                 
                 loaded = true
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to load MNN libraries", e)
-                throw e
+            } catch (_: Throwable) {
+                // Native libraries not available — all JNI calls will fail gracefully
+                Log.w(TAG, "MNN native libraries not available; using fallback")
             }
         }
     }

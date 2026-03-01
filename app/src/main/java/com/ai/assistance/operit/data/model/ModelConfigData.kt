@@ -27,7 +27,8 @@ enum class ApiProviderType {
         DOUBAO, // 豆包（火山模型）
         LMSTUDIO, // LM Studio本地模型服务
         MNN, // MNN本地推理引擎
-        LLAMA_CPP, // llama.cpp 本地推理引擎
+        LLAMA_CPP, // llama.cpp 本地推理引擎 (legacy alias — routes to Cactus SDK)
+        CACTUS_LOCAL, // Cactus SDK 本地推理引擎
         PPINFRA, // 派欧云
         OTHER // 其他提供商（自定义端点）
 }

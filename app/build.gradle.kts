@@ -5,11 +5,11 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.parcelize)
     id("io.objectbox")
-    id("kotlin-kapt")
 }
 
 val localProperties = Properties()
@@ -20,7 +20,8 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "com.ai.assistance.operit"
-    compileSdk = 34
+    compileSdk = 36
+    ndkVersion = "27.0.12077973"
 
     signingConfigs {
         val releaseKeystorePath = localProperties.getProperty("RELEASE_STORE_FILE")
@@ -51,8 +52,8 @@ android {
 
     defaultConfig {
         applicationId = "com.ai.assistance.operit"
-        minSdk = 26
-        targetSdk = 34
+        minSdk = 24
+        targetSdk = 35
         versionCode = 39
         versionName = "1.8.1+1"
 
@@ -61,19 +62,6 @@ android {
             useSupportLibrary = true
         }
         
-        ndk {
-            // Explicitly specify the ABIs to support. This ensures that native libraries
-            // for both 32-bit and 64-bit ARM devices are included in the APK,
-            // resolving conflicts between dependencies with different native library sets.
-            abiFilters.addAll(listOf("arm64-v8a"))
-        }
-
-        externalNativeBuild {
-            cmake {
-                cppFlags("-std=c++17")
-            }
-        }
-
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"${localProperties.getProperty("GITHUB_CLIENT_ID")}\"")
         buildConfigField("String", "GITHUB_CLIENT_SECRET", "\"${localProperties.getProperty("GITHUB_CLIENT_SECRET")}\"")
     }
@@ -120,21 +108,17 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
         isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "11"
     }
     buildFeatures {
         compose = true
         aidl = true
         buildConfig = true
-    }
-    
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
     }
     packaging {
         
@@ -179,7 +163,6 @@ android {
 dependencies {
     implementation("com.github.jelmerk:hnswlib-core:1.2.1")
     implementation(project(":dragonbones"))
-    implementation(project(":terminal"))
     implementation(project(":mnn"))
     implementation(project(":llama"))
     implementation(project(":showerclient"))
@@ -409,22 +392,35 @@ dependencies {
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-serialization-json")
         exclude(group = "io.ktor", module = "ktor-client-core")
         exclude(group = "io.ktor", module = "ktor-client-cio")
+        exclude(group = "io.ktor", module = "ktor-client-okhttp")
+        exclude(group = "io.ktor", module = "ktor-client-content-negotiation")
         exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json")
     }
-    
+
+    // Cactus SDK and related dependencies
+    implementation(libs.cactus.sdk)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.okio)
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.jna)
+
     // 强制使用兼容的版本
     configurations.all {
         resolutionStrategy {
-            force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-            force("io.ktor:ktor-client-core:2.3.5") 
-            force("io.ktor:ktor-client-cio:2.3.5")
-            force("io.ktor:ktor-serialization-kotlinx-json:2.3.5")
-            force("org.jetbrains.kotlin:kotlin-bom:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib-common:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+            force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+            force("io.ktor:ktor-client-core:3.1.3")
+            force("io.ktor:ktor-client-okhttp:3.1.3")
+            force("io.ktor:ktor-client-content-negotiation:3.1.3")
+            force("io.ktor:ktor-serialization-kotlinx-json:3.1.3")
+            force("org.jetbrains.kotlin:kotlin-bom:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-common:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.0")
+            force("org.jetbrains.kotlin:kotlin-reflect:2.2.0")
             // Force BouncyCastle to use jdk18on version to avoid duplicate classes
             force("org.bouncycastle:bcprov-jdk18on:1.78")
         }
