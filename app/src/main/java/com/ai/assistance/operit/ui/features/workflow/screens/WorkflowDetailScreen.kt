@@ -698,39 +698,9 @@ fun NodeDialog(
         }
     }
 
-    val availableReferenceNodes
-        if (nodeType != "mcp") {
-            mcpAvailableTools = emptyList()
-            mcpToolSchemas = emptyList()
-            mcpParameters = emptyList()
-            return@LaunchedEffect
-        }
+    // MCP LaunchedEffect placeholder removed
 
-        if (mcpServerName.isBlank()) {
-            mcpAvailableTools = emptyList()
-            mcpToolSchemas = emptyList()
-            mcpParameters = emptyList()
-            return@LaunchedEffect
-        }
-
-        // 获取该MCP服务器的可用工具
-        withContext(Dispatchers.IO) {
-            try {
-                val client = mcpManager.getOrCreateClient(mcpServerName)
-                if (client != null && client.isActive()) {
-                    val tools = client.getTools()
-                    mcpAvailableTools = tools.map { it.optString("name", "") }.filter { it.isNotBlank() }
-                } else {
-                    mcpAvailableTools = emptyList()
-                }
-            } catch (e: Exception) {
-                mcpAvailableTools = emptyList()
-            }
-        }
-    }
-
-    val availableReferenceNodes
-        if (nodeType != "mcp" || mcpToolName.isBlank() || mcpServerName.isBlank()) {
+    // Trigger node configuration
             mcpToolSchemas = emptyList()
             mcpParameters = emptyList()
             return@LaunchedEffect
