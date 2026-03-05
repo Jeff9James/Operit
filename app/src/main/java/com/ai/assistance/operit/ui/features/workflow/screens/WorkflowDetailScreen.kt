@@ -854,56 +854,67 @@ fun NodeDialog(
         }
 
         // 获取工具的参数schema
-        try {
-            val client = MCPBridgeClient(context, mcpServerName)
-            val serviceInfo = client.getServiceInfo()
-            if (serviceInfo != null) {
-                // 查找选中的工具
-                val tool = serviceInfo.tools.find { it.name == mcpToolName }
-                val inputSchema = tool?.inputSchema
-                val properties = inputSchema?.properties
-                val required = inputSchema?.required ?: emptyList()
+        withContext(Dispatchers.IO) {
+            try {
+                val client = MCPBridgeClient(context, mcpServerName)
+                // 使用getTools()获取工具列表
+                val tools = client.getTools()
+                if (tools.isNotEmpty()) {
+                    // 查找选中的工具
+                    val tool = tools.find { it.optString("name") == mcpToolName }
+                    val inputSchema = tool?.optJSONObject("inputSchema")
+                    val properties = inputSchema?.optJSONObject("properties")
+                    val requiredArray = inputSchema?.optJSONArray("required")
+                    val required = requiredArray?.let { arr ->
+                        (0 until arr.length()).map { i -> arr.optString(i) }.toSet()
+                    } ?: emptySet()
 
-                val schemas = mutableListOf<ToolParameterSchema>()
-                properties?.forEach { (key, prop) ->
-                    schemas.add(
-                        ToolParameterSchema(
-                            name = key,
-                            type = prop.type ?: "string",
-                            description = prop.description ?: "",
-                            required = required.contains(key),
-                            default = null
+                    val schemas = mutableListOf<ToolParameterSchema>()
+                    properties?.let { props ->
+                        props.keys().forEach { key ->
+                            val prop = props.optJSONObject(key as String)
+                            if (prop != null) {
+                                schemas.add(
+                                    ToolParameterSchema(
+                                        name = key as String,
+                                        type = prop.optString("type", "string"),
+                                        description = prop.optString("description", ""),
+                                        required = required.contains(key),
+                                        default = null
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    mcpToolSchemas = schemas
+
+                    // 构建参数配置列表
+                    val existingParams = mcpParameters.toList()
+                    val existingByKey = existingParams.filter { it.key.isNotBlank() }.associateBy { it.key }
+                    val schemaKeys = schemas.map { it.name }.toSet()
+
+                    val merged = mutableListOf<ParameterConfig>()
+                    schemas.forEach { schema ->
+                        val existing = existingByKey[schema.name]
+                        merged.add(
+                            ParameterConfig(
+                                key = schema.name,
+                                isReference = existing?.isReference ?: false,
+                                value = existing?.value ?: schema.default ?: ""
+                            )
                         )
-                    )
+                    }
+                    existingParams.filter { it.key.isNotBlank() && !schemaKeys.contains(it.key) }.forEach { merged.add(it) }
+                    existingParams.filter { it.key.isBlank() }.forEach { merged.add(it) }
+                    mcpParameters = merged
+                } else {
+                    mcpToolSchemas = emptyList()
+                    mcpParameters = emptyList()
                 }
-                mcpToolSchemas = schemas
-
-                // 构建参数配置列表
-                val existingParams = mcpParameters.toList()
-                val existingByKey = existingParams.filter { it.key.isNotBlank() }.associateBy { it.key }
-                val schemaKeys = schemas.map { it.name }.toSet()
-
-                val merged = mutableListOf<ParameterConfig>()
-                schemas.forEach { schema ->
-                    val existing = existingByKey[schema.name]
-                    merged.add(
-                        ParameterConfig(
-                            key = schema.name,
-                            isReference = existing?.isReference ?: false,
-                            value = existing?.value ?: schema.default ?: ""
-                        )
-                    )
-                }
-                existingParams.filter { it.key.isNotBlank() && !schemaKeys.contains(it.key) }.forEach { merged.add(it) }
-                existingParams.filter { it.key.isBlank() }.forEach { merged.add(it) }
-                mcpParameters = merged
-            } else {
+            } catch (e: Exception) {
                 mcpToolSchemas = emptyList()
                 mcpParameters = emptyList()
             }
-        } catch (e: Exception) {
-            mcpToolSchemas = emptyList()
-            mcpParameters = emptyList()
         }
     }
     
