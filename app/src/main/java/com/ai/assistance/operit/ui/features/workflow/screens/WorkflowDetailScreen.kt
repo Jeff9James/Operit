@@ -848,7 +848,9 @@ fun NodeDialog(
                     val inputSchema = tool?.optJSONObject("inputSchema")
                     val properties = inputSchema?.optJSONObject("properties")
                     val requiredArray = inputSchema?.optJSONArray("required")
-                    val required = (0 until (requiredArray?.length() ?: 0)).map { i -> requiredArray.optString(i) }.toSet()
+                    val required = requiredArray?.let { arr ->
+                        (0 until arr.length()).map { i -> arr.optString(i) }.toSet()
+                    } ?: emptySet()
 
                     val schemas = mutableListOf<ToolParameterSchema>()
                     properties?.let { props ->
