@@ -233,6 +233,16 @@
     <string name="workflow_mcp_tool_label">工具名称</string>
     <string name="workflow_mcp_tool_placeholder">选择工具</string>
     <string name="workflow_mcp_no_servers">没有可用的MCP服务器</string>
+    <string name="workflow_mcp_add_server">添加MCP服务器</string>
+    <string name="workflow_mcp_server_name">服务器名称</string>
+    <string name="workflow_mcp_server_name_hint">输入服务器名称</string>
+    <string name="workflow_mcp_server_endpoint">服务器端点</string>
+    <string name="workflow_mcp_server_endpoint_hint">http://localhost:8080 或 npx -y @modelcontextprotocol/server-filesystem /path</string>
+    <string name="workflow_mcp_server_type">连接类型</string>
+    <string name="workflow_mcp_server_type_remote">远程 (HTTP/SSE)</string>
+    <string name="workflow_mcp_server_type_stdio">本地 (Stdio)</string>
+    <string name="workflow_mcp_add_success">MCP服务器添加成功</string>
+    <string name="workflow_mcp_add_error">添加MCP服务器失败: %1$s</string>
     <string name="workflow_mcp_no_tools">该服务器没有可用工具</string>
     <string name="workflow_mcp_node_no_server">未选择MCP服务器</string>
     <string name="workflow_mcp_node_no_tool">未选择工具</string>

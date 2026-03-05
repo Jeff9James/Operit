@@ -51,6 +51,7 @@ import com.ai.assistance.operit.ui.components.CustomScaffold
 import com.ai.assistance.operit.ui.features.workflow.viewmodel.WorkflowViewModel
 import com.ai.assistance.operit.ui.features.workflow.components.GridWorkflowCanvas
 import com.ai.assistance.operit.ui.features.workflow.components.ConnectionMenuDialog
+import com.ai.assistance.operit.ui.features.workflow.components.AddMCPServerDialog
 import com.ai.assistance.operit.ui.features.workflow.components.NodeActionMenuDialog
 import com.ai.assistance.operit.ui.features.workflow.components.ScheduleConfigDialog
 import kotlinx.coroutines.Dispatchers
@@ -443,6 +444,27 @@ fun WorkflowDetailScreen(
                 }
             }
 
+            // 添加MCP服务器对话框
+            if (showAddMCPServerDialog) {
+                AddMCPServerDialog(
+                    onDismiss = { showAddMCPServerDialog = false },
+                    onConfirm = { serverName, endpoint, isRemote ->
+                        try {
+                            // 注册到MCPManager
+                            mcpManager.registerServer(serverName, endpoint, "MCP Server")
+                            // 刷新服务器列表
+                            mcpServerName = serverName
+                            mcpToolName = ""
+                            mcpToolSchemas = emptyList()
+                            mcpParameters = emptyList()
+                            showAddMCPServerDialog = false
+                        } catch (e: Exception) {
+                            // Handle error - could show a snackbar or error message
+                        }
+                    }
+                )
+            }
+
             // 连接菜单对话框
             showConnectionMenu?.let { sourceNodeId ->
                 val sourceNode = workflow?.nodes?.find { it.id == sourceNodeId }
@@ -788,6 +810,7 @@ fun NodeDialog(
     // MCP节点配置
     var mcpServerName by remember { mutableStateOf(if (node is MCPNode) node.serverName else "") }
     var mcpServerExpanded by remember { mutableStateOf(false) }
+    var showAddMCPServerDialog by remember { mutableStateOf(false) }
     var mcpToolName by remember { mutableStateOf(if (node is MCPNode) node.toolName else "") }
     var mcpToolExpanded by remember { mutableStateOf(false) }
     var mcpAvailableTools by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -796,7 +819,7 @@ fun NodeDialog(
     
     // 获取已注册的MCP服务器列表
     val mcpManager = remember(context) { com.ai.assistance.operit.core.tools.mcp.MCPManager.getInstance(context) }
-    val availableMCPServers = remember(context) { mcpManager.getRegisteredServers() }
+    val availableMCPServers = remember(context, showAddMCPServerDialog) { mcpManager.getRegisteredServers() }
     
     // MCP节点：当服务器或工具改变时，加载可用的工具列表
     LaunchedEffect(mcpServerName, nodeType) {
@@ -1867,6 +1890,21 @@ fun NodeDialog(
                                         }
                                     )
                                 }
+                                // Add "Add new server" option
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.workflow_mcp_add_server)) },
+                                    onClick = {
+                                        mcpServerExpanded = false
+                                        showAddMCPServerDialog = true
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
                                 if (availableMCPServers.isEmpty()) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.workflow_mcp_no_servers)) },

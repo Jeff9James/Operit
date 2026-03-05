@@ -229,6 +229,16 @@
     <string name="workflow_mcp_tool_label">Tool Name</string>
     <string name="workflow_mcp_tool_placeholder">Select Tool</string>
     <string name="workflow_mcp_no_servers">No MCP servers available</string>
+    <string name="workflow_mcp_add_server">Add MCP Server</string>
+    <string name="workflow_mcp_server_name">Server Name</string>
+    <string name="workflow_mcp_server_name_hint">Enter server name</string>
+    <string name="workflow_mcp_server_endpoint">Server Endpoint</string>
+    <string name="workflow_mcp_server_endpoint_hint">http://localhost:8080 or npx -y @modelcontextprotocol/server-filesystem /path</string>
+    <string name="workflow_mcp_server_type">Connection Type</string>
+    <string name="workflow_mcp_server_type_remote">Remote (HTTP/SSE)</string>
+    <string name="workflow_mcp_server_type_stdio">Local (Stdio)</string>
+    <string name="workflow_mcp_add_success">MCP server added successfully</string>
+    <string name="workflow_mcp_add_error">Failed to add MCP server: %1$s</string>
     <string name="workflow_mcp_no_tools">No tools available for this server</string>
     <string name="workflow_mcp_node_no_server">No MCP server selected</string>
     <string name="workflow_mcp_node_no_tool">No tool selected</string>
