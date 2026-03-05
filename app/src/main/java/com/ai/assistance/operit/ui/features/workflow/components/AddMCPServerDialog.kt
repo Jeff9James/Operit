@@ -16,11 +16,10 @@ import com.ai.assistance.operit.R
 @Composable
 fun AddMCPServerDialog(
     onDismiss: () -> Unit,
-    onConfirm: (serverName: String, endpoint: String, isRemote: Boolean) -> Unit
+    onConfirm: (serverName: String, endpoint: String) -> Unit
 ) {
     var serverName by remember { mutableStateOf("") }
     var endpoint by remember { mutableStateOf("") }
-    var isRemote by remember { mutableStateOf(true) } // true = HTTP/SSE, false = stdio
     var serverNameError by remember { mutableStateOf(false) }
     var endpointError by remember { mutableStateOf(false) }
 
@@ -46,47 +45,6 @@ fun AddMCPServerDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Connection Type
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .selectable(
-                                selected = isRemote,
-                                onClick = { isRemote = true }
-                            )
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = isRemote,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.workflow_mcp_server_type_remote))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .selectable(
-                                selected = !isRemote,
-                                onClick = { isRemote = false }
-                            )
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = !isRemote,
-                            onClick = null
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.workflow_mcp_server_type_stdio))
-                    }
-                }
-
                 // Server Endpoint
                 OutlinedTextField(
                     value = endpoint,
@@ -110,7 +68,7 @@ fun AddMCPServerDialog(
                     endpointError = endpoint.isBlank()
 
                     if (!serverNameError && !endpointError) {
-                        onConfirm(serverName.trim(), endpoint.trim(), isRemote)
+                        onConfirm(serverName.trim(), endpoint.trim())
                     }
                 }
             ) {

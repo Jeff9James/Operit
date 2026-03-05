@@ -444,27 +444,6 @@ fun WorkflowDetailScreen(
                 }
             }
 
-            // 添加MCP服务器对话框
-            if (showAddMCPServerDialog) {
-                AddMCPServerDialog(
-                    onDismiss = { showAddMCPServerDialog = false },
-                    onConfirm = { serverName, endpoint, isRemote ->
-                        try {
-                            // 注册到MCPManager
-                            mcpManager.registerServer(serverName, endpoint, "MCP Server")
-                            // 刷新服务器列表
-                            mcpServerName = serverName
-                            mcpToolName = ""
-                            mcpToolSchemas = emptyList()
-                            mcpParameters = emptyList()
-                            showAddMCPServerDialog = false
-                        } catch (e: Exception) {
-                            // Handle error - could show a snackbar or error message
-                        }
-                    }
-                )
-            }
-
             // 连接菜单对话框
             showConnectionMenu?.let { sourceNodeId ->
                 val sourceNode = workflow?.nodes?.find { it.id == sourceNodeId }
@@ -2386,6 +2365,27 @@ fun NodeDialog(
             }
         }
     )
+    
+    // 添加MCP服务器对话框
+    if (showAddMCPServerDialog) {
+        AddMCPServerDialog(
+            onDismiss = { showAddMCPServerDialog = false },
+            onConfirm = { serverName, endpoint ->
+                try {
+                    // 注册到MCPManager
+                    mcpManager.registerServer(serverName, endpoint, "MCP Server")
+                    // 刷新服务器列表
+                    mcpServerName = serverName
+                    mcpToolName = ""
+                    mcpToolSchemas = emptyList()
+                    mcpParameters = emptyList()
+                    showAddMCPServerDialog = false
+                } catch (e: Exception) {
+                    // Handle error - could show a snackbar or error message
+                }
+            }
+        )
+    }
     
     // 定时配置对话框
     if (showScheduleDialog) {
