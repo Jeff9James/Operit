@@ -880,10 +880,8 @@ fun NodeDialog(
                         merged.add(
                             ParameterConfig(
                                 key = schema.name,
-                                value = existing?.value ?: schema.default ?: "",
-                                useReference = existing?.useReference ?: false,
-                                referenceNodeId = existing?.referenceNodeId ?: "",
-                                referenceNodeOutput = existing?.referenceNodeOutput ?: ""
+                                isReference = existing?.isReference ?: false,
+                                value = existing?.value ?: schema.default ?: ""
                             )
                         )
                     }
