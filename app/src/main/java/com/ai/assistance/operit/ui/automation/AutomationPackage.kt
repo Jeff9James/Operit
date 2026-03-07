@@ -71,23 +71,4 @@ package com.ai.assistance.operit.ui.automation
  * val result = agent.run("Open settings and change theme")
  * ```
  */
-
-// Export main classes
-export class ScreenInteractionService
-export class Eyes
-export class Finger
-export class SemanticParser
-export class Perception
-export class ActionExecutor
-export class Agent
-
-// Export data classes
-export typealias SimplifiedElement = com.ai.assistance.operit.ui.automation.SimplifiedElement
-export typealias RawScreenData = com.ai.assistance.operit.ui.automation.RawScreenData
-export typealias InteractiveElement = com.ai.assistance.operit.ui.automation.InteractiveElement
-export typealias ScreenAnalysis = com.ai.assistance.operit.ui.automation.ScreenAnalysis
-export typealias AgentAction = com.ai.assistance.operit.ui.automation.AgentAction
-export typealias AgentOutput = com.ai.assistance.operit.ui.automation.AgentOutput
-export typealias ActionResult = com.ai.assistance.operit.ui.automation.ActionResult
-export typealias AgentResult = com.ai.assistance.operit.ui.automation.AgentResult
-export typealias MemoryManager = com.ai.assistance.operit.ui.automation.MemoryManager
+class AutomationPackage
