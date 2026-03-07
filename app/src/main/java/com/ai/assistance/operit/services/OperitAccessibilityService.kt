@@ -1,12 +1,19 @@
 package com.ai.assistance.operit.services
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.content.Context
+import android.graphics.Path
+import android.graphics.Point
+import android.os.Handler
+import android.os.Looper
+import android.util.DisplayMetrics
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.ui.automation.*
 import kotlinx.coroutines.*
-import android.graphics.Rect
 
 /**
  * OperitAccessibilityService
@@ -21,14 +28,28 @@ class OperitAccessibilityService : AccessibilityService() {
         var instance: OperitAccessibilityService? = null
         
         fun getInstance(): OperitAccessibilityService? = instance
+        
+        fun isConnected(): Boolean = instance != null
     }
     
+    private lateinit var windowManager: WindowManager
+    private var screenWidth: Int = 0
+    private var screenHeight: Int = 0
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var currentActivityName: String? = null
+    
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        updateScreenSize()
+        AppLogger.d(TAG, "Accessibility service created")
+    }
     
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        updateScreenSize()
         AppLogger.d(TAG, "Accessibility service connected")
     }
     
@@ -51,6 +72,15 @@ class OperitAccessibilityService : AccessibilityService() {
         serviceScope.cancel()
         AppLogger.d(TAG, "Accessibility service destroyed")
     }
+    
+    private fun updateScreenSize() {
+        val metrics = DisplayMetrics()
+        windowManager.defaultDisplay.getRealMetrics(metrics)
+        screenWidth = metrics.widthPixels
+        screenHeight = metrics.heightPixels
+    }
+    
+    fun getScreenSize(): Pair<Int, Int> = Pair(screenWidth, screenHeight)
     
     /**
      * Get UI hierarchy as XML
@@ -91,11 +121,12 @@ class OperitAccessibilityService : AccessibilityService() {
         
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
-        val resourceId = node.resourceId?.toString() ?: ""
+        val resourceId = node.viewIdResourceName ?: ""
         
         if (text.isNotBlank() || contentDesc.isNotBlank() || node.isClickable) {
             val indent = "  ".repeat(depth)
-            sb.appendLine("$indent- ${node.className?.simpleName}: $text (id: $resourceId)")
+            val className = node.className?.toString()?.substringAfterLast(".") ?: "Unknown"
+            sb.appendLine("$indent- $className: $text (id: $resourceId)")
         }
         
         for (i in 0 until node.childCount) {
@@ -112,18 +143,15 @@ class OperitAccessibilityService : AccessibilityService() {
      */
     fun performClickAt(x: Int, y: Int): Boolean {
         AppLogger.d(TAG, "Click at: ($x, $y)")
-        return performClick(x.toFloat(), y.toFloat())
-    }
-    
-    private fun performClick(x: Float, y: Float): Boolean {
-        val path = android.graphics.Path().apply {
-            moveTo(x, y)
+        
+        val path = Path().apply {
+            moveTo(x.toFloat(), y.toFloat())
         }
         
-        val builder = android.view.accessibility.AccessibilityGestureDescription.Builder(1)
-        builder.addStroke(0, 500, path)
+        val builder = GestureDescription.Builder()
+        builder.addStroke(GestureDescription.StrokeDescription(path, 0, 500))
         
-        return dispatchGesture(builder.build(), null, null)
+        return dispatchGesture(builder.build(), null, Handler(Looper.getMainLooper()))
     }
     
     /**
@@ -131,18 +159,15 @@ class OperitAccessibilityService : AccessibilityService() {
      */
     fun performLongPressAt(x: Int, y: Int): Boolean {
         AppLogger.d(TAG, "Long press at: ($x, $y)")
-        return performLongClick(x.toFloat(), y.toFloat())
-    }
-    
-    private fun performLongClick(x: Float, y: Float): Boolean {
-        val path = android.graphics.Path().apply {
-            moveTo(x, y)
+        
+        val path = Path().apply {
+            moveTo(x.toFloat(), y.toFloat())
         }
         
-        val builder = android.view.accessibility.AccessibilityGestureDescription.Builder(1)
-        builder.addStroke(0, 1500, path)
+        val builder = GestureDescription.Builder()
+        builder.addStroke(GestureDescription.StrokeDescription(path, 0, 1500))
         
-        return dispatchGesture(builder.build(), null, null)
+        return dispatchGesture(builder.build(), null, Handler(Looper.getMainLooper()))
     }
     
     /**
@@ -150,49 +175,38 @@ class OperitAccessibilityService : AccessibilityService() {
      */
     fun performSwipeGesture(startX: Int, startY: Int, endX: Int, endY: Int, duration: Long): Boolean {
         AppLogger.d(TAG, "Swipe: ($startX, $startY) -> ($endX, $endY), duration=$duration")
-        return performSwipe(startX.toFloat(), startY.toFloat(), endX.toFloat(), endY.toFloat(), duration)
-    }
-    
-    private fun performSwipe(x1: Float, y1: Float, x2: Float, y2: Float, duration: Long): Boolean {
-        val path = android.graphics.Path().apply {
-            moveTo(x1, y1)
-            lineTo(x2, y2)
+        
+        val path = Path().apply {
+            moveTo(startX.toFloat(), startY.toFloat())
+            lineTo(endX.toFloat(), endY.toFloat())
         }
         
-        val builder = android.view.accessibility.AccessibilityGestureDescription.Builder(1)
-        builder.addStroke(0, duration, path)
+        val builder = GestureDescription.Builder()
+        builder.addStroke(GestureDescription.StrokeDescription(path, 0, duration))
         
-        return dispatchGesture(builder.build(), null, null)
+        return dispatchGesture(builder.build(), null, Handler(Looper.getMainLooper()))
     }
     
     /**
      * Execute scroll down
      */
     fun performScrollDown(): Boolean {
-        val display = windowManager.defaultDisplay
-        val metrics = android.util.DisplayMetrics()
-        display.getRealMetrics(metrics)
+        val startY = (screenHeight * 0.8).toInt()
+        val endY = (screenHeight * 0.2).toInt()
+        val centerX = screenWidth / 2
         
-        val startY = (metrics.heightPixels * 0.8).toInt()
-        val endY = (metrics.heightPixels * 0.2).toInt()
-        val centerX = metrics.widthPixels / 2
-        
-        return performSwipe(centerX.toFloat(), startY.toFloat(), centerX.toFloat(), endY.toFloat(), 500)
+        return performSwipeGesture(centerX, startY, centerX, endY, 500)
     }
     
     /**
      * Execute scroll up
      */
     fun performScrollUp(): Boolean {
-        val display = windowManager.defaultDisplay
-        val metrics = android.util.DisplayMetrics()
-        display.getRealMetrics(metrics)
+        val startY = (screenHeight * 0.2).toInt()
+        val endY = (screenHeight * 0.8).toInt()
+        val centerX = screenWidth / 2
         
-        val startY = (metrics.heightPixels * 0.2).toInt()
-        val endY = (metrics.heightPixels * 0.8).toInt()
-        val centerX = metrics.widthPixels / 2
-        
-        return performSwipe(centerX.toFloat(), startY.toFloat(), centerX.toFloat(), endY.toFloat(), 500)
+        return performSwipeGesture(centerX, startY, centerX, endY, 500)
     }
     
     /**
@@ -224,7 +238,7 @@ class OperitAccessibilityService : AccessibilityService() {
     /**
      * Check if connected
      */
-    fun isConnected(): Boolean = instance != null
+    fun isServiceConnected(): Boolean = instance != null
     
     /**
      * Get interactive elements
@@ -241,6 +255,31 @@ class OperitAccessibilityService : AccessibilityService() {
             emptyMap()
         }
     }
+    
+    /**
+     * Execute back action
+     */
+    fun performBack(): Boolean = performGlobalAction(GLOBAL_ACTION_BACK)
+    
+    /**
+     * Execute home action
+     */
+    fun performHome(): Boolean = performGlobalAction(GLOBAL_ACTION_HOME)
+    
+    /**
+     * Execute recents action
+     */
+    fun performRecents(): Boolean = performGlobalAction(GLOBAL_ACTION_RECENTS)
+    
+    /**
+     * Execute notifications action
+     */
+    fun performNotifications(): Boolean = performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+    
+    /**
+     * Execute power dialog action
+     */
+    fun performPowerDialog(): Boolean = performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
     
     /**
      * Execute a task using AI Agent

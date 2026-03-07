@@ -1,6 +1,7 @@
 package com.ai.assistance.operit.ui.automation
 
 import android.content.Context
+import com.ai.assistance.operit.services.OperitAccessibilityService
 
 /**
  * UI Automation Utilities
@@ -9,60 +10,98 @@ import android.content.Context
 object AutomationExtensions {
     
     /**
-     * Get the ScreenInteractionService instance
+     * Get the OperitAccessibilityService instance
      */
-    fun getScreenInteractionService(): ScreenInteractionService? {
-        return ScreenInteractionService.instance
+    fun getAccessibilityService(): OperitAccessibilityService? {
+        return OperitAccessibilityService.getInstance()
     }
     
     /**
      * Check if UI automation is available
      */
     fun isAutomationAvailable(): Boolean {
-        return ScreenInteractionService.instance != null
+        return OperitAccessibilityService.getInstance() != null
     }
     
     /**
-     * Get the accessibility service instance
+     * Get Perception instance
      */
-    fun getAccessibilityService(): com.ai.assistance.operit.services.OperitAccessibilityService? {
-        return com.ai.assistance.operit.services.OperitAccessibilityService.getInstance()
+    fun getPerception(): Perception? {
+        val service = OperitAccessibilityService.getInstance() ?: return null
+        return Perception(service)
+    }
+    
+    /**
+     * Get Eyes instance
+     */
+    fun getEyes(): Eyes? {
+        val service = OperitAccessibilityService.getInstance() ?: return null
+        return Eyes(service)
+    }
+    
+    /**
+     * Get Finger instance
+     */
+    fun getFinger(): Finger? {
+        val service = OperitAccessibilityService.getInstance() ?: return null
+        return Finger(service)
+    }
+    
+    /**
+     * Get Agent instance
+     */
+    fun getAgent(): Agent? {
+        val service = OperitAccessibilityService.getInstance() ?: return null
+        return Agent(service)
+    }
+    
+    /**
+     * Get ActionExecutor instance
+     */
+    fun getActionExecutor(): ActionExecutor? {
+        val service = OperitAccessibilityService.getInstance() ?: return null
+        return ActionExecutor(service)
     }
 }
 
 /**
  * Extension function to get Perception instance
  */
-fun Context.perception(): Perception {
-    return Perception(this)
+fun Context.perception(): Perception? {
+    val service = OperitAccessibilityService.getInstance() ?: return null
+    return Perception(service)
 }
 
 /**
  * Extension function to get Eyes instance
  */
-fun Context.eyes(): Eyes {
-    return Eyes(this)
+fun Context.eyes(): Eyes? {
+    val service = OperitAccessibilityService.getInstance() ?: return null
+    return Eyes(service)
 }
 
 /**
  * Extension function to get Finger instance
  */
-fun Context.finger(): Finger {
-    return Finger(this)
+fun Context.finger(): Finger? {
+    val service = OperitAccessibilityService.getInstance() ?: return null
+    return Finger(service)
 }
 
 /**
  * Extension function to get Agent instance
  */
-fun Context.agent(): Agent {
-    return Agent(this)
+fun Context.agent(): Agent? {
+    val service = OperitAccessibilityService.getInstance() ?: return null
+    return Agent(service)
 }
 
 /**
  * Extension function to get ActionExecutor instance
  */
-fun Context.actionExecutor(): ActionExecutor {
-    return ActionExecutor(this)
+fun Context.actionExecutor(): ActionExecutor? {
+    val service = OperitAccessibilityService.getInstance() ?: return null
+    return ActionExecutor(service)
 }
 
 /**

@@ -1,109 +1,94 @@
 package com.ai.assistance.operit.ui.automation
 
-import android.content.Context
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.withContext
+import com.ai.assistance.operit.services.OperitAccessibilityService
 
 /**
- * Perception Module - Screen Analysis
- * Observes device screen and creates structured analysis
- * Based on Blurr's Perception implementation
+ * Perception - Screen analysis module combining Eyes and SemanticParser
+ * Provides high-level screen understanding capabilities
  */
-class Perception(private val context: Context) {
+class Perception(private val service: OperitAccessibilityService) {
     
-    private val eyes: Eyes = Eyes(context)
-    private val semanticParser: SemanticParser = SemanticParser()
+    private val eyes = Eyes(service)
+    private val finger = Finger(service)
+    private val parser = SemanticParser()
     
-    /**
-     * Analyze current screen state
-     * Returns structured ScreenAnalysis with UI representation and element map
-     */
-    suspend fun analyze(): ScreenAnalysis = withContext(Dispatchers.IO) {
-        // Gather screen data concurrently
-        val rawScreenDataDeferred = async { eyes.getRawScreenData() }
-        val keyboardStatusDeferred = async { eyes.getKeyBoardStatus() }
-        val activityNameDeferred = async { eyes.getCurrentActivityName() }
-        
-        val rawScreenData = rawScreenDataDeferred.await()
-        val keyboardOpen = keyboardStatusDeferred.await()
-        val activityName = activityNameDeferred.await() ?: ""
-        
-        if (rawScreenData == null) {
-            return@withContext ScreenAnalysis(
-                uiRepresentation = "Unable to get screen data",
-                elementMap = emptyMap(),
-                keyboardOpen = keyboardOpen,
-                activityName = activityName,
-                pixelsAbove = 0,
-                pixelsBelow = 0,
-                screenWidth = 0,
-                screenHeight = 0
-            )
+    companion object {
+        /**
+         * Get singleton instance
+         */
+        fun getInstance(): Perception? {
+            val service = OperitAccessibilityService.getInstance()
+            return service?.let { Perception(it) }
         }
+    }
+    
+    /**
+     * Get current screen analysis
+     */
+    fun analyzeScreen(): UIAnalysis {
+        val hierarchy = eyes.getUIHierarchy()
+        val elements = eyes.getInteractiveElements()
         
-        // Parse the UI hierarchy using SemanticParser
-        val screenAnalysis = semanticParser.parseNodeTree(rawScreenData.rootNode)
-        
-        rawScreenData.rootNode.recycle()
-        
-        ScreenAnalysis(
-            uiRepresentation = screenAnalysis.uiRepresentation,
-            elementMap = screenAnalysis.elementMap,
-            keyboardOpen = keyboardOpen,
-            activityName = activityName,
-            pixelsAbove = rawScreenData.pixelsAbove,
-            pixelsBelow = rawScreenData.pixelsBelow,
-            screenWidth = rawScreenData.screenWidth,
-            screenHeight = rawScreenData.screenHeight
-        )
+        return UIAnalysis(elements, hierarchy)
     }
     
     /**
-     * Get screenshot bitmap
+     * Get simplified screen analysis
      */
-    suspend fun getScreenshot(): android.graphics.Bitmap? = withContext(Dispatchers.IO) {
-        eyes.openEyes()
+    fun analyzeScreenSimplified(): String {
+        return eyes.getSimplifiedHierarchy()
     }
     
     /**
-     * Get UI hierarchy as XML
+     * Find element by text
      */
-    suspend fun getXmlHierarchy(): String = withContext(Dispatchers.IO) {
-        eyes.openXMLEyes()
+    fun findByText(text: String): InteractiveElement? {
+        val analysis = analyzeScreen()
+        return parser.findElementByText(analysis, text)
     }
     
     /**
-     * Get pure XML hierarchy
+     * Find element by resource ID
      */
-    suspend fun getPureXmlHierarchy(): String = withContext(Dispatchers.IO) {
-        eyes.openPureXMLEyes()
+    fun findByResourceId(resourceId: String): InteractiveElement? {
+        val analysis = analyzeScreen()
+        return parser.findElementById(analysis, resourceId)
     }
     
     /**
-     * Get current activity name
+     * Find clickable elements
      */
-    fun getCurrentActivityName(): String? {
-        return eyes.getCurrentActivityName()
+    fun findClickableElements(): List<InteractiveElement> {
+        val analysis = analyzeScreen()
+        return parser.findClickableElements(analysis)
     }
     
     /**
-     * Check if keyboard is open
+     * Find scrollable elements
      */
-    fun isKeyboardOpen(): Boolean {
-        return eyes.getKeyBoardStatus()
+    fun findScrollableElements(): List<InteractiveElement> {
+        val analysis = analyzeScreen()
+        return parser.findScrollableElements(analysis)
     }
     
     /**
-     * Get element map for action execution
+     * Get current activity
      */
-    suspend fun getElementMap(): Map<Int, InteractiveElement> {
-        val analysis = analyze()
-        return analysis.elementMap
+    fun getCurrentActivity(): String? {
+        return eyes.getCurrentActivity()
+    }
+    
+    /**
+     * Get screen size
+     */
+    fun getScreenSize(): Pair<Int, Int> {
+        return eyes.getScreenSize()
+    }
+    
+    /**
+     * Check if service is connected
+     */
+    fun isConnected(): Boolean {
+        return eyes.isConnected()
     }
 }
-
-/**
- * Extension function to get Perception instance
- */
-fun Context.getPerception(): Perception = Perception(this)

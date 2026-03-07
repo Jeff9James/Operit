@@ -1,87 +1,83 @@
 package com.ai.assistance.operit.ui.automation
 
-import android.content.Context
 import android.graphics.Bitmap
-import android.view.accessibility.AccessibilityNodeInfo
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.ai.assistance.operit.services.OperitAccessibilityService
 
 /**
- * Eyes API - Screen reading wrapper
- * Provides high-level methods for screen perception
- * Based on Blurr's Eyes implementation
+ * Eyes - High-level API for screen reading
+ * Provides screenshot capture and UI hierarchy access
  */
-class Eyes(private val context: Context) {
+class Eyes(private val service: OperitAccessibilityService) {
     
-    private val service: ScreenInteractionService?
-        get() = ScreenInteractionService.instance
-    
-    /**
-     * Capture screenshot of current screen
-     * Requires API level R (30) or higher
-     */
-    suspend fun openEyes(): Bitmap? = withContext(Dispatchers.IO) {
-        service?.captureScreenshot()
+    companion object {
+        /**
+         * Get singleton instance
+         */
+        fun getInstance(): Eyes? {
+            val service = OperitAccessibilityService.getInstance()
+            return service?.let { Eyes(it) }
+        }
     }
     
     /**
-     * Dump current UI layout as pure XML
+     * Capture screenshot
      */
-    suspend fun openPureXMLEyes(): String = withContext(Dispatchers.IO) {
-        service?.dumpWindowHierarchy(pureXML = true) ?: ""
+    suspend fun captureScreenshot(): Bitmap? {
+        return service.takeScreenshot()
     }
     
     /**
-     * Dump current UI layout as readable markdown format
+     * Get UI hierarchy as XML string
      */
-    suspend fun openXMLEyes(): String = withContext(Dispatchers.IO) {
-        service?.dumpWindowHierarchy(pureXML = false) ?: ""
+    fun getUIHierarchy(): String {
+        return service.getUIHierarchyXml()
     }
     
     /**
-     * Check if keyboard is currently available for typing
+     * Get simplified UI hierarchy
      */
-    fun getKeyBoardStatus(): Boolean {
-        return service?.isKeyboardOpened() ?: false
+    fun getSimplifiedHierarchy(): String {
+        return service.getSimplifiedUIHierarchy()
     }
     
     /**
-     * Get raw screen data including UI hierarchy and scroll information
+     * Get interactive elements
      */
-    suspend fun getRawScreenData(): RawScreenData? = withContext(Dispatchers.IO) {
-        service?.getScreenAnalysisData(getAll = false)
+    fun getInteractiveElements(): Map<Int, InteractiveElement> {
+        return service.getInteractiveElements()
     }
     
     /**
-     * Get all raw screen data from all windows
+     * Get current activity name
      */
-    suspend fun getAllRawScreenData(): RawScreenData? = withContext(Dispatchers.IO) {
-        service?.getAllScreenAnalysisData()
+    fun getCurrentActivity(): String? {
+        return service.getCurrentActivity()
     }
     
     /**
-     * Get current foreground activity name
+     * Get screen size
      */
-    fun getCurrentActivityName(): String? {
-        return service?.getCurrentActivityName()
+    fun getScreenSize(): Pair<Int, Int> {
+        return service.getScreenSize()
     }
     
     /**
-     * Get current package name
+     * Check if service is connected
      */
-    fun getCurrentPackageName(): String? {
-        return service?.getCurrentPackageName()
+    fun isConnected(): Boolean {
+        return service.isServiceConnected()
     }
     
     /**
-     * Get UI hierarchy signature for change detection
+     * Get screen as base64 PNG
      */
-    fun getWindowHierarchySignature(): String {
-        return service?.getWindowHierarchySignature() ?: ""
+    suspend fun getScreenAsBase64(): String? {
+        val bitmap = captureScreenshot() ?: return null
+        
+        val stream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        val byteArray = stream.toByteArray()
+        
+        return android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
     }
 }
-
-/**
- * Extension function to get Eyes instance
- */
-fun Context.getEyes(): Eyes = Eyes(this)

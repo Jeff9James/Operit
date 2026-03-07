@@ -1,119 +1,176 @@
 package com.ai.assistance.operit.ui.automation
 
-import android.content.Context
+import com.ai.assistance.operit.services.OperitAccessibilityService
+import com.ai.assistance.operit.util.AppLogger
 
 /**
- * Finger API - Gesture execution wrapper
- * Provides high-level methods for device interaction
+ * Finger - High-level API for gesture execution
+ * Provides tap, swipe, scroll, and other gesture functions
  */
-class Finger(private val context: Context) {
+class Finger(private val service: OperitAccessibilityService) {
     
-    private val service: ScreenInteractionService?
-        get() = ScreenInteractionService.instance
-    
-    // ==================== Gesture Methods ====================
-    
-    fun tap(x: Int, y: Int): Boolean {
-        return service?.clickOnPoint(x.toFloat(), y.toFloat()) ?: false
-    }
-    
-    fun longPress(x: Int, y: Int): Boolean {
-        return service?.longClickOnPoint(x.toFloat(), y.toFloat()) ?: false
-    }
-    
-    fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, duration: Int = 1000): Boolean {
-        return service?.swipe(x1.toFloat(), y1.toFloat(), x2.toFloat(), y2.toFloat(), duration.toLong()) ?: false
-    }
-    
-    fun type(text: String): Boolean {
-        val result = service?.typeTextInFocusedField(text) ?: false
-        if (result) {
-            enter()
+    companion object {
+        private const val TAG = "Finger"
+        
+        /**
+         * Get singleton instance
+         */
+        fun getInstance(): Finger? {
+            val service = OperitAccessibilityService.getInstance()
+            return service?.let { Finger(it) }
         }
-        return result
     }
     
-    fun enter(): Boolean {
-        return service?.pressEnter() ?: false
+    private val screenSize: Pair<Int, Int>
+        get() = service.getScreenSize()
+    
+    /**
+     * Tap at coordinates
+     */
+    fun tap(x: Int, y: Int): Boolean {
+        AppLogger.d(TAG, "Tap at ($x, $y)")
+        return service.performClickAt(x, y)
     }
     
-    // ==================== Global Actions ====================
-    
-    fun back(): Boolean = service?.performBack() ?: false
-    fun home(): Boolean = service?.performHome() ?: false
-    fun switchApp(): Boolean = service?.performRecents() ?: false
-    fun notifications(): Boolean = service?.expandNotifications() ?: false
-    fun powerMenu(): Boolean = service?.openPowerMenu() ?: false
-    
-    // ==================== Scroll Methods ====================
-    
-    fun scrollUp(pixels: Int = 500, duration: Int = 500): Boolean {
-        val screenHeight = getScreenHeight()
-        val screenWidth = getScreenWidth()
-        return swipe(
-            screenWidth / 2,
-            screenHeight / 2 + pixels / 2,
-            screenWidth / 2,
-            screenHeight / 2 - pixels / 2,
-            duration
-        )
+    /**
+     * Tap at element center
+     */
+    fun tap(element: InteractiveElement): Boolean {
+        val centerX = element.bounds[0] + element.bounds[2] / 2
+        val centerY = element.bounds[1] + element.bounds[3] / 2
+        return tap(centerX, centerY)
     }
     
-    fun scrollDown(pixels: Int = 500, duration: Int = 500): Boolean {
-        val screenHeight = getScreenHeight()
-        val screenWidth = getScreenWidth()
-        return swipe(
-            screenWidth / 2,
-            screenHeight / 2 - pixels / 2,
-            screenWidth / 2,
-            screenHeight / 2 + pixels / 2,
-            duration
-        )
+    /**
+     * Long press at coordinates
+     */
+    fun longPress(x: Int, y: Int): Boolean {
+        AppLogger.d(TAG, "Long press at ($x, $y)")
+        return service.performLongPressAt(x, y)
     }
     
-    fun scrollLeft(pixels: Int = 500, duration: Int = 500): Boolean {
-        val screenHeight = getScreenHeight()
-        val screenWidth = getScreenWidth()
-        return swipe(
-            screenWidth / 2 + pixels / 2,
-            screenHeight / 2,
-            screenWidth / 2 - pixels / 2,
-            screenHeight / 2,
-            duration
-        )
+    /**
+     * Long press at element center
+     */
+    fun longPress(element: InteractiveElement): Boolean {
+        val centerX = element.bounds[0] + element.bounds[2] / 2
+        val centerY = element.bounds[1] + element.bounds[3] / 2
+        return longPress(centerX, centerY)
     }
     
-    fun scrollRight(pixels: Int = 500, duration: Int = 500): Boolean {
-        val screenHeight = getScreenHeight()
-        val screenWidth = getScreenWidth()
-        return swipe(
-            screenWidth / 2 - pixels / 2,
-            screenHeight / 2,
-            screenWidth / 2 + pixels / 2,
-            screenHeight / 2,
-            duration
-        )
+    /**
+     * Swipe from (x1, y1) to (x2, y2)
+     */
+    fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, duration: Long = 300): Boolean {
+        AppLogger.d(TAG, "Swipe from ($x1, $y1) to ($x2, $y2) duration=$duration")
+        return service.performSwipeGesture(x1, y1, x2, y2, duration)
     }
     
-    fun scrollDownPrecisely(pixels: Int, pixelsPerSecond: Int = 1000): Boolean {
-        return service?.scrollDownPrecisely(pixels, pixelsPerSecond) ?: false
+    /**
+     * Swipe up
+     */
+    fun swipeUp(duration: Long = 300): Boolean {
+        val (width, height) = screenSize
+        val startY = (height * 0.8).toInt()
+        val endY = (height * 0.2).toInt()
+        val centerX = width / 2
+        return swipe(centerX, startY, centerX, endY, duration)
     }
     
-    fun scrollUpPrecisely(pixels: Int, pixelsPerSecond: Int = 1000): Boolean {
-        return service?.scrollUpPrecisely(pixels, pixelsPerSecond) ?: false
+    /**
+     * Swipe down
+     */
+    fun swipeDown(duration: Long = 300): Boolean {
+        val (width, height) = screenSize
+        val startY = (height * 0.2).toInt()
+        val endY = (height * 0.8).toInt()
+        val centerX = width / 2
+        return swipe(centerX, startY, centerX, endY, duration)
     }
     
-    // ==================== Utility Methods ====================
-    
-    private fun getScreenWidth(): Int {
-        val displayMetrics = context.resources.displayMetrics
-        return displayMetrics.widthPixels
+    /**
+     * Swipe left
+     */
+    fun swipeLeft(duration: Long = 300): Boolean {
+        val (width, height) = screenSize
+        val startX = (width * 0.8).toInt()
+        val endX = (width * 0.2).toInt()
+        val centerY = height / 2
+        return swipe(startX, centerY, endX, centerY, duration)
     }
     
-    private fun getScreenHeight(): Int {
-        val displayMetrics = context.resources.displayMetrics
-        return displayMetrics.heightPixels
+    /**
+     * Swipe right
+     */
+    fun swipeRight(duration: Long = 300): Boolean {
+        val (width, height) = screenSize
+        val startX = (width * 0.2).toInt()
+        val endX = (width * 0.8).toInt()
+        val centerY = height / 2
+        return swipe(startX, centerY, endX, centerY, duration)
+    }
+    
+    /**
+     * Scroll down
+     */
+    fun scrollDown(): Boolean {
+        AppLogger.d(TAG, "Scroll down")
+        return service.performScrollDown()
+    }
+    
+    /**
+     * Scroll up
+     */
+    fun scrollUp(): Boolean {
+        AppLogger.d(TAG, "Scroll up")
+        return service.performScrollUp()
+    }
+    
+    /**
+     * Input text into focused field
+     */
+    fun inputText(text: String): Boolean {
+        AppLogger.d(TAG, "Input text: $text")
+        return service.performTextInput(text)
+    }
+    
+    /**
+     * Press back
+     */
+    fun pressBack(): Boolean {
+        AppLogger.d(TAG, "Press back")
+        return service.performBack()
+    }
+    
+    /**
+     * Press home
+     */
+    fun pressHome(): Boolean {
+        AppLogger.d(TAG, "Press home")
+        return service.performHome()
+    }
+    
+    /**
+     * Open recents
+     */
+    fun openRecents(): Boolean {
+        AppLogger.d(TAG, "Open recents")
+        return service.performRecents()
+    }
+    
+    /**
+     * Open notifications
+     */
+    fun openNotifications(): Boolean {
+        AppLogger.d(TAG, "Open notifications")
+        return service.performNotifications()
+    }
+    
+    /**
+     * Open power dialog
+     */
+    fun openPowerDialog(): Boolean {
+        AppLogger.d(TAG, "Open power dialog")
+        return service.performPowerDialog()
     }
 }
-
-fun Context.getFinger(): Finger = Finger(this)
